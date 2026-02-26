@@ -200,21 +200,24 @@
   var MAX_AMOUNT_PER_HOUR = 15;
 
   // src/features/notifications.ts
-  async function saveSurveyFingerprint(fingerprint) {
+  async function saveSurveyFingerprints(fingerprints) {
     const now = Date.now();
     const { surveys: immutableSurveys } = await store_default.get(["surveys"]);
-    const surveys = structuredClone(immutableSurveys);
-    for (const [key, timestamp] of Object.entries(surveys)) {
+    const oldSurveys = structuredClone(immutableSurveys);
+    for (const [key, timestamp] of Object.entries(oldSurveys)) {
       if (now - timestamp >= NOTIFY_TTL_MS) {
-        delete surveys[key];
+        delete oldSurveys[key];
       }
     }
-    if (surveys[fingerprint]) {
-      return false;
+    const newSurveys = [];
+    for (const fingerprint of fingerprints) {
+      if (!oldSurveys[fingerprint]) {
+        oldSurveys[fingerprint] = now;
+        newSurveys.push(fingerprint);
+      }
     }
-    surveys[fingerprint] = now;
-    await store_default.set({ surveys });
-    return true;
+    await store_default.set({ surveys: oldSurveys });
+    return newSurveys;
   }
   var NewSurveyNotificationsEnhancement = class {
     async apply() {
@@ -223,10 +226,14 @@
       );
       if (surveys.length === 0) return;
       const assets = await getSharedResources();
+      const surveyFingerprints = Array.from(surveys).map(
+        (survey) => survey.getAttribute("data-testid")?.replace("study-", "")
+      ).filter((id) => id !== void 0);
+      const newSurveys = await saveSurveyFingerprints(surveyFingerprints);
       for (const survey of surveys) {
         const surveyId = survey.getAttribute("data-testid")?.replace("study-", "");
         if (!surveyId) continue;
-        const isNewFingerprint = await saveSurveyFingerprint(surveyId);
+        const isNewFingerprint = newSurveys.includes(surveyId);
         if (!isNewFingerprint || !document.hidden) continue;
         const surveyTitle = survey.querySelector("h2.title")?.textContent || "New Survey";
         const surveyReward = survey.querySelector("span.reward")?.textContent || "Unknown Reward";
@@ -334,7 +341,10 @@
         }
         const currentSymbol = extractSymbol(element.textContent);
         const sourceSymbol = extractSymbol(sourceText);
-        if (sourceSymbol === selectedCurrency && element.textContent !== sourceText) {
+        log(
+          `(${sourceText}): ${selectedCurrency} === ${sourceSymbol}: ${selectedCurrency === sourceSymbol}`
+        );
+        if (sourceSymbol === selectedSymbol && element.textContent !== sourceText) {
           element.textContent = sourceText;
           continue;
         }
@@ -664,7 +674,9 @@
     const refreshMenuCommands = createMenuCommandRefresher();
     await refreshMenuCommands();
     const unsubscribe = store_default.subscribe(async (changed) => {
-      await refreshMenuCommands();
+      if (changed.ui) {
+        await refreshMenuCommands();
+      }
       debounced();
       uiEnhancement.update(changed);
     });

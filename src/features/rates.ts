@@ -1,4 +1,5 @@
 import store from "../store/store.ts";
+import { log } from "../utils.ts";
 import {
     CONVERSION_RATES_FETCH_INTERVAL_MS,
     MIN_AMOUNT_PER_HOUR,
@@ -117,8 +118,11 @@ class ConvertCurrencyEnhancement implements Enhancement {
             }
             const currentSymbol = extractSymbol(element.textContent);
             const sourceSymbol = extractSymbol(sourceText);
+            log(
+                `(${sourceText}): ${selectedCurrency} === ${sourceSymbol}: ${selectedCurrency === sourceSymbol}`,
+            );
             if (
-                sourceSymbol === selectedCurrency &&
+                sourceSymbol === selectedSymbol &&
                 element.textContent !== sourceText
             ) {
                 // Revert to original text

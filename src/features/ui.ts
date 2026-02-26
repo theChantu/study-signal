@@ -183,6 +183,7 @@ class UIEnhancement implements Enhancement {
         const keys = Object.keys(changed) as (keyof typeof changed)[];
         for (const el of settingsElements) {
             const setting = el.dataset.setting as keyof typeof changed;
+            // Skip if the setting is not in the changed keys
             if (!keys.includes(setting)) continue;
 
             if (

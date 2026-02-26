@@ -1,7 +1,6 @@
 import store from "./store/store";
 import { uiEnhancement } from "./features";
 import { log, runEnhancements } from "./utils";
-import { defaultVMSettings } from "./store/defaults";
 
 (async function () {
     "use strict";
@@ -137,7 +136,9 @@ import { defaultVMSettings } from "./store/defaults";
     // Initial menu command setup
     await refreshMenuCommands();
     const unsubscribe = store.subscribe(async (changed) => {
-        await refreshMenuCommands();
+        if (changed.ui) {
+            await refreshMenuCommands();
+        }
         debounced();
 
         uiEnhancement.update(changed);

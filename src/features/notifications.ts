@@ -3,29 +3,31 @@ import { getSharedResources } from "../utils";
 import { NOTIFY_TTL_MS } from "../constants";
 import type { Enhancement } from "../types";
 
-async function saveSurveyFingerprint(fingerprint: string) {
+async function saveSurveyFingerprints(fingerprints: string[]) {
     const now = Date.now();
 
     const { surveys: immutableSurveys } = await store.get(["surveys"]);
-    const surveys = structuredClone(immutableSurveys);
+    const oldSurveys = structuredClone(immutableSurveys);
 
-    for (const [key, timestamp] of Object.entries(surveys)) {
+    // Remove old surveys that have exceeded the TTL
+    for (const [key, timestamp] of Object.entries(oldSurveys)) {
         if (now - timestamp >= NOTIFY_TTL_MS) {
-            delete surveys[key];
+            delete oldSurveys[key];
         }
     }
 
-    if (surveys[fingerprint]) {
-        return false;
+    const newSurveys = [];
+    // Add new surveys to the store with the current timestamp
+    for (const fingerprint of fingerprints) {
+        if (!oldSurveys[fingerprint]) {
+            oldSurveys[fingerprint] = now;
+            newSurveys.push(fingerprint);
+        }
     }
 
-    surveys[fingerprint] = now;
-    await store.set({ surveys });
-
-    return true;
+    await store.set({ surveys: oldSurveys });
+    return newSurveys;
 }
-
-function validSurveyToNotify() {}
 
 class NewSurveyNotificationsEnhancement implements Enhancement {
     async apply() {
@@ -34,12 +36,20 @@ class NewSurveyNotificationsEnhancement implements Enhancement {
         );
         if (surveys.length === 0) return;
         const assets = await getSharedResources();
+
+        const surveyFingerprints = Array.from(surveys)
+            .map((survey) =>
+                survey.getAttribute("data-testid")?.replace("study-", ""),
+            )
+            .filter((id): id is string => id !== undefined);
+        const newSurveys = await saveSurveyFingerprints(surveyFingerprints);
+
         for (const survey of surveys) {
             const surveyId = survey
                 .getAttribute("data-testid")
                 ?.replace("study-", "");
             if (!surveyId) continue;
-            const isNewFingerprint = await saveSurveyFingerprint(surveyId);
+            const isNewFingerprint = newSurveys.includes(surveyId);
             if (!isNewFingerprint || !document.hidden) continue;
 
             const surveyTitle =
