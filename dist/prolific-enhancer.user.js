@@ -249,10 +249,10 @@
     }
     getCurrencyInfo(el) {
       let displaySymbol = Array.from(el.classList).find(
-        (className) => className.includes("current-")
+        (className) => className.includes("display-")
       );
       if (displaySymbol)
-        displaySymbol = displaySymbol.replace("current-", "");
+        displaySymbol = displaySymbol.replace("display-", "");
       let sourceSymbol = Array.from(el.classList).find(
         (className) => className.includes("source-")
       );
@@ -317,8 +317,8 @@
       if (displaySymbol)
         displaySymbol = displaySymbol.replace("current-", "");
       return {
-        displaySymbol: displaySymbol ?? null,
         // CloudResearch uses USD by default
+        displaySymbol: displaySymbol ?? "$",
         sourceSymbol: "$"
       };
     }
@@ -335,9 +335,9 @@
     getHourlyRateElements() {
       return Array.from(
         document.querySelectorAll(
-          '[class*="project-pay-per-hour-"]'
+          '[class*="project-pay-per-hour-"] > *:last-child'
         )
-      ).filter((node) => node.textContent.includes("per hour"));
+      );
     }
     setHourlyRate(element) {
     }
@@ -527,10 +527,6 @@
     const g = Math.round(255 * bias);
     return `rgba(${r}, ${g}, 0, 0.63)`;
   }
-  function extractSymbol3(text) {
-    const m = text.match(/[£$€]/);
-    return m ? m[0] : null;
-  }
   function getSymbol(currency) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -563,19 +559,20 @@
             element.textContent = sourceText;
           }
           const previousClassName2 = Array.from(element.classList).find(
-            (className) => className.includes("current-")
+            (className) => className.includes("display-")
           );
           if (previousClassName2) {
             element.classList.remove(previousClassName2);
           }
+          element.classList.add(`display-${sourceSymbol}`);
           continue;
         }
         if (displaySymbol === selectedSymbol) continue;
         const previousClassName = Array.from(element.classList).find(
-          (className) => className.includes("current-")
+          (className) => className.includes("display-")
         );
         if (previousClassName) element.classList.remove(previousClassName);
-        element.classList.add(`current-${selectedSymbol}`);
+        element.classList.add(`display-${selectedSymbol}`);
         const elementRate = extractHourlyRate(sourceText);
         const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
         element.textContent = sourceText.replace(
@@ -588,6 +585,14 @@
       document.querySelectorAll("[data-original-text]").forEach((el) => {
         el.textContent = el.getAttribute("data-original-text") || "";
         el.removeAttribute("data-original-text");
+        const displayClass = Array.from(el.classList).find(
+          (className) => className.includes("display-")
+        );
+        const sourceClass = Array.from(el.classList).find(
+          (className) => className.includes("source-")
+        );
+        if (displayClass) el.classList.remove(displayClass);
+        if (sourceClass) el.classList.remove(sourceClass);
       });
     }
   };
@@ -599,11 +604,12 @@
           continue;
         }
         const rate = extractHourlyRate(element.textContent);
-        const symbol = extractSymbol3(element.textContent);
-        if (isNaN(rate) || !symbol) return;
+        const { displaySymbol, sourceSymbol } = this.siteAdapter.getCurrencyInfo(element);
+        log(displaySymbol, sourceSymbol);
+        if (isNaN(rate) || !displaySymbol) return;
         const { conversionRates } = await store_default.get(["conversionRates"]);
-        const min = symbol === "$" ? MIN_AMOUNT_PER_HOUR : MIN_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
-        const max = symbol === "$" ? MAX_AMOUNT_PER_HOUR : MAX_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
+        const min = displaySymbol === "$" ? MIN_AMOUNT_PER_HOUR : MIN_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
+        const max = displaySymbol === "$" ? MAX_AMOUNT_PER_HOUR : MAX_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
         element.style.backgroundColor = rateToColor(rate, min, max);
         if (!element.classList.contains("pe-rate-highlight"))
           element.classList.add("pe-rate-highlight");

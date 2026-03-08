@@ -36,10 +36,10 @@ export class ProlificAdapter extends BaseAdapter {
 
     getCurrencyInfo(el: HTMLElement) {
         let displaySymbol = Array.from(el.classList).find((className) =>
-            className.includes("current-"),
+            className.includes("display-"),
         );
         if (displaySymbol)
-            displaySymbol = displaySymbol.replace("current-", "");
+            displaySymbol = displaySymbol.replace("display-", "");
         let sourceSymbol = Array.from(el.classList).find((className) =>
             className.includes("source-"),
         );

@@ -6,6 +6,8 @@ import {
 } from "../constants.ts";
 import Enhancement from "./enhancement.ts";
 import { defaultVMSettings } from "../store/defaults.ts";
+import { log } from "../utils.ts";
+
 import type { VMSettings } from "../types.ts";
 
 type ConversionRates = VMSettings["conversionRates"];
@@ -131,11 +133,12 @@ class ConvertCurrencyEnhancement extends Enhancement {
                 }
 
                 const previousClassName = Array.from(element.classList).find(
-                    (className) => className.includes("current-"),
+                    (className) => className.includes("display-"),
                 );
                 if (previousClassName) {
                     element.classList.remove(previousClassName);
                 }
+                element.classList.add(`display-${sourceSymbol}`);
 
                 continue;
             }
@@ -145,10 +148,10 @@ class ConvertCurrencyEnhancement extends Enhancement {
 
             // Update className
             const previousClassName = Array.from(element.classList).find(
-                (className) => className.includes("current-"),
+                (className) => className.includes("display-"),
             );
             if (previousClassName) element.classList.remove(previousClassName);
-            element.classList.add(`current-${selectedSymbol}`);
+            element.classList.add(`display-${selectedSymbol}`);
 
             const elementRate = extractHourlyRate(sourceText);
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
@@ -163,6 +166,16 @@ class ConvertCurrencyEnhancement extends Enhancement {
         document.querySelectorAll("[data-original-text]").forEach((el) => {
             el.textContent = el.getAttribute("data-original-text") || "";
             el.removeAttribute("data-original-text");
+
+            const displayClass = Array.from(el.classList).find((className) =>
+                className.includes("display-"),
+            );
+            const sourceClass = Array.from(el.classList).find((className) =>
+                className.includes("source-"),
+            );
+
+            if (displayClass) el.classList.remove(displayClass);
+            if (sourceClass) el.classList.remove(sourceClass);
         });
     }
 }
@@ -177,17 +190,19 @@ class HighlightRatesEnhancement extends Enhancement {
             }
 
             const rate = extractHourlyRate(element.textContent);
-            const symbol = extractSymbol(element.textContent);
-            if (isNaN(rate) || !symbol) return;
+            const { displaySymbol, sourceSymbol } =
+                this.siteAdapter.getCurrencyInfo(element);
+            log(displaySymbol, sourceSymbol);
+            if (isNaN(rate) || !displaySymbol) return;
 
             const { conversionRates } = await store.get(["conversionRates"]);
 
             const min =
-                symbol === "$"
+                displaySymbol === "$"
                     ? MIN_AMOUNT_PER_HOUR
                     : MIN_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
             const max =
-                symbol === "$"
+                displaySymbol === "$"
                     ? MAX_AMOUNT_PER_HOUR
                     : MAX_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
 

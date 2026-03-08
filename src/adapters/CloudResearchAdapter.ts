@@ -44,8 +44,8 @@ export class CloudResearchAdapter extends BaseAdapter {
             displaySymbol = displaySymbol.replace("current-", "");
 
         return {
-            displaySymbol: displaySymbol ?? null,
             // CloudResearch uses USD by default
+            displaySymbol: displaySymbol ?? "$",
             sourceSymbol: "$",
         };
     }
@@ -68,9 +68,9 @@ export class CloudResearchAdapter extends BaseAdapter {
     getHourlyRateElements() {
         return Array.from(
             document.querySelectorAll<HTMLElement>(
-                '[class*="project-pay-per-hour-"]',
+                '[class*="project-pay-per-hour-"] > *:last-child',
             ),
-        ).filter((node) => node.textContent.includes("per hour"));
+        );
     }
 
     setHourlyRate(element: HTMLElement) {}
