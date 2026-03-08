@@ -1,13 +1,15 @@
-import type { Enhancement } from "../types";
+import Enhancement from "./enhancement";
 
-class SurveyLinksEnhancement implements Enhancement {
+class SurveyLinksEnhancement extends Enhancement {
+    constructor() {
+        super();
+    }
+
     apply() {
-        const surveys = document.querySelectorAll('li[data-testid^="study-"]');
+        const surveys = this.siteAdapter.getSurveyElements();
         for (const survey of surveys) {
-            const testid = survey.getAttribute("data-testid");
-            if (!testid) continue;
-            const surveyId = testid.replace("study-", "");
-            const studyContent = survey.querySelector("div.study-content");
+            const surveyId = this.siteAdapter.getSurveyId(survey);
+            const studyContent = this.siteAdapter.getSurveyContainer(survey);
             if (studyContent && !studyContent.querySelector(".pe-link")) {
                 const container = document.createElement("div");
                 const link = document.createElement("a");

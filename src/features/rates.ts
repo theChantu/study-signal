@@ -5,7 +5,7 @@ import {
     MIN_AMOUNT_PER_HOUR,
     MAX_AMOUNT_PER_HOUR,
 } from "../constants.ts";
-import type { Enhancement } from "../types.ts";
+import Enhancement from "./enhancement.ts";
 import { defaultVMSettings } from "../store/defaults.ts";
 import type { VMSettings } from "../types.ts";
 
@@ -93,9 +93,9 @@ function getSymbol(currency: string) {
         .find((part) => part.type === "currency")?.value;
 }
 
-class ConvertCurrencyEnhancement implements Enhancement {
+class ConvertCurrencyEnhancement extends Enhancement {
     async apply() {
-        const elements = document.querySelectorAll("span.reward span");
+        const elements = this.siteAdapter.getRewardElements();
         const { selectedCurrency, conversionRates } = await store.get([
             "selectedCurrency",
             "conversionRates",
@@ -109,54 +109,68 @@ class ConvertCurrencyEnhancement implements Enhancement {
 
         for (const element of elements) {
             let sourceText = element.getAttribute("data-original-text");
+
             if (!sourceText) {
                 element.setAttribute(
                     "data-original-text",
                     element.textContent || "",
                 );
                 sourceText = element.textContent || "";
+                const sourceSymbol =
+                    this.siteAdapter.getInitCurrencyInfo(element);
+
+                element.classList.add(`source-${sourceSymbol}`);
             }
-            const currentSymbol = extractSymbol(element.textContent);
-            const sourceSymbol = extractSymbol(sourceText);
-            log(
-                `(${sourceText}): ${selectedCurrency} === ${sourceSymbol}: ${selectedCurrency === sourceSymbol}`,
-            );
-            if (
-                sourceSymbol === selectedSymbol &&
-                element.textContent !== sourceText
-            ) {
-                // Revert to original text
-                element.textContent = sourceText;
+
+            const { sourceSymbol, displaySymbol } =
+                this.siteAdapter.getCurrencyInfo(element);
+
+            if (sourceSymbol === selectedSymbol) {
+                // Selected symbol matches source, so revert element text
+                if (element.textContent !== sourceText) {
+                    element.textContent = sourceText;
+                }
+
+                const previousClassName = Array.from(element.classList).find(
+                    (className) => className.includes("current-"),
+                );
+                if (previousClassName) {
+                    element.classList.remove(previousClassName);
+                }
+
                 continue;
             }
-            // Skip if already in the desired currency
-            if (currentSymbol === selectedSymbol) continue;
 
-            const elementRate = extractHourlyRate(element.textContent);
+            // Continue if currency is already converted
+            if (displaySymbol === selectedSymbol) continue;
+
+            // Update className
+            const previousClassName = Array.from(element.classList).find(
+                (className) => className.includes("current-"),
+            );
+            if (previousClassName) element.classList.remove(previousClassName);
+            element.classList.add(`current-${selectedSymbol}`);
+
+            const elementRate = extractHourlyRate(sourceText);
             let modified = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
-            if (element.textContent.includes("/hr")) modified += "/hr";
+            if (sourceText.includes("/hr")) modified += "/hr";
             element.textContent = modified;
         }
     }
     revert() {
-        document.querySelectorAll("span[data-original-text]").forEach((el) => {
+        document.querySelectorAll("[data-original-text]").forEach((el) => {
             el.textContent = el.getAttribute("data-original-text") || "";
             el.removeAttribute("data-original-text");
         });
     }
 }
 
-class HighlightRatesEnhancement implements Enhancement {
+class HighlightRatesEnhancement extends Enhancement {
     async apply() {
-        const elements = document.querySelectorAll<HTMLElement>(
-            "[data-testid='study-tag-reward-per-hour']",
-        );
+        const elements = this.siteAdapter.getHourlyRateElements();
         for (const element of elements) {
             // Check if the element should be ignored
-            if (
-                element.getAttribute("data-testid") === "study-tag-reward" ||
-                element.classList.contains("pe-rate-highlight")
-            ) {
+            if (element.classList.contains("pe-rate-highlight")) {
                 continue;
             }
 

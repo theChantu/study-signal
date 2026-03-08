@@ -64,12 +64,13 @@ class UIEnhancement implements Enhancement {
         const { selectedCurrency } = settings;
         const toggleElement = createSettingElement(
             "Selected Currency",
-            `Currency: ${selectedCurrency}`,
+            `${selectedCurrency}`,
             "selectedCurrency",
             async () => {
                 const { selectedCurrency } = await store.get([
                     "selectedCurrency",
                 ]);
+                // Set to other currency
                 await store.set({
                     selectedCurrency:
                         selectedCurrency === "USD" ? "GBP" : "USD",
@@ -161,7 +162,7 @@ class UIEnhancement implements Enhancement {
 
                 // Save position
                 const { left, top } = container.getBoundingClientRect();
-                store.set({
+                store.update({
                     ui: {
                         initialized: true,
                         position: { left, top },
@@ -193,7 +194,7 @@ class UIEnhancement implements Enhancement {
                 const { selectedCurrency } = changed;
                 const button = el.querySelector("button");
                 if (!button) continue;
-                button.textContent = `Currency: ${selectedCurrency}`;
+                button.textContent = `${selectedCurrency}`;
             }
 
             if (setting.startsWith("enable")) {

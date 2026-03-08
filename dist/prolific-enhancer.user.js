@@ -5,7 +5,8 @@
 // @description  A lightweight userscript that makes finding worthwhile Prolific studies faster and less annoying.
 // @author       Chantu
 // @license      MIT
-// @match        *://app.prolific.com/*
+// @include        *://app.prolific.com/*
+// @include        *://connect.cloudresearch.com/*
 // @grant        GM.notification
 // @grant        GM.getValue
 // @grant        GM.getValues
@@ -61,63 +62,54 @@
         })
       );
     };
+    const notify = (values) => {
+      for (const listener of listeners) listener(values);
+    };
     const set = async (values) => {
+      const newValues = Object.fromEntries(
+        Object.entries(values).filter(([, v]) => v !== void 0)
+      );
+      await GM.setValues(newValues);
+      notify(newValues);
+    };
+    const update = async (values) => {
       const keys = Object.keys(values);
       const prevValues = await get(keys);
       const newValues = Object.fromEntries(
         keys.map((k) => {
           const prev = prevValues[k];
           const next = values[k];
-          if (typeof prev === "object" && prev !== null && typeof next === "object" && next !== null) {
+          if (typeof prev === "object" && prev !== null && typeof next === "object" && next !== null && !Array.isArray(prev) && !Array.isArray(next)) {
             return [k, { ...prev, ...next }];
           }
           return [k, next === void 0 ? prev : next];
         })
       );
       await GM.setValues(newValues);
-      for (const listener of listeners) listener(newValues);
+      notify(newValues);
     };
     const subscribe = (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     };
-    return { get, set, subscribe };
+    return { get, set, update, subscribe };
   }
   var store = createStore();
   var store_default = store;
 
-  // src/features/links.ts
-  var SurveyLinksEnhancement = class {
-    apply() {
-      const surveys = document.querySelectorAll('li[data-testid^="study-"]');
-      for (const survey of surveys) {
-        const testid = survey.getAttribute("data-testid");
-        if (!testid) continue;
-        const surveyId = testid.replace("study-", "");
-        const studyContent = survey.querySelector("div.study-content");
-        if (studyContent && !studyContent.querySelector(".pe-link")) {
-          const container = document.createElement("div");
-          const link = document.createElement("a");
-          container.className = "pe-btn-container";
-          container.appendChild(link);
-          link.className = "pe-link pe-custom-btn";
-          link.href = `https://app.prolific.com/studies/${surveyId}`;
-          link.textContent = "Take part in this study";
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          studyContent.appendChild(container);
-        }
-      }
+  // src/adapters/Adapter.ts
+  var BaseAdapter = class {
+    settings;
+    constructor(defaults, overrides = {}) {
+      this.settings = { ...defaults, ...overrides };
     }
-    revert() {
-      const elements = document.querySelectorAll(".pe-btn-container");
-      for (const el of elements) {
-        if (!el) continue;
-        el.remove();
-      }
-    }
+    // abstract setCurrencySymbol(): void;
+    // abstract setSourceCurrencySymbol(): void;
+    // abstract prepareNextScan?(): Promise<void>;
+    // TODO: Used to add to survey URL
+    // For instance, cloud research, show 100 surveys, "https://connect.cloudresearch.com/participant/dashboard" + "?page=1&size=100"
+    // abstract overrideUrl(url: string): string;
   };
-  var surveyLinksEnhancement = new SurveyLinksEnhancement();
 
   // src/utils.ts
   var debugEnabled = false;
@@ -133,6 +125,15 @@
       debugEnabled = changed.enableDebug;
     }
   });
+  function extractSymbol(text) {
+    const m = text.match(/[£$€]/);
+    return m ? m[0] : null;
+  }
+  function getRandomTimeout() {
+    const MAX_TIMEOUT = 7;
+    const MIN_TIMEOUT = 5;
+    return Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) + MIN_TIMEOUT;
+  }
   var fetchResources = (...args) => {
     let promise = null;
     return () => {
@@ -193,6 +194,171 @@
   var getSharedResources = fetchResources("prolific_logo");
   initDebug();
 
+  // src/adapters/ProlificAdapter.ts
+  var PROLIFIC_SETTINGS = {
+    enableInterval: false
+  };
+  var ProlificAdapter = class extends BaseAdapter {
+    constructor(overrides = {}) {
+      super(PROLIFIC_SETTINGS, overrides);
+    }
+    getSurveyElements() {
+      return document.querySelectorAll(
+        'li[data-testid^="study-"]'
+      );
+    }
+    getSurveyId(el) {
+      return el.getAttribute("data-testid")?.replace("study-", "") || null;
+    }
+    getSurveyContainer(el) {
+      return el.querySelector("div.study-content");
+    }
+    getInitCurrencyInfo(el) {
+      return extractSymbol(el.textContent) || null;
+    }
+    getCurrencyInfo(el) {
+      let displaySymbol = Array.from(el.classList).find(
+        (className) => className.includes("current-")
+      );
+      if (displaySymbol)
+        displaySymbol = displaySymbol.replace("current-", "");
+      let sourceSymbol = Array.from(el.classList).find(
+        (className) => className.includes("source-")
+      );
+      if (sourceSymbol) sourceSymbol = sourceSymbol.replace("source-", "");
+      return {
+        displaySymbol: displaySymbol || null,
+        sourceSymbol: sourceSymbol || null
+      };
+    }
+    getRewardElements() {
+      return Array.from(
+        document.querySelectorAll(
+          "[data-testid='study-tag-reward-per-hour'], [data-testid='study-tag-reward']"
+        )
+      );
+    }
+    getHourlyRateElements() {
+      return Array.from(
+        document.querySelectorAll(
+          "[data-testid='study-tag-reward-per-hour']"
+        )
+      );
+    }
+    setHourlyRate(el) {
+    }
+  };
+
+  // src/adapters/CloudResearchAdapter.ts
+  var CLOUD_RESEARCH_SETTINGS = {
+    enableInterval: true
+  };
+  var CloudResearchAdapter = class extends BaseAdapter {
+    constructor(overrides = {}) {
+      super(CLOUD_RESEARCH_SETTINGS, overrides);
+    }
+    getSurveyElements() {
+      return document.querySelectorAll("div.project-card");
+    }
+    getSurveyId(el) {
+      const surveyId = Array.from(el.classList).find(
+        (className) => className.includes("project-card-")
+      );
+      if (surveyId) return surveyId.replace("project-card-", "");
+      return null;
+    }
+    getSurveyContainer(el) {
+      return el.querySelector("div.project-card");
+    }
+    getInitCurrencyInfo(el) {
+      return "$";
+    }
+    getCurrencyInfo(el) {
+      let displaySymbol = Array.from(el.classList).find(
+        (className) => className.includes("current-")
+      );
+      if (displaySymbol)
+        displaySymbol = displaySymbol.replace("current-", "");
+      return {
+        displaySymbol: displaySymbol || null,
+        // CloudResearch uses USD by default
+        sourceSymbol: "$"
+      };
+    }
+    getRewardElements() {
+      return Array.from(
+        document.querySelectorAll(
+          '[class*="project-pay-per-hour-"]'
+        )
+      );
+    }
+    getHourlyRateElements() {
+      return Array.from(
+        document.querySelectorAll(
+          '[class*="project-pay-per-hour-"]'
+        )
+      ).filter((node) => node.textContent.includes("per hour"));
+    }
+    setHourlyRate(element) {
+    }
+  };
+
+  // src/config.ts
+  var siteAdapters = {
+    prolific: new ProlificAdapter(),
+    cloudresearch: new CloudResearchAdapter()
+  };
+  function getSiteAdapter() {
+    const host = window.location.hostname;
+    for (const key of Object.keys(siteAdapters)) {
+      if (host.includes(key)) return siteAdapters[key];
+    }
+    throw new Error(`Extension injected on unsupported host: ${host}`);
+  }
+  var config_default = getSiteAdapter;
+
+  // src/features/enhancement.ts
+  var Enhancement = class {
+    siteAdapter;
+    constructor() {
+      this.siteAdapter = config_default();
+    }
+  };
+
+  // src/features/links.ts
+  var SurveyLinksEnhancement = class extends Enhancement {
+    constructor() {
+      super();
+    }
+    apply() {
+      const surveys = this.siteAdapter.getSurveyElements();
+      for (const survey of surveys) {
+        const surveyId = this.siteAdapter.getSurveyId(survey);
+        const studyContent = this.siteAdapter.getSurveyContainer(survey);
+        if (studyContent && !studyContent.querySelector(".pe-link")) {
+          const container = document.createElement("div");
+          const link = document.createElement("a");
+          container.className = "pe-btn-container";
+          container.appendChild(link);
+          link.className = "pe-link pe-custom-btn";
+          link.href = `https://app.prolific.com/studies/${surveyId}`;
+          link.textContent = "Take part in this study";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          studyContent.appendChild(container);
+        }
+      }
+    }
+    revert() {
+      const elements = document.querySelectorAll(".pe-btn-container");
+      for (const el of elements) {
+        if (!el) continue;
+        el.remove();
+      }
+    }
+  };
+  var surveyLinksEnhancement = new SurveyLinksEnhancement();
+
   // src/constants.ts
   var NOTIFY_TTL_MS = 24 * 60 * 60 * 1e3;
   var CONVERSION_RATES_FETCH_INTERVAL_MS = 7 * 24 * 60 * 60 * 1e3;
@@ -203,35 +369,34 @@
   async function saveSurveyFingerprints(fingerprints) {
     const now = Date.now();
     const { surveys: immutableSurveys } = await store_default.get(["surveys"]);
-    const oldSurveys = structuredClone(immutableSurveys);
-    for (const [key, timestamp] of Object.entries(oldSurveys)) {
+    const prevSurveys = structuredClone(immutableSurveys);
+    let changed = false;
+    for (const [key, timestamp] of Object.entries(prevSurveys)) {
       if (now - timestamp >= NOTIFY_TTL_MS) {
-        delete oldSurveys[key];
+        delete prevSurveys[key];
+        changed = true;
       }
     }
     const newSurveys = [];
     for (const fingerprint of fingerprints) {
-      if (!oldSurveys[fingerprint]) {
-        oldSurveys[fingerprint] = now;
+      if (!(fingerprint in prevSurveys)) {
         newSurveys.push(fingerprint);
       }
+      prevSurveys[fingerprint] = now;
+      changed = true;
     }
-    await store_default.set({ surveys: oldSurveys });
+    if (changed) await store_default.set({ surveys: prevSurveys });
     return newSurveys;
   }
-  var NewSurveyNotificationsEnhancement = class {
+  var NewSurveyNotificationsEnhancement = class extends Enhancement {
     async apply() {
-      const surveys = document.querySelectorAll(
-        'li[data-testid^="study-"]'
-      );
+      const surveys = this.siteAdapter.getSurveyElements();
       if (surveys.length === 0) return;
       const assets = await getSharedResources();
-      const surveyFingerprints = Array.from(surveys).map(
-        (survey) => survey.getAttribute("data-testid")?.replace("study-", "")
-      ).filter((id) => id !== void 0);
+      const surveyFingerprints = Array.from(surveys).map((survey) => this.siteAdapter.getSurveyId(survey)).filter((id) => id !== void 0);
       const newSurveys = await saveSurveyFingerprints(surveyFingerprints);
       for (const survey of surveys) {
-        const surveyId = survey.getAttribute("data-testid")?.replace("study-", "");
+        const surveyId = this.siteAdapter.getSurveyId(survey);
         if (!surveyId) continue;
         const isNewFingerprint = newSurveys.includes(surveyId);
         if (!isNewFingerprint || !document.hidden) continue;
@@ -311,7 +476,7 @@
     const g = Math.round(255 * bias);
     return `rgba(${r}, ${g}, 0, 0.63)`;
   }
-  function extractSymbol(text) {
+  function extractSymbol3(text) {
     const m = text.match(/[£$€]/);
     return m ? m[0] : null;
   }
@@ -321,9 +486,9 @@
       currency
     }).formatToParts(0).find((part) => part.type === "currency")?.value;
   }
-  var ConvertCurrencyEnhancement = class {
+  var ConvertCurrencyEnhancement = class extends Enhancement {
     async apply() {
-      const elements = document.querySelectorAll("span.reward span");
+      const elements = this.siteAdapter.getRewardElements();
       const { selectedCurrency, conversionRates } = await store_default.get([
         "selectedCurrency",
         "conversionRates"
@@ -338,41 +503,50 @@
             element.textContent || ""
           );
           sourceText = element.textContent || "";
+          const sourceSymbol2 = this.siteAdapter.getInitCurrencyInfo(element);
+          element.classList.add(`source-${sourceSymbol2}`);
         }
-        const currentSymbol = extractSymbol(element.textContent);
-        const sourceSymbol = extractSymbol(sourceText);
-        log(
-          `(${sourceText}): ${selectedCurrency} === ${sourceSymbol}: ${selectedCurrency === sourceSymbol}`
-        );
-        if (sourceSymbol === selectedSymbol && element.textContent !== sourceText) {
-          element.textContent = sourceText;
+        const { sourceSymbol, displaySymbol } = this.siteAdapter.getCurrencyInfo(element);
+        if (sourceSymbol === selectedSymbol) {
+          if (element.textContent !== sourceText) {
+            element.textContent = sourceText;
+          }
+          const previousClassName2 = Array.from(element.classList).find(
+            (className) => className.includes("current-")
+          );
+          if (previousClassName2) {
+            element.classList.remove(previousClassName2);
+          }
           continue;
         }
-        if (currentSymbol === selectedSymbol) continue;
-        const elementRate = extractHourlyRate(element.textContent);
+        if (displaySymbol === selectedSymbol) continue;
+        const previousClassName = Array.from(element.classList).find(
+          (className) => className.includes("current-")
+        );
+        if (previousClassName) element.classList.remove(previousClassName);
+        element.classList.add(`current-${selectedSymbol}`);
+        const elementRate = extractHourlyRate(sourceText);
         let modified = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
-        if (element.textContent.includes("/hr")) modified += "/hr";
+        if (sourceText.includes("/hr")) modified += "/hr";
         element.textContent = modified;
       }
     }
     revert() {
-      document.querySelectorAll("span[data-original-text]").forEach((el) => {
+      document.querySelectorAll("[data-original-text]").forEach((el) => {
         el.textContent = el.getAttribute("data-original-text") || "";
         el.removeAttribute("data-original-text");
       });
     }
   };
-  var HighlightRatesEnhancement = class {
+  var HighlightRatesEnhancement = class extends Enhancement {
     async apply() {
-      const elements = document.querySelectorAll(
-        "[data-testid='study-tag-reward-per-hour']"
-      );
+      const elements = this.siteAdapter.getHourlyRateElements();
       for (const element of elements) {
-        if (element.getAttribute("data-testid") === "study-tag-reward" || element.classList.contains("pe-rate-highlight")) {
+        if (element.classList.contains("pe-rate-highlight")) {
           continue;
         }
         const rate = extractHourlyRate(element.textContent);
-        const symbol = extractSymbol(element.textContent);
+        const symbol = extractSymbol3(element.textContent);
         if (isNaN(rate) || !symbol) return;
         const { conversionRates } = await store_default.get(["conversionRates"]);
         const min = symbol === "$" ? MIN_AMOUNT_PER_HOUR : MIN_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
@@ -436,7 +610,7 @@
       const { selectedCurrency } = settings;
       const toggleElement = createSettingElement(
         "Selected Currency",
-        `Currency: ${selectedCurrency}`,
+        `${selectedCurrency}`,
         "selectedCurrency",
         async () => {
           const { selectedCurrency: selectedCurrency2 } = await store_default.get([
@@ -514,7 +688,7 @@
           isDragging = false;
           container.style.cursor = "grab";
           const { left: left2, top: top2 } = container.getBoundingClientRect();
-          store_default.set({
+          store_default.update({
             ui: {
               initialized: true,
               position: { left: left2, top: top2 }
@@ -538,7 +712,7 @@
           const { selectedCurrency } = changed;
           const button = el.querySelector("button");
           if (!button) continue;
-          button.textContent = `Currency: ${selectedCurrency}`;
+          button.textContent = `${selectedCurrency}`;
         }
         if (setting.startsWith("enable")) {
           const value = changed[setting];
@@ -641,7 +815,7 @@
     const debounced = debounce(async () => {
       await runEnhancements();
     }, 300);
-    const observer = new MutationObserver(async (mutations) => {
+    const observer = new MutationObserver((mutations) => {
       const hasChanges = mutations.some(
         (m) => m.addedNodes.length > 0 || m.removedNodes.length > 0
       );
@@ -650,6 +824,14 @@
     });
     const config = { childList: true, subtree: true };
     observer.observe(document.body, config);
+    const siteAdapter = config_default();
+    if (siteAdapter.settings.enableInterval) {
+      const ms = getRandomTimeout();
+      setTimeout(() => {
+        if (!document.hidden) return;
+        location.reload();
+      }, ms);
+    }
     function createMenuCommandRefresher() {
       const commandIds = [];
       return async function refreshMenuCommands2() {
@@ -663,9 +845,7 @@
         const id = GM.registerMenuCommand(
           `${hidden ? "Show" : "Hide"} Settings UI`,
           async () => {
-            await store_default.set({
-              ui: { hidden: !hidden }
-            });
+            await store_default.update({ ui: { hidden: !hidden } });
           }
         );
         commandIds.push(id);
@@ -674,9 +854,9 @@
     const refreshMenuCommands = createMenuCommandRefresher();
     await refreshMenuCommands();
     const unsubscribe = store_default.subscribe(async (changed) => {
-      if (changed.ui) {
-        await refreshMenuCommands();
-      }
+      const keys = Object.keys(changed);
+      if (keys.length === 1 && keys[0] === "surveys") return;
+      if (changed.ui) await refreshMenuCommands();
       debounced();
       uiEnhancement.update(changed);
     });

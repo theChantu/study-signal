@@ -5,7 +5,8 @@
 // @description  A lightweight userscript that makes finding worthwhile Prolific studies faster and less annoying.
 // @author       Chantu
 // @license      MIT
-// @match        *://app.prolific.com/*
+// @include        *://app.prolific.com/*
+// @include        *://connect.cloudresearch.com/*
 // @grant        GM.notification
 // @grant        GM.getValue
 // @grant        GM.getValues

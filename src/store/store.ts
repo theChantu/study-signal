@@ -47,7 +47,21 @@ function createStore() {
             K[number]
         >;
     };
+
+    const notify = (values: Partial<StoreSchema>) => {
+        for (const listener of listeners) listener(values);
+    };
+
     const set = async (values: Partial<StoreSchema>) => {
+        const newValues = Object.fromEntries(
+            Object.entries(values).filter(([, v]) => v !== undefined),
+        ) as Partial<StoreSchema>;
+
+        await GM.setValues(newValues);
+        notify(newValues);
+    };
+
+    const update = async (values: Partial<StoreSchema>) => {
         const keys = Object.keys(values) as (keyof StoreSchema)[];
         const prevValues = await get(keys);
 
@@ -60,18 +74,19 @@ function createStore() {
                     typeof prev === "object" &&
                     prev !== null &&
                     typeof next === "object" &&
-                    next !== null
+                    next !== null &&
+                    !Array.isArray(prev) &&
+                    !Array.isArray(next)
                 ) {
                     return [k, { ...prev, ...next }];
                 }
 
                 return [k, next === undefined ? prev : next];
             }),
-        ) as Pick<StoreSchema, (typeof keys)[number]>;
+        ) as Partial<StoreSchema>;
 
         await GM.setValues(newValues);
-
-        for (const listener of listeners) listener(newValues);
+        notify(newValues);
     };
 
     const subscribe = (listener: StoreListener) => {
@@ -79,7 +94,7 @@ function createStore() {
         return () => listeners.delete(listener);
     };
 
-    return { get, set, subscribe };
+    return { get, set, update, subscribe };
 }
 
 const store = createStore();

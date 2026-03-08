@@ -1,53 +1,50 @@
 import store from "../store/store";
 import { getSharedResources } from "../utils";
 import { NOTIFY_TTL_MS } from "../constants";
-import type { Enhancement } from "../types";
+import Enhancement from "./enhancement";
 
 async function saveSurveyFingerprints(fingerprints: string[]) {
     const now = Date.now();
 
     const { surveys: immutableSurveys } = await store.get(["surveys"]);
-    const oldSurveys = structuredClone(immutableSurveys);
+    const prevSurveys = structuredClone(immutableSurveys);
 
-    // Remove old surveys that have exceeded the TTL
-    for (const [key, timestamp] of Object.entries(oldSurveys)) {
+    let changed = false;
+    // TTL removals
+    for (const [key, timestamp] of Object.entries(prevSurveys)) {
         if (now - timestamp >= NOTIFY_TTL_MS) {
-            delete oldSurveys[key];
+            delete prevSurveys[key];
+            changed = true;
         }
     }
 
     const newSurveys = [];
-    // Add new surveys to the store with the current timestamp
     for (const fingerprint of fingerprints) {
-        if (!oldSurveys[fingerprint]) {
-            oldSurveys[fingerprint] = now;
+        if (!(fingerprint in prevSurveys)) {
             newSurveys.push(fingerprint);
         }
+        prevSurveys[fingerprint] = now;
+        changed = true;
     }
 
-    await store.set({ surveys: oldSurveys });
+    if (changed) await store.set({ surveys: prevSurveys });
+
     return newSurveys;
 }
 
-class NewSurveyNotificationsEnhancement implements Enhancement {
+class NewSurveyNotificationsEnhancement extends Enhancement {
     async apply() {
-        const surveys = document.querySelectorAll<HTMLElement>(
-            'li[data-testid^="study-"]',
-        );
+        const surveys = this.siteAdapter.getSurveyElements();
         if (surveys.length === 0) return;
         const assets = await getSharedResources();
 
         const surveyFingerprints = Array.from(surveys)
-            .map((survey) =>
-                survey.getAttribute("data-testid")?.replace("study-", ""),
-            )
+            .map((survey) => this.siteAdapter.getSurveyId(survey))
             .filter((id): id is string => id !== undefined);
         const newSurveys = await saveSurveyFingerprints(surveyFingerprints);
 
         for (const survey of surveys) {
-            const surveyId = survey
-                .getAttribute("data-testid")
-                ?.replace("study-", "");
+            const surveyId = this.siteAdapter.getSurveyId(survey);
             if (!surveyId) continue;
             const isNewFingerprint = newSurveys.includes(surveyId);
             if (!isNewFingerprint || !document.hidden) continue;

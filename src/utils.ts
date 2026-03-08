@@ -25,6 +25,20 @@ store.subscribe((changed) => {
     }
 });
 
+function extractSymbol(text: string) {
+    const m = text.match(/[£$€]/);
+    return m ? m[0] : null;
+}
+
+function getRandomTimeout() {
+    // 5 - 7 minutes
+    const MAX_TIMEOUT = 7;
+    const MIN_TIMEOUT = 5;
+    return (
+        Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) + MIN_TIMEOUT
+    );
+}
+
 type GetResourceUrlParam = Parameters<typeof GM.getResourceUrl>[0];
 type ResourceMap<T extends readonly GetResourceUrlParam[]> = {
     [K in T[number]]?: Awaited<ReturnType<typeof GM.getResourceUrl>>;
@@ -105,4 +119,12 @@ async function runEnhancements() {
 
 const getSharedResources = fetchResources("prolific_logo");
 initDebug();
-export { log, fetchResources, getSharedResources, clamp, runEnhancements };
+export {
+    log,
+    fetchResources,
+    getSharedResources,
+    clamp,
+    runEnhancements,
+    extractSymbol,
+    getRandomTimeout,
+};

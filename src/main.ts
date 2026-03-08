@@ -1,6 +1,7 @@
 import store from "./store/store";
 import { uiEnhancement } from "./features";
-import { log, runEnhancements } from "./utils";
+import { log, runEnhancements, getRandomTimeout } from "./utils";
+import getSiteAdapter from "./config";
 
 (async function () {
     "use strict";
@@ -96,7 +97,7 @@ import { log, runEnhancements } from "./utils";
     }, 300);
 
     // Observe the DOM for changes and re-run the enhancements if necessary
-    const observer = new MutationObserver(async (mutations) => {
+    const observer = new MutationObserver((mutations) => {
         const hasChanges = mutations.some(
             (m) => m.addedNodes.length > 0 || m.removedNodes.length > 0,
         );
@@ -107,6 +108,16 @@ import { log, runEnhancements } from "./utils";
 
     const config = { childList: true, subtree: true };
     observer.observe(document.body, config);
+
+    // Automatically refresh page after timeout if applicable
+    const siteAdapter = getSiteAdapter();
+    if (siteAdapter.settings.enableInterval) {
+        const ms = getRandomTimeout();
+        setTimeout(() => {
+            if (!document.hidden) return;
+            location.reload();
+        }, ms);
+    }
 
     function createMenuCommandRefresher() {
         const commandIds: ReturnType<typeof GM.registerMenuCommand>[] = [];
@@ -124,9 +135,7 @@ import { log, runEnhancements } from "./utils";
             const id = GM.registerMenuCommand(
                 `${hidden ? "Show" : "Hide"} Settings UI`,
                 async () => {
-                    await store.set({
-                        ui: { hidden: !hidden },
-                    });
+                    await store.update({ ui: { hidden: !hidden } });
                 },
             );
             commandIds.push(id);
@@ -136,11 +145,12 @@ import { log, runEnhancements } from "./utils";
     // Initial menu command setup
     await refreshMenuCommands();
     const unsubscribe = store.subscribe(async (changed) => {
-        if (changed.ui) {
-            await refreshMenuCommands();
-        }
-        debounced();
+        // Ignore if only surveys changed
+        const keys = Object.keys(changed);
+        if (keys.length === 1 && keys[0] === "surveys") return;
 
+        if (changed.ui) await refreshMenuCommands();
+        debounced();
         uiEnhancement.update(changed);
     });
 })();
