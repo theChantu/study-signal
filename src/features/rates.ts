@@ -133,7 +133,7 @@ class ConvertCurrencyEnhancement extends Enhancement {
                 }
 
                 const previousClassName = Array.from(element.classList).find(
-                    (className) => className.includes("display-"),
+                    (className) => className.startsWith("display-"),
                 );
                 if (previousClassName) {
                     element.classList.remove(previousClassName);
@@ -148,7 +148,7 @@ class ConvertCurrencyEnhancement extends Enhancement {
 
             // Update className
             const previousClassName = Array.from(element.classList).find(
-                (className) => className.includes("display-"),
+                (className) => className.startsWith("display-"),
             );
             if (previousClassName) element.classList.remove(previousClassName);
             element.classList.add(`display-${selectedSymbol}`);
@@ -168,10 +168,10 @@ class ConvertCurrencyEnhancement extends Enhancement {
             el.removeAttribute("data-original-text");
 
             const displayClass = Array.from(el.classList).find((className) =>
-                className.includes("display-"),
+                className.startsWith("display-"),
             );
             const sourceClass = Array.from(el.classList).find((className) =>
-                className.includes("source-"),
+                className.startsWith("source-"),
             );
 
             if (displayClass) el.classList.remove(displayClass);
@@ -192,8 +192,7 @@ class HighlightRatesEnhancement extends Enhancement {
             const rate = extractHourlyRate(element.textContent);
             const { displaySymbol, sourceSymbol } =
                 this.siteAdapter.getCurrencyInfo(element);
-            log(displaySymbol, sourceSymbol);
-            if (isNaN(rate) || !displaySymbol) return;
+            if (isNaN(rate)) return;
 
             const { conversionRates } = await store.get(["conversionRates"]);
 

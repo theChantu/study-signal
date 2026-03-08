@@ -141,9 +141,11 @@ async function runEnhancements() {
         await updateRates();
     }
 
+    // Currency conversion must happen first
+    enableCurrencyConversion && (await convertCurrencyEnhancement.apply());
+    enableHighlightRates && (await highlightRatesEnhancement.apply());
+
     await Promise.all([
-        enableCurrencyConversion && convertCurrencyEnhancement.apply(),
-        enableHighlightRates && highlightRatesEnhancement.apply(),
         enableSurveyLinks && surveyLinksEnhancement.apply(),
         enableNewSurveyNotifications &&
             newSurveyNotificationsEnhancement.apply(),

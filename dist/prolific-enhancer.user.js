@@ -211,9 +211,9 @@
     if (enableCurrencyConversion) {
       await updateRates();
     }
+    enableCurrencyConversion && await convertCurrencyEnhancement.apply();
+    enableHighlightRates && await highlightRatesEnhancement.apply();
     await Promise.all([
-      enableCurrencyConversion && convertCurrencyEnhancement.apply(),
-      enableHighlightRates && highlightRatesEnhancement.apply(),
       enableSurveyLinks && surveyLinksEnhancement.apply(),
       enableNewSurveyNotifications && newSurveyNotificationsEnhancement.apply(),
       !hidden && uiEnhancement.apply()
@@ -249,12 +249,12 @@
     }
     getCurrencyInfo(el) {
       let displaySymbol = Array.from(el.classList).find(
-        (className) => className.includes("display-")
+        (className) => className.startsWith("display-")
       );
       if (displaySymbol)
         displaySymbol = displaySymbol.replace("display-", "");
       let sourceSymbol = Array.from(el.classList).find(
-        (className) => className.includes("source-")
+        (className) => className.startsWith("source-")
       );
       if (sourceSymbol) sourceSymbol = sourceSymbol.replace("source-", "");
       return {
@@ -312,7 +312,7 @@
     }
     getCurrencyInfo(el) {
       let displaySymbol = Array.from(el.classList).find(
-        (className) => className.includes("current-")
+        (className) => className.startsWith("current-")
       );
       if (displaySymbol)
         displaySymbol = displaySymbol.replace("current-", "");
@@ -559,7 +559,7 @@
             element.textContent = sourceText;
           }
           const previousClassName2 = Array.from(element.classList).find(
-            (className) => className.includes("display-")
+            (className) => className.startsWith("display-")
           );
           if (previousClassName2) {
             element.classList.remove(previousClassName2);
@@ -569,7 +569,7 @@
         }
         if (displaySymbol === selectedSymbol) continue;
         const previousClassName = Array.from(element.classList).find(
-          (className) => className.includes("display-")
+          (className) => className.startsWith("display-")
         );
         if (previousClassName) element.classList.remove(previousClassName);
         element.classList.add(`display-${selectedSymbol}`);
@@ -586,10 +586,10 @@
         el.textContent = el.getAttribute("data-original-text") || "";
         el.removeAttribute("data-original-text");
         const displayClass = Array.from(el.classList).find(
-          (className) => className.includes("display-")
+          (className) => className.startsWith("display-")
         );
         const sourceClass = Array.from(el.classList).find(
-          (className) => className.includes("source-")
+          (className) => className.startsWith("source-")
         );
         if (displayClass) el.classList.remove(displayClass);
         if (sourceClass) el.classList.remove(sourceClass);
@@ -605,8 +605,7 @@
         }
         const rate = extractHourlyRate(element.textContent);
         const { displaySymbol, sourceSymbol } = this.siteAdapter.getCurrencyInfo(element);
-        log(displaySymbol, sourceSymbol);
-        if (isNaN(rate) || !displaySymbol) return;
+        if (isNaN(rate)) return;
         const { conversionRates } = await store_default.get(["conversionRates"]);
         const min = displaySymbol === "$" ? MIN_AMOUNT_PER_HOUR : MIN_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;
         const max = displaySymbol === "$" ? MAX_AMOUNT_PER_HOUR : MAX_AMOUNT_PER_HOUR * conversionRates.USD.rates.GBP;

@@ -38,7 +38,7 @@ export class CloudResearchAdapter extends BaseAdapter {
 
     getCurrencyInfo(el: HTMLElement) {
         let displaySymbol = Array.from(el.classList).find((className) =>
-            className.includes("current-"),
+            className.startsWith("current-"),
         );
         if (displaySymbol)
             displaySymbol = displaySymbol.replace("current-", "");
