@@ -6,17 +6,27 @@ class SurveyLinksEnhancement extends Enhancement {
     }
 
     apply() {
-        const surveys = this.siteAdapter.getSurveyElements();
+        const surveys = this.adapter.getSurveyElements();
         for (const survey of surveys) {
-            const surveyId = this.siteAdapter.getSurveyId(survey);
-            const studyContent = this.siteAdapter.getSurveyContainer(survey);
+            const surveyId = this.adapter.getSurveyId(survey);
+            const studyContent = this.adapter.getSurveyContainer(survey);
+
+            if (!surveyId) continue;
+
+            const { path, suffix } = this.adapter.url;
+            const surveyLink = this.adapter.buildUrl([
+                path,
+                surveyId,
+                ...(suffix ? [suffix] : []),
+            ]);
+
             if (studyContent && !studyContent.querySelector(".pe-link")) {
                 const container = document.createElement("div");
                 const link = document.createElement("a");
                 container.className = "pe-btn-container";
                 container.appendChild(link);
                 link.className = "pe-link pe-custom-btn";
-                link.href = `https://app.prolific.com/studies/${surveyId}`;
+                link.href = surveyLink;
                 link.textContent = "Take part in this study";
                 link.target = "_blank";
                 link.rel = "noopener noreferrer";

@@ -13,5 +13,9 @@
     },
     "peerDependencies": {
         "typescript": "^5.9.3"
+    },
+    "dependencies": {
+        "tldts": "^7.0.25",
+        "ufo": "^1.6.3"
     }
 }

@@ -1,4 +1,4 @@
-import type { VMSettings } from "../types";
+import type { VMSettings } from "../lib/types";
 import { defaultVMSettings } from "./defaults";
 
 type StoreSchema = VMSettings & {};

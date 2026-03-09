@@ -1,7 +1,7 @@
 import store from "../store/store";
-import type { Enhancement } from "../types";
+import type { Enhancement } from "../lib/types";
 import type { StoreListener } from "../store/store";
-import { clamp } from "../utils";
+import { clamp } from "../lib/utils";
 import { defaultVMSettings } from "../store/defaults";
 
 function formatSettingString(setting: string) {

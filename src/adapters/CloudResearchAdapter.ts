@@ -1,15 +1,26 @@
-import { BaseAdapter } from "./Adapter";
-import { extractSymbol } from "../utils";
+import { BaseAdapter } from "./BaseAdapter";
 
-import type { AdapterSettings } from "./Adapter";
+import type { AdapterSettings } from "./BaseAdapter";
 
 const CLOUD_RESEARCH_SETTINGS: AdapterSettings = {
-    enableInterval: true,
+    enableAutoReload: true,
 };
 
 export class CloudResearchAdapter extends BaseAdapter {
     constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(CLOUD_RESEARCH_SETTINGS, overrides);
+        super(
+            {
+                host: "connect.cloudresearch.com",
+                path: "/participant/dashboard",
+                suffix: "details",
+                query: {
+                    page: 1,
+                    size: 100,
+                },
+            },
+            CLOUD_RESEARCH_SETTINGS,
+            overrides,
+        );
     }
 
     getSurveyElements() {

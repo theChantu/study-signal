@@ -1,5 +1,15 @@
+import { getDomainWithoutSuffix } from "tldts";
+import { joinURL } from "ufo";
+
+type UrlSettings = {
+    host: string;
+    path: string;
+    suffix?: string;
+    query?: Record<string, string | number | boolean>;
+};
+
 export type AdapterSettings = {
-    enableInterval: boolean;
+    enableAutoReload: boolean;
 };
 
 type CurrencyInfo = {
@@ -8,13 +18,26 @@ type CurrencyInfo = {
 };
 
 export abstract class BaseAdapter {
+    readonly url: Readonly<UrlSettings>;
+    readonly siteName: string;
     readonly settings: Readonly<AdapterSettings>;
 
     constructor(
+        url: UrlSettings,
         defaults: AdapterSettings,
         overrides: Partial<AdapterSettings> = {},
     ) {
+        this.url = url;
+        this.siteName = getDomainWithoutSuffix(url.host) ?? url.host;
         this.settings = { ...defaults, ...overrides };
+    }
+
+    get origin(): string {
+        return `https://${this.url.host}`;
+    }
+
+    buildUrl(segments: string[]) {
+        return joinURL(this.origin, ...segments);
     }
 
     abstract getSurveyElements(): NodeListOf<HTMLElement>;
@@ -25,17 +48,8 @@ export abstract class BaseAdapter {
     abstract getRewardElements(): HTMLElement[];
     abstract getRewardElement(el: HTMLElement): HTMLElement | null;
     abstract getHourlyRateElements(): HTMLElement[];
-    // abstract getHourlyRateElement(el: HTMLElement): HTMLElement | null;
     abstract setHourlyRate(el: HTMLElement): void;
 
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;
     abstract getCurrencyInfo(el: HTMLElement): CurrencyInfo;
-
-    // abstract setCurrencySymbol(): void;
-    // abstract setSourceCurrencySymbol(): void;
-
-    // abstract prepareNextScan?(): Promise<void>;
-    // TODO: Used to add to survey URL
-    // For instance, cloud research, show 100 surveys, "https://connect.cloudresearch.com/participant/dashboard" + "?page=1&size=100"
-    // abstract overrideUrl(url: string): string;
 }

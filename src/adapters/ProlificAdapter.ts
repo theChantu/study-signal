@@ -1,15 +1,22 @@
-import { BaseAdapter } from "./Adapter";
-import { extractSymbol } from "../utils";
+import { BaseAdapter } from "./BaseAdapter";
+import { extractSymbol } from "../lib/utils";
 
-import type { AdapterSettings } from "./Adapter";
+import type { AdapterSettings } from "./BaseAdapter";
 
 const PROLIFIC_SETTINGS: AdapterSettings = {
-    enableInterval: false,
+    enableAutoReload: false,
 };
 
 export class ProlificAdapter extends BaseAdapter {
     constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(PROLIFIC_SETTINGS, overrides);
+        super(
+            {
+                host: "app.prolific.com",
+                path: "/studies",
+            },
+            PROLIFIC_SETTINGS,
+            overrides,
+        );
     }
 
     getSurveyElements() {
@@ -60,7 +67,10 @@ export class ProlificAdapter extends BaseAdapter {
     }
 
     getRewardElement(el: HTMLElement) {
-        return (el.querySelector("span.reward") as HTMLElement) ?? null;
+        return (
+            (el.querySelector("span.reward")
+                ?.firstElementChild as HTMLElement) ?? null
+        );
     }
 
     getHourlyRateElements() {

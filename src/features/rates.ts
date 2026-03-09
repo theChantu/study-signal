@@ -6,9 +6,9 @@ import {
 } from "../constants.ts";
 import Enhancement from "./enhancement.ts";
 import { defaultVMSettings } from "../store/defaults.ts";
-import { log } from "../utils.ts";
+import { log } from "../lib/utils.ts";
 
-import type { VMSettings } from "../types.ts";
+import type { VMSettings } from "../lib/types.ts";
 
 type ConversionRates = VMSettings["conversionRates"];
 
@@ -96,7 +96,7 @@ function getSymbol(currency: string) {
 
 class ConvertCurrencyEnhancement extends Enhancement {
     async apply() {
-        const elements = this.siteAdapter.getRewardElements();
+        const elements = this.adapter.getRewardElements();
         const { selectedCurrency, conversionRates } = await store.get([
             "selectedCurrency",
             "conversionRates",
@@ -117,14 +117,13 @@ class ConvertCurrencyEnhancement extends Enhancement {
                     element.textContent || "",
                 );
                 sourceText = element.textContent || "";
-                const sourceSymbol =
-                    this.siteAdapter.getInitCurrencyInfo(element);
+                const sourceSymbol = this.adapter.getInitCurrencyInfo(element);
 
                 element.classList.add(`source-${sourceSymbol}`);
             }
 
             const { sourceSymbol, displaySymbol } =
-                this.siteAdapter.getCurrencyInfo(element);
+                this.adapter.getCurrencyInfo(element);
 
             if (sourceSymbol === selectedSymbol) {
                 // Selected symbol matches source, so revert element text
@@ -132,26 +131,14 @@ class ConvertCurrencyEnhancement extends Enhancement {
                     element.textContent = sourceText;
                 }
 
-                const previousClassName = Array.from(element.classList).find(
-                    (className) => className.startsWith("display-"),
-                );
-                if (previousClassName) {
-                    element.classList.remove(previousClassName);
-                }
-                element.classList.add(`display-${sourceSymbol}`);
-
+                this.updateDisplay(element, `display-${sourceSymbol}`);
                 continue;
             }
 
+            this.updateDisplay(element, `display-${selectedSymbol}`);
+
             // Continue if currency is already converted
             if (displaySymbol === selectedSymbol) continue;
-
-            // Update className
-            const previousClassName = Array.from(element.classList).find(
-                (className) => className.startsWith("display-"),
-            );
-            if (previousClassName) element.classList.remove(previousClassName);
-            element.classList.add(`display-${selectedSymbol}`);
 
             const elementRate = extractHourlyRate(sourceText);
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
@@ -162,6 +149,17 @@ class ConvertCurrencyEnhancement extends Enhancement {
             );
         }
     }
+
+    private updateDisplay(element: HTMLElement, display: string) {
+        const previousClassName = Array.from(element.classList).find(
+            (className) => className.startsWith("display-"),
+        );
+        if (previousClassName) {
+            element.classList.remove(previousClassName);
+        }
+        element.classList.add(display);
+    }
+
     revert() {
         document.querySelectorAll("[data-original-text]").forEach((el) => {
             el.textContent = el.getAttribute("data-original-text") || "";
@@ -182,7 +180,7 @@ class ConvertCurrencyEnhancement extends Enhancement {
 
 class HighlightRatesEnhancement extends Enhancement {
     async apply() {
-        const elements = this.siteAdapter.getHourlyRateElements();
+        const elements = this.adapter.getHourlyRateElements();
         for (const element of elements) {
             // Check if the element should be ignored
             if (element.classList.contains("pe-rate-highlight")) {
@@ -191,7 +189,7 @@ class HighlightRatesEnhancement extends Enhancement {
 
             const rate = extractHourlyRate(element.textContent);
             const { displaySymbol, sourceSymbol } =
-                this.siteAdapter.getCurrencyInfo(element);
+                this.adapter.getCurrencyInfo(element);
             if (isNaN(rate)) return;
 
             const { conversionRates } = await store.get(["conversionRates"]);

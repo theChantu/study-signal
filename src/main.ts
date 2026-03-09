@@ -5,8 +5,8 @@ import {
     runEnhancements,
     getRandomTimeoutMs,
     scheduleTimeout,
-} from "./utils";
-import getSiteAdapter from "./config";
+} from "./lib/utils";
+import getSiteAdapter from "./lib/getSiteAdapter";
 
 (async function () {
     "use strict";
@@ -125,9 +125,9 @@ import getSiteAdapter from "./config";
         location.reload();
     }, ms);
 
+    const adapter = getSiteAdapter();
     // Automatically refresh page after timeout if applicable
-    const { siteName, adapter } = getSiteAdapter();
-    if (adapter.settings.enableInterval) {
+    if (adapter.settings.enableAutoReload) {
         log("Page refresh scheduled.");
         pageReloadTimeout.start();
     }

@@ -1,4 +1,4 @@
-import type { VMSettings } from "../types";
+import type { VMSettings } from "../lib/types";
 
 // TODO: Have a fallback rate of 1 for each conversion rate
 // Instead of storing USD: 1, GBP: 1 and etc, initialize automatically with fetchedRate || 1, if fetch fails
