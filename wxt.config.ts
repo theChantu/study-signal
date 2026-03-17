@@ -13,5 +13,14 @@ export default defineConfig({
     manifest: {
         host_permissions: hostPermissions,
         permissions: ["storage", "notifications", "tabs"],
+
+        browser_specific_settings: {
+            gecko: {
+                id: "@chantu-survey-enhancer",
+                ["data_collection_permissions" as any]: {
+                    required: ["none"],
+                },
+            },
+        },
     },
 });
