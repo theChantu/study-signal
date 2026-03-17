@@ -4,7 +4,9 @@ import { getRandomTimeoutMs, scheduleTimeout } from "../lib/utils";
 import runEnhancements from "../lib/runEnhancements";
 import getSiteAdapter from "../lib/getSiteAdapter";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
+import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { SettingsUpdate } from "@/store/createStore";
+import { defaultSettings, defaultSettingsKeys } from "@/store/defaultSettings";
 
 import type { ContentScriptContext } from "#imports";
 
@@ -59,7 +61,19 @@ async function runContentScript(ctx: ContentScriptContext) {
     // Apply the enhancements initially
     await safelyRunEnhancements();
 
-    const ms = getRandomTimeoutMs();
+    const adapter = getSiteAdapter();
+
+    let siteSettings = (await sendExtensionMessage({
+        type: "store-fetch",
+        data: {
+            url: `https://${adapter.url.host}`,
+            settings: defaultSettingsKeys,
+        },
+    })) ?? { data: defaultSettings };
+
+    const { minReloadInterval, maxReloadInterval } = siteSettings?.data;
+
+    const ms = getRandomTimeoutMs(minReloadInterval, maxReloadInterval);
     const pageReloadTimeout = scheduleTimeout(() => {
         if (!document.hidden) {
             pageReloadTimeout.reset();
@@ -70,14 +84,46 @@ async function runContentScript(ctx: ContentScriptContext) {
         location.reload();
     }, ms);
 
-    const adapter = getSiteAdapter();
-    // Automatically refresh page after timeout if applicable
-    if (adapter.settings.enableAutoReload) {
-        log("Page refresh scheduled.");
-        pageReloadTimeout.start();
+    function handleAutoReloadSettingChange(enabled: boolean) {
+        if (enabled) {
+            log("Page refresh scheduled.");
+            pageReloadTimeout.start();
+        } else {
+            log("Page refresh canceled.");
+            pageReloadTimeout.clear();
+        }
+    }
+
+    if (siteSettings.data.enableAutoReload) {
+        handleAutoReloadSettingChange(siteSettings.data.enableAutoReload);
     }
 
     onExtensionMessage("store-changed", (payload) => {
+        if (siteSettings) {
+            siteSettings.data = { ...siteSettings.data, ...payload };
+        }
+
+        const { enableAutoReload } = payload;
+        if (enableAutoReload !== undefined) {
+            handleAutoReloadSettingChange(enableAutoReload);
+        }
+
+        const { minReloadInterval, maxReloadInterval } = payload;
+        if (
+            minReloadInterval !== undefined ||
+            maxReloadInterval !== undefined
+        ) {
+            const ms = getRandomTimeoutMs(
+                siteSettings.data.minReloadInterval,
+                siteSettings.data.maxReloadInterval,
+            );
+            log(
+                "Page refresh interval updated. New interval (ms):",
+                ms / (60 * 1000),
+            );
+            pageReloadTimeout.setDelay(ms);
+        }
+
         // Ignore if only surveys changed
         const keys = Object.keys(payload);
         if (keys.length === 1 && keys[0] === "surveys") return;

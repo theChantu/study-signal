@@ -33,10 +33,17 @@ interface NewSurveyNotificationsSettings {
     enableNewSurveyNotifications: boolean;
 }
 
+interface ReloadSettings {
+    minReloadInterval: number;
+    maxReloadInterval: number;
+    enableAutoReload: boolean;
+}
+
 type SiteSettings = CurrencyConversionSettings &
     HighlightRatesSettings &
     SurveyLinksSettings &
-    NewSurveyNotificationsSettings;
+    NewSurveyNotificationsSettings &
+    ReloadSettings;
 
 interface GlobalSettings {
     enableDebug: boolean;

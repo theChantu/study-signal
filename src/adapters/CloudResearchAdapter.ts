@@ -1,12 +1,7 @@
 import { BaseAdapter } from "./BaseAdapter";
 import { sites } from "./sites";
 
-import type { AdapterSettings } from "./BaseAdapter";
 import type CurrencyConversion from "./modules/CurrencyConversion";
-
-const CLOUD_RESEARCH_SETTINGS: AdapterSettings = {
-    enableAutoReload: true,
-};
 
 const HOST = "connect.cloudresearch.com";
 const CLOUD_RESEARCH_URL = {
@@ -23,8 +18,8 @@ export class CloudResearchAdapter
     extends BaseAdapter<typeof HOST>
     implements CurrencyConversion
 {
-    constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(CLOUD_RESEARCH_URL, CLOUD_RESEARCH_SETTINGS, overrides);
+    constructor() {
+        super(CLOUD_RESEARCH_URL);
     }
 
     override modules = sites[HOST].modules;

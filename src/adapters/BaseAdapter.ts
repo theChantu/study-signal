@@ -16,9 +16,6 @@ export type UrlSettings<H extends SupportedSites = SupportedSites> =
 // enableHighlightRates: boolean;
 // enableSurveyLinks: boolean;
 // enableNewSurveyNotifications: boolean;
-export type AdapterSettings = {
-    enableAutoReload: boolean;
-};
 
 type CurrencyInfo = {
     displaySymbol: string | null;
@@ -27,16 +24,10 @@ type CurrencyInfo = {
 
 export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     readonly url: Readonly<UrlSettings<H>>;
-    readonly settings: Readonly<AdapterSettings>;
     abstract readonly modules: readonly ModuleName[];
 
-    constructor(
-        url: UrlSettings<H>,
-        defaults: AdapterSettings,
-        overrides: Partial<AdapterSettings> = {},
-    ) {
+    constructor(url: UrlSettings<H>) {
         this.url = url;
-        this.settings = { ...defaults, ...overrides };
     }
 
     private _moduleSet?: ReadonlySet<ModuleName>;

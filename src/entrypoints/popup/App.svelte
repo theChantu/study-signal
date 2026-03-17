@@ -12,6 +12,7 @@
         Bell,
         Bug,
         LoaderCircle,
+        RefreshCw,
     } from "@lucide/svelte";
     import { capitalize } from "@/lib/utils";
 
@@ -266,6 +267,54 @@
 
         <div class="card section">
             <h2>
+                <RefreshCw size={14} strokeWidth={2.5} />
+                Auto Reload
+            </h2>
+            <Toggle
+                title="Auto reload"
+                description="Periodically refresh the page in the background to check for new studies."
+                value={currentSite?.enableAutoReload}
+                onClick={() =>
+                    updateSetting({
+                        enableAutoReload: !currentSite?.enableAutoReload,
+                    })}
+            />
+            {#if currentSite?.enableAutoReload}
+                <div class="field">
+                    <label for="min-interval">Min interval (minutes)</label>
+                    <input
+                        id="min-interval"
+                        type="number"
+                        min="1"
+                        value={currentSite?.minReloadInterval}
+                        on:change={(e) =>
+                            updateSetting({
+                                minReloadInterval: Number(
+                                    e.currentTarget.value,
+                                ),
+                            })}
+                    />
+                </div>
+                <div class="field">
+                    <label for="max-interval">Max interval (minutes)</label>
+                    <input
+                        id="max-interval"
+                        type="number"
+                        min="1"
+                        value={currentSite?.maxReloadInterval}
+                        on:change={(e) =>
+                            updateSetting({
+                                maxReloadInterval: Number(
+                                    e.currentTarget.value,
+                                ),
+                            })}
+                    />
+                </div>
+            {/if}
+        </div>
+
+        <div class="card section">
+            <h2>
                 <Bug size={14} strokeWidth={2.5} />
                 Developer
             </h2>
@@ -420,6 +469,23 @@
     }
 
     .select-wrap select:focus {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    input[type="number"] {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: #d1d5db;
+        font-size: 0.82rem;
+        font-family: inherit;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    input[type="number"]:focus {
         border-color: rgba(255, 255, 255, 0.2);
     }
 

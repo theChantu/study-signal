@@ -17,6 +17,9 @@ const defaultSiteSettings = Object.freeze({
     cachedResearchers: {},
     excludedResearchers: [],
     includedResearchers: [],
+    minReloadInterval: 5,
+    maxReloadInterval: 7,
+    enableAutoReload: false,
 }) satisfies SiteSettings;
 
 export { defaultSiteSettings };

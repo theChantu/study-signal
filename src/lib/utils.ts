@@ -7,16 +7,8 @@ function extractSymbol(text: string) {
     return m ? m[0] : null;
 }
 
-function getRandomTimeoutMs() {
-    // 3 - 5 minutes
-    const MAX_TIMEOUT = 5;
-    const MIN_TIMEOUT = 3;
-    return (
-        (Math.floor(Math.random() * (MAX_TIMEOUT - MIN_TIMEOUT)) +
-            MIN_TIMEOUT) *
-        60 *
-        1000
-    );
+function getRandomTimeoutMs(min: number, max: number): number {
+    return (Math.floor(Math.random() * (max - min + 1)) + min) * 60 * 1000;
 }
 
 function scheduleTimeout(fn: () => void, delay = 300) {
@@ -41,6 +33,13 @@ function scheduleTimeout(fn: () => void, delay = 300) {
             if (timeout) {
                 clearTimeout(timeout);
                 timeout = null;
+            }
+        },
+        setDelay(newDelay: number) {
+            delay = newDelay;
+            if (timeout) {
+                clearTimeout(timeout);
+                run();
             }
         },
     };

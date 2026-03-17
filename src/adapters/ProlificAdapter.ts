@@ -2,12 +2,6 @@ import { BaseAdapter } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
 import { sites } from "./sites";
 
-import type { AdapterSettings } from "./BaseAdapter";
-
-const PROLIFIC_SETTINGS: AdapterSettings = {
-    enableAutoReload: false,
-};
-
 const HOST = "app.prolific.com";
 const PROLIFIC_URL = {
     ...sites[HOST],
@@ -15,8 +9,8 @@ const PROLIFIC_URL = {
 } as const;
 
 export class ProlificAdapter extends BaseAdapter<typeof HOST> {
-    constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(PROLIFIC_URL, PROLIFIC_SETTINGS, overrides);
+    constructor() {
+        super(PROLIFIC_URL);
     }
 
     override modules = sites[HOST].modules;
