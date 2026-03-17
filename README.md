@@ -1,89 +1,69 @@
 # Survey Enhancer
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/github/package-json/v/theChantu/prolific-enhancer?color=gre)
+![Version](https://img.shields.io/github/package-json/v/theChantu/survey-enhancer?color=gre)
 
-A JavaScript userscript that augments the Prolific user experience.
+A browser extension that enhances the survey experience on [Prolific](https://app.prolific.com/) and [CloudResearch](https://connect.cloudresearch.com/).
 
 ## Features
 
-- **Color Code:** Applies logarithmic color scaling to hourly rates to highlight high vs low paying studies.
-- **Currency Conversion:** Supports conversion to either USD or GBP.
-- **Direct Survey Links:** Adds "Take part" buttons directly to each survey.
-- **Notifications:** Background alerts for new studies.
-- **Settings:** Toggle any feature directly from the Userscript menu.
+- **Highlight Rates:** Applies color scaling to hourly rates to highlight high vs low paying studies.
+- **Currency Conversion:** Converts rewards into USD or GBP.
+- **Direct Survey Links:** Adds direct links to each survey.
+- **Notifications:** Desktop alerts when new studies appear, with researcher include/exclude filters.
+- **Per-Site Settings:** Configure each supported site independently from the popup.
 
-## Screenshots
+## Supported Sites
 
-![Features](assets/prolific-color-coding-direct-links.png "Color coding and direct survey links on the studies page")
-
-## Technologies
-
-- JavaScript (ES6+)
-- Violentmonkey / Tampermonkey API
+- [Prolific](https://app.prolific.com/studies)
+- [CloudResearch](https://connect.cloudresearch.com/participant/dashboard)
 
 ## Installation
 
-1. **Install a Userscript Manager**
-   You need a browser extension to run this script. I recommend:
-    - [Tampermonkey](https://www.tampermonkey.net/) (Chrome, Edge, Firefox, Safari)
-    - [Violentmonkey](https://violentmonkey.github.io/) (Chrome, Edge, Firefox)
+### Chrome / Chromium
 
-2. **Install the Script**
-    - Install directly from [here](https://github.com/theChantu/prolific-enhancer/raw/main/dist/prolific-enhancer.user.js).
-    - Or, navigate to the `dist/prolific-enhancer.user.js` file in this repository and click **Raw**.
-    - Your Userscript Manager should automatically detect the script and prompt you to install.
-    - Click **Confirm** or **Install**.
-    - If you cloned this repo, open `dist/prolific-enhancer.user.js` in your browser instead.
+1. Download the latest release `.zip` for Chrome.
+2. Unzip the file.
+3. Go to `chrome://extensions` and enable **Developer mode**.
+4. Click **Load unpacked** and select the unzipped folder.
+
+### Firefox
+
+1. Download the latest release `.zip` for Firefox.
+2. Unzip the file.
+3. Go to `about:debugging#/runtime/this-firefox`.
+4. Click **Load Temporary Add-on** and select any file in the unzipped folder.
 
 ## Usage
 
-1. **Dashboard:** Log in to [Prolific](https://app.prolific.com/) and open the "Studies" tab.
-2. **Settings:** To toggle features (e.g., turn off Currency Conversion):
-    - Click your Userscript Manager icon (Violentmonkey/Tampermonkey) in the browser toolbar.
-    - Look under "Prolific Enhancer" to see the "Enable/Disable" commands.
-    - Click a command to toggle it. The page updates instantly.
-3. **Notifications:** Keep the Prolific tab open (it can be in the background) to receive alerts.
+1. Navigate to a supported site.
+2. Click the Survey Enhancer icon in the toolbar to open the popup.
+3. Toggle features and adjust settings per site.
+4. The popup auto-detects which site you're on.
 
 ## Development
 
 ### Prerequisites
 
-- Node.js v18+ or Bun v1.2+
-- npm or Bun package manager
+- [Bun](https://bun.sh/) v1.2+
 
-### Installation
+### Setup
 
-Clone the repository
-
-```
-git clone https://github.com/theChantu/prolific-enhancer.git
-```
-
-Navigate to the directory
-
-```
-cd prolific-enhancer/
+```bash
+git clone https://github.com/theChantu/survey-enhancer.git
+cd survey-enhancer
+bun install
 ```
 
-Install the dependencies
+### Commands
 
-```
-npm install
-```
-
-### Development
-
-Build
-
-```
-npm run build
-```
-
-Build and watch for changes
-
-```
-npm run watch
+```bash
+bun run dev              # Dev mode (Chrome)
+bun run dev:firefox      # Dev mode (Firefox)
+bun run build            # Production build (Chrome)
+bun run build:firefox    # Production build (Firefox)
+bun run zip              # Package for distribution (Chrome)
+bun run zip:firefox      # Package for distribution (Firefox)
 ```
 
 ## License
