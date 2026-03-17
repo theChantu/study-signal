@@ -50,8 +50,13 @@ function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
 
+function cleanResearcherName(name: string): string {
+    return name.trim().toLowerCase();
+}
+
 export {
     clamp,
+    cleanResearcherName,
     extractSymbol,
     getRandomTimeoutMs,
     scheduleTimeout,

@@ -60,7 +60,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
             const keyChanged = config.enableKey in changed;
             const keyEnabled = changed[config.enableKey];
             if (keyEnabled === undefined) {
-                const settings = await store.get(adapter.siteName, [
+                const settings = await store.get(adapter.url.name, [
                     config.enableKey,
                 ]);
                 if (!settings[config.enableKey]) continue;
@@ -80,7 +80,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
     }
 
     // Initial run
-    const settings = await store.get(adapter.siteName, [...ENABLE_KEYS]);
+    const settings = await store.get(adapter.url.name, [...ENABLE_KEYS]);
 
     for (const config of SORTED) {
         if (!adapter.hasModule(config.module) || !settings[config.enableKey])

@@ -4,7 +4,7 @@ import BaseEnhancement from "./BaseEnhancement";
 import { defaultSiteSettings } from "../store/defaultSiteSettings";
 import extractHourlyRate from "@/lib/extractHourlyRate";
 
-import type { SiteSettings } from "../lib/types";
+import type { SiteSettings } from "../store/types";
 
 type ConversionRates = SiteSettings["conversionRates"];
 
@@ -55,7 +55,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
 
         const elements = this.adapter.getRewardElements();
         const { selectedCurrency, conversionRates } = await store.get(
-            this.adapter.siteName,
+            this.adapter.url.name,
             ["selectedCurrency", "conversionRates"],
         );
 
@@ -110,7 +110,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
     }
 
     private async updateRates() {
-        const { conversionRates } = await store.get(this.adapter.siteName, [
+        const { conversionRates } = await store.get(this.adapter.url.name, [
             "conversionRates",
         ]);
 
@@ -124,7 +124,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         const newConversionRates = await fetchRates();
         newConversionRates.timestamp = now;
 
-        await store.set(this.adapter.siteName, {
+        await store.set(this.adapter.url.name, {
             conversionRates: newConversionRates,
         });
     }

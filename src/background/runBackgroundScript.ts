@@ -2,7 +2,7 @@ import { browser } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
 import { createStore } from "@/store/createStore";
-import { adapterHosts } from "@/adapters/hosts";
+import { supportedSites } from "@/adapters/sites";
 import getSiteAdapter from "@/lib/getSiteAdapter";
 
 function runBackgroundScript() {
@@ -45,8 +45,8 @@ function runBackgroundScript() {
         const adapter = getSiteAdapter(url);
         if (!adapter) return null;
 
-        const data = await store.get(adapter.siteName, settings);
-        return { siteName: adapter.siteName, data };
+        const data = await store.get(adapter.url.name, settings);
+        return { siteName: adapter.url.name, data };
     });
 
     store.subscribe("globals", async (changed) => {
@@ -54,7 +54,8 @@ function runBackgroundScript() {
 
         for (const tab of tabs) {
             if (!tab.id || !tab.url) continue;
-            if (!adapterHosts.some((host) => tab.url!.includes(host))) continue;
+            if (!supportedSites.some((site) => tab.url!.includes(site)))
+                continue;
 
             await sendTabMessage(tab.id, {
                 type: "store-changed",

@@ -2,7 +2,7 @@ import { defaultSiteSettings } from "./defaultSiteSettings";
 import { defaultGlobalSettings } from "./defaultGlobalSettings";
 import { storage } from "#imports";
 
-import type { SiteSettings, GlobalSettings } from "../lib/types";
+import type { SiteSettings, GlobalSettings } from "./types";
 
 export type Settings = SiteSettings & GlobalSettings;
 export type SettingsUpdate = Partial<Settings>;
@@ -39,6 +39,8 @@ type DeepNonNullable<T> = T extends (...args: any[]) => any
 
 function deepMerge(target: any, source: any): any {
     if (source === undefined) return target;
+
+    if (Array.isArray(source) || Array.isArray(target)) return source;
 
     if (
         typeof target === "object" &&
@@ -177,7 +179,6 @@ export function createStore() {
         );
     }
 
-    // update(siteName, values) — deep merge site settings
     const update = async (siteName: SiteName, values: SiteSettingsUpdate) => {
         const keys = Object.keys(values) as (keyof SiteSettings)[];
         const current = await get(siteName, keys);
@@ -203,5 +204,34 @@ export function createStore() {
         return () => siteListeners.delete(listener as SiteListener);
     }
 
-    return { get, set, update, subscribe };
+    type ArrayKeys = {
+        [K in keyof SiteSettings]: SiteSettings[K] extends any[] ? K : never;
+    }[keyof SiteSettings];
+
+    async function push<K extends ArrayKeys>(
+        siteName: SiteName,
+        key: K,
+        ...items: SiteSettings[K] extends (infer U)[] ? U[] : never
+    ) {
+        const current = await get(siteName, [key]);
+        const arr = current[key] as unknown[];
+        const unique = items.filter((item) => !arr.includes(item));
+        if (unique.length === 0) return;
+        await set(siteName, { [key]: [...arr, ...unique] } as SiteSettingsUpdate);
+    }
+
+    async function remove<K extends ArrayKeys>(
+        siteName: SiteName,
+        key: K,
+        ...items: SiteSettings[K] extends (infer U)[] ? U[] : never
+    ) {
+        const current = await get(siteName, [key]);
+        const arr = current[key] as unknown[];
+        const removeSet = new Set(items);
+        const filtered = arr.filter((item) => !removeSet.has(item));
+        if (filtered.length === arr.length) return;
+        await set(siteName, { [key]: filtered } as SiteSettingsUpdate);
+    }
+
+    return { get, set, update, push, remove, subscribe };
 }

@@ -2,6 +2,7 @@
     import { defaultSettings } from "@/store/defaultSettings";
     import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
     import Toggle from "@/components/Toggle.svelte";
+    import ResearcherList from "@/components/ResearcherList.svelte";
     import {
         Settings as SettingsIcon,
         CircleDollarSign,
@@ -13,6 +14,10 @@
     } from "@lucide/svelte";
 
     import type { Settings, SettingsUpdate } from "@/store/createStore";
+    import type {
+        SiteSettings,
+        NewSurveyNotificationsSettings,
+    } from "@/store/types";
 
     let invalidUrl = false;
     let siteName = "";
@@ -25,6 +30,34 @@
             type: "store-update",
             data: { siteName, ...values },
         });
+    }
+
+    type ResearcherKey = Exclude<
+        keyof NewSurveyNotificationsSettings,
+        "enableNewSurveyNotifications" | "cachedResearchers"
+    >;
+
+    function addResearcher(key: ResearcherKey, name: string) {
+        if (!settings || settings[key].includes(name)) return;
+        updateSetting({ [key]: [...settings[key], name] });
+    }
+
+    function removeResearcher(key: ResearcherKey, name: string) {
+        if (!settings) return;
+        updateSetting({ [key]: settings[key].filter((n) => n !== name) });
+    }
+
+    function resetKey(key: keyof SiteSettings) {
+        updateSetting({ [key]: defaultSettings[key] });
+    }
+
+    // Exclude enableDebug because there's already a dedicated toggle for it
+    const siteSettingKeys = Object.keys(defaultSettings).filter(
+        (k) => k in defaultSettings && k !== "enableDebug",
+    ) as (keyof SiteSettings)[];
+
+    function formatKey(key: string) {
+        return key.replace(/([A-Z])/g, " $1").toLowerCase();
     }
 
     onMount(() => {
@@ -64,6 +97,7 @@
     });
 </script>
 
+<!-- TODO: Return the list of supported sites via getSupportedSites and make use of hosts.ts inside getSiteAdapter by feeding in those URLs. Define type supportedSites as the union of all supported site domains using hosts.ts -->
 {#if invalidUrl}
     <div class="popup">
         <div class="card error-card">
@@ -166,6 +200,24 @@
                             !settings?.enableNewSurveyNotifications,
                     })}
             />
+            {#if settings.enableNewSurveyNotifications}
+                <ResearcherList
+                    title="Included researchers"
+                    names={settings.includedResearchers}
+                    suggestions={Object.keys(settings.cachedResearchers)}
+                    onAdd={(name) => addResearcher("includedResearchers", name)}
+                    onRemove={(name) =>
+                        removeResearcher("includedResearchers", name)}
+                />
+                <ResearcherList
+                    title="Excluded researchers"
+                    names={settings.excludedResearchers}
+                    suggestions={Object.keys(settings.cachedResearchers)}
+                    onAdd={(name) => addResearcher("excludedResearchers", name)}
+                    onRemove={(name) =>
+                        removeResearcher("excludedResearchers", name)}
+                />
+            {/if}
         </div>
 
         <div class="card section">
@@ -182,6 +234,22 @@
                         enableDebug: !settings?.enableDebug,
                     })}
             />
+
+            {#if settings.enableDebug}
+                <div class="debug-resets">
+                    <span class="list-label">Reset to default</span>
+                    <div class="debug-buttons">
+                        {#each siteSettingKeys as key}
+                            <button
+                                class="debug-btn"
+                                on:click={() => resetKey(key)}
+                            >
+                                {formatKey(key)}
+                            </button>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
         </div>
     </div>
 {/if}
@@ -326,5 +394,43 @@
         font-size: 0.76rem;
         line-height: 1.4;
         color: #6b7280;
+    }
+
+    .debug-resets {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .debug-resets .list-label {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: #6b7280;
+    }
+
+    .debug-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .debug-btn {
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: #d1d5db;
+        font-size: 0.72rem;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    .debug-btn:hover {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
     }
 </style>

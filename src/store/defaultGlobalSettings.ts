@@ -1,4 +1,4 @@
-import type { GlobalSettings } from "../lib/types";
+import type { GlobalSettings } from "./types";
 
 const defaultGlobalSettings = Object.freeze({
     enableDebug: false,

@@ -1,15 +1,14 @@
-import { getDomainWithoutSuffix } from "tldts";
 import { joinURL } from "ufo";
 
 import type { ModuleName } from "./modules/BaseModule";
+import type { SupportedSites, sites } from "./sites";
 
-type UrlSettings = {
-    host: string;
-    path: string;
-    iconPath: string;
-    suffix?: string;
-    query?: Record<string, string | number | boolean>;
-};
+export type UrlSettings<H extends SupportedSites = SupportedSites> =
+    (typeof sites)[H] & {
+        host: H;
+        suffix?: string;
+        query?: Record<string, string | number | boolean>;
+    };
 
 // TODO: Allow AdapterSettings to inherit these settings based on whatever Module is extended
 // e.g., CurrencyConversion would pass enableCurrencyConversion
@@ -26,19 +25,17 @@ type CurrencyInfo = {
     sourceSymbol: string | null;
 };
 
-export abstract class BaseAdapter {
-    readonly url: Readonly<UrlSettings>;
-    readonly siteName: string;
+export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
+    readonly url: Readonly<UrlSettings<H>>;
     readonly settings: Readonly<AdapterSettings>;
     abstract readonly modules: readonly ModuleName[];
 
     constructor(
-        url: UrlSettings,
+        url: UrlSettings<H>,
         defaults: AdapterSettings,
         overrides: Partial<AdapterSettings> = {},
     ) {
         this.url = url;
-        this.siteName = getDomainWithoutSuffix(url.host) ?? url.host;
         this.settings = { ...defaults, ...overrides };
     }
 
@@ -65,6 +62,7 @@ export abstract class BaseAdapter {
     abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyContainer(el: HTMLElement): HTMLElement | null;
     abstract getSurveyTitle(el: HTMLElement): HTMLElement | null;
+    abstract getSurveyResearcher(el: HTMLElement): string | null;
 
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;
     abstract getCurrencyInfo(el: HTMLElement): CurrencyInfo;

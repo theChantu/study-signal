@@ -1,7 +1,9 @@
 import { defineConfig } from "wxt";
-import { adapterHosts } from "./src/adapters/hosts";
+import { supportedSites } from "./src/adapters/sites";
 
-const hostPermissions = adapterHosts.map((host) => `https://${host}/*`);
+const hostPermissions = supportedSites.map(
+    (site) => `https://${site}/*` as const,
+);
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({

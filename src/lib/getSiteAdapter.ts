@@ -1,8 +1,20 @@
-import { ProlificAdapter, CloudResearchAdapter } from "../adapters";
+import { ProlificAdapter } from "@/adapters/ProlificAdapter";
+import { CloudResearchAdapter } from "@/adapters/CloudResearchAdapter";
+import { BaseAdapter } from "@/adapters/BaseAdapter";
+import type { SupportedSites } from "@/adapters/sites";
 
-const siteAdapters = [new ProlificAdapter(), new CloudResearchAdapter()];
+const siteToAdapter = {
+    "app.prolific.com": ProlificAdapter,
+    "connect.cloudresearch.com": CloudResearchAdapter,
+} as const satisfies Record<SupportedSites, new () => BaseAdapter>;
 
-type SiteAdapter = ProlificAdapter | CloudResearchAdapter;
+type SiteAdapter = InstanceType<
+    (typeof siteToAdapter)[keyof typeof siteToAdapter]
+>;
+
+const siteAdapters = Object.values(siteToAdapter).map(
+    (AdapterClass) => new AdapterClass(),
+) as SiteAdapter[];
 
 function matchesHost(host: string, allowedHost: string): boolean {
     return host === allowedHost || host.endsWith(`.${allowedHost}`);

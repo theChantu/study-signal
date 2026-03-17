@@ -33,7 +33,7 @@ class HighlightRatesEnhancement extends BaseEnhancement {
                 this.adapter.getCurrencyInfo(element);
             if (isNaN(rate)) return;
 
-            const { conversionRates } = await store.get(this.adapter.siteName, [
+            const { conversionRates } = await store.get(this.adapter.url.name, [
                 "conversionRates",
             ]);
 

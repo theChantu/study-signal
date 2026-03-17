@@ -13,9 +13,9 @@ class SurveyLinksEnhancement extends BaseEnhancement {
 
             if (!surveyId) continue;
 
-            const { path, suffix } = this.adapter.url;
+            const { surveyPath, suffix } = this.adapter.url;
             const surveyLink = this.adapter.buildUrl([
-                path,
+                surveyPath,
                 surveyId,
                 ...(suffix ? [suffix] : []),
             ]);

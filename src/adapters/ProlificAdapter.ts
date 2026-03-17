@@ -1,5 +1,6 @@
 import { BaseAdapter } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
+import { sites } from "./sites";
 
 import type { AdapterSettings } from "./BaseAdapter";
 import type { ModuleName } from "./modules/BaseModule";
@@ -8,17 +9,15 @@ const PROLIFIC_SETTINGS: AdapterSettings = {
     enableAutoReload: false,
 };
 
-export class ProlificAdapter extends BaseAdapter {
+const HOST = "app.prolific.com";
+const PROLIFIC_URL = {
+    ...sites[HOST],
+    host: HOST,
+} as const;
+
+export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(
-            {
-                host: "app.prolific.com",
-                path: "/studies",
-                iconPath: "/apple-touch-icon.png",
-            },
-            PROLIFIC_SETTINGS,
-            overrides,
-        );
+        super(PROLIFIC_URL, PROLIFIC_SETTINGS, overrides);
     }
 
     override modules: readonly ModuleName[] = [
@@ -45,6 +44,13 @@ export class ProlificAdapter extends BaseAdapter {
 
     getSurveyTitle(el: HTMLElement) {
         return el.querySelector<HTMLElement>("h2") ?? null;
+    }
+
+    getSurveyResearcher(el: HTMLElement): string | null {
+        return (
+            el.querySelector<HTMLElement>('[aria-labelledby*="host-name-"]')
+                ?.textContent ?? null
+        );
     }
 
     getInitCurrencyInfo(el: HTMLElement) {

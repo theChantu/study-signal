@@ -1,7 +1,7 @@
 import { defaultSiteSettings } from "./defaultSiteSettings";
 import { defaultGlobalSettings } from "./defaultGlobalSettings";
 
-import type { GlobalSettings, SiteSettings } from "../lib/types";
+import type { GlobalSettings, SiteSettings } from "./types";
 
 const defaultSettings = Object.freeze({
     ...defaultSiteSettings,

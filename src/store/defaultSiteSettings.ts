@@ -1,4 +1,4 @@
-import type { SiteSettings } from "../lib/types";
+import type { SiteSettings } from "./types";
 
 // TODO: Have a fallback rate of 1 for each conversion rate
 // Instead of storing USD: 1, GBP: 1 and etc, initialize automatically with fetchedRate ?? 1, if fetch fails
@@ -14,7 +14,9 @@ const defaultSiteSettings = Object.freeze({
     enableSurveyLinks: true,
     enableNewSurveyNotifications: true,
     surveys: {},
-    ui: { initialized: false, visible: true, position: { left: 0, top: 0 } },
+    cachedResearchers: {},
+    excludedResearchers: [],
+    includedResearchers: [],
 }) satisfies SiteSettings;
 
 export { defaultSiteSettings };

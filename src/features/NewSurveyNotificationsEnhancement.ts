@@ -1,6 +1,6 @@
 import store from "../store/store";
-import { capitalize } from "../lib/utils";
-import { NOTIFY_TTL_MS } from "../constants";
+import { capitalize, cleanResearcherName } from "../lib/utils";
+import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
 import getSiteResources from "../lib/getSiteResources";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
@@ -10,14 +10,54 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const surveys = this.adapter.getSurveyElements();
         if (surveys.length === 0) return;
 
-        const assets = await getSiteResources();
-        const surveyFingerprints = this.extractSurveyFingerprints(surveys);
-        const newSurveys =
-            await this.saveSurveyFingerprints(surveyFingerprints);
+        const {
+            surveys: previousSurveys,
+            cachedResearchers: previousCachedResearchers,
+        } = await store.get(this.adapter.url.name, [
+            "surveys",
+            "cachedResearchers",
+        ]);
 
-        for (const survey of surveys) {
+        const newSurveys = this.extractNewSurveys(previousSurveys, surveys);
+        if (newSurveys.length === 0) return;
+
+        const assets = await getSiteResources();
+
+        await this.saveNewSurveys(
+            previousSurveys,
+            this.extractSurveyFingerprints(newSurveys),
+        );
+
+        const newResearchers = this.extractNewSurveyResearchers(
+            previousCachedResearchers,
+            newSurveys,
+        );
+        if (newResearchers.size > 0)
+            await this.saveResearcherNames(
+                previousCachedResearchers,
+                newResearchers,
+            );
+
+        const { includedResearchers, excludedResearchers } = await store.get(
+            this.adapter.url.name,
+            ["includedResearchers", "excludedResearchers"],
+        );
+        const includedResearchersSet = new Set(includedResearchers);
+        const excludedResearchersSet = new Set(excludedResearchers);
+
+        for (const survey of newSurveys) {
             const surveyId = this.adapter.getSurveyId(survey);
-            if (!surveyId || !newSurveys.includes(surveyId) || !document.hidden)
+            const rawName = this.adapter.getSurveyResearcher(survey);
+            if (!surveyId || !rawName) continue;
+            const researcher = cleanResearcherName(rawName);
+
+            if (excludedResearchersSet.has(researcher) || !document.hidden)
+                continue;
+
+            if (
+                includedResearchersSet.size > 0 &&
+                !includedResearchersSet.has(researcher)
+            )
                 continue;
 
             await sendExtensionMessage({
@@ -27,43 +67,83 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         }
     }
 
-    private async saveSurveyFingerprints(fingerprints: string[]) {
+    private async saveResearcherNames(
+        previous: Record<string, ReturnType<typeof Date.now>>,
+        names: Set<string>,
+    ) {
         const now = Date.now();
 
-        const { surveys: immutableSurveys } = await store.get(
-            this.adapter.siteName,
-            ["surveys"],
-        );
-        const prevSurveys = structuredClone(immutableSurveys);
+        const cachedResearchers = structuredClone(previous);
 
-        let changed = false;
-        // TTL removals
-        for (const [key, timestamp] of Object.entries(prevSurveys)) {
-            if (now - timestamp >= NOTIFY_TTL_MS) {
-                delete prevSurveys[key];
-                changed = true;
+        for (const [name, timestamp] of Object.entries(cachedResearchers)) {
+            if (now - timestamp >= NAME_CACHE_TTL_MS) {
+                delete cachedResearchers[name];
             }
         }
 
-        const newSurveys: string[] = [];
-        for (const fingerprint of fingerprints) {
-            if (!(fingerprint in prevSurveys)) {
-                newSurveys.push(fingerprint);
-                prevSurveys[fingerprint] = now;
-                changed = true;
-            }
+        for (const name of names) {
+            cachedResearchers[name] = now;
         }
 
-        if (changed)
-            await store.set(this.adapter.siteName, { surveys: prevSurveys });
-
-        return newSurveys;
+        await store.set(this.adapter.url.name, {
+            cachedResearchers,
+        });
     }
 
-    private extractSurveyFingerprints(surveys: NodeListOf<HTMLElement>) {
+    private extractNewSurveyResearchers(
+        previous: Record<string, ReturnType<typeof Date.now>>,
+        surveys: HTMLElement[],
+    ) {
+        const researchers = new Set<string>();
+        for (const survey of surveys) {
+            const rawName = this.adapter.getSurveyResearcher(survey);
+            if (!rawName) continue;
+
+            const researcher = cleanResearcherName(rawName);
+            if (researcher in previous) continue;
+            researchers.add(researcher);
+        }
+        return researchers;
+    }
+
+    private async saveNewSurveys(
+        previous: Record<string, ReturnType<typeof Date.now>>,
+        fingerprints: string[],
+    ) {
+        const now = Date.now();
+
+        const previousClone = structuredClone(previous);
+
+        // Survey fingerprint cleanup
+        for (const [key, timestamp] of Object.entries(previousClone)) {
+            if (now - timestamp >= NOTIFY_TTL_MS) {
+                delete previousClone[key];
+            }
+        }
+
+        for (const fingerprint of fingerprints) {
+            previousClone[fingerprint] = now;
+        }
+
+        await store.set(this.adapter.url.name, {
+            surveys: previousClone,
+        });
+    }
+
+    private extractNewSurveys(
+        previous: Record<string, ReturnType<typeof Date.now>>,
+        current: NodeListOf<HTMLElement>,
+    ) {
+        return Array.from(current).filter((survey) => {
+            const id = this.adapter.getSurveyId(survey);
+            return id !== null && !(id in previous);
+        });
+    }
+
+    private extractSurveyFingerprints(surveys: HTMLElement[]) {
         return Array.from(surveys)
             .map((survey) => this.adapter.getSurveyId(survey))
-            .filter((id): id is string => id !== undefined);
+            .filter((id): id is string => id !== null);
     }
 
     private extractSurveyRate(survey: HTMLElement) {
@@ -88,14 +168,14 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             (hourlyRateElement && this.extractSurveyRate(hourlyRateElement)) ||
             "Unknown rate";
 
-        const { path, suffix } = this.adapter.url;
+        const { surveyPath, suffix } = this.adapter.url;
         const surveyLink = this.adapter.buildUrl([
-            path,
+            surveyPath,
             surveyId,
             ...(suffix ? [suffix] : []),
         ]);
 
-        const siteLabel = capitalize(this.adapter.siteName);
+        const siteLabel = capitalize(this.adapter.url.name);
 
         const notificationData = {
             title: surveyTitle || siteLabel,

@@ -1,4 +1,5 @@
 import { BaseAdapter } from "./BaseAdapter";
+import { sites } from "./sites";
 
 import type { AdapterSettings } from "./BaseAdapter";
 import type { ModuleName } from "./modules/BaseModule";
@@ -8,25 +9,23 @@ const CLOUD_RESEARCH_SETTINGS: AdapterSettings = {
     enableAutoReload: true,
 };
 
+const HOST = "connect.cloudresearch.com";
+const CLOUD_RESEARCH_URL = {
+    ...sites[HOST],
+    host: HOST,
+    suffix: "details",
+    query: {
+        page: 1,
+        size: 100,
+    },
+} as const;
+
 export class CloudResearchAdapter
-    extends BaseAdapter
+    extends BaseAdapter<typeof HOST>
     implements CurrencyConversion
 {
     constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(
-            {
-                host: "connect.cloudresearch.com",
-                path: "/participant/dashboard",
-                iconPath: "/participant/favicon.ico",
-                suffix: "details",
-                query: {
-                    page: 1,
-                    size: 100,
-                },
-            },
-            CLOUD_RESEARCH_SETTINGS,
-            overrides,
-        );
+        super(CLOUD_RESEARCH_URL, CLOUD_RESEARCH_SETTINGS, overrides);
     }
 
     override modules: readonly ModuleName[] = [
@@ -55,6 +54,13 @@ export class CloudResearchAdapter
 
     getSurveyTitle(el: HTMLElement) {
         return el.querySelector<HTMLElement>("p") ?? null;
+    }
+
+    getSurveyResearcher(el: HTMLElement): string | null {
+        return (
+            el.querySelector<HTMLElement>("label div div:last-child")
+                ?.textContent ?? null
+        );
     }
 
     getInitCurrencyInfo(el: HTMLElement) {

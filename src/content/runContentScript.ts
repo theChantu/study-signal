@@ -3,10 +3,10 @@ import log from "@/lib/log";
 import { getRandomTimeoutMs, scheduleTimeout } from "../lib/utils";
 import runEnhancements from "../lib/runEnhancements";
 import getSiteAdapter from "../lib/getSiteAdapter";
-
-import type { ContentScriptContext } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { SettingsUpdate } from "@/store/createStore";
+
+import type { ContentScriptContext } from "#imports";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
