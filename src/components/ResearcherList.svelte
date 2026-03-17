@@ -9,7 +9,6 @@
     export let onRemove: (name: string) => void;
 
     let input = "";
-    let showSuggestions = false;
 
     $: filtered =
         input.length > 0
@@ -24,7 +23,6 @@
             onAdd(cleaned);
         }
         input = "";
-        showSuggestions = false;
     }
 
     function handleKeydown(e: KeyboardEvent) {
@@ -63,11 +61,8 @@
             placeholder="Add researcher..."
             bind:value={input}
             on:keydown={handleKeydown}
-            on:focus={() => (showSuggestions = true)}
-            on:input={() => (showSuggestions = true)}
-            on:blur={() => setTimeout(() => (showSuggestions = false), 150)}
         />
-        {#if showSuggestions && filtered.length > 0}
+        {#if filtered.length > 0}
             <ul class="suggestions">
                 {#each filtered.slice(0, 5) as suggestion}
                     <li>

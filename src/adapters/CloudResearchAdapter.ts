@@ -114,5 +114,9 @@ export class CloudResearchAdapter
         );
     }
 
-    setHourlyRate(element: HTMLElement) {}
+    setHourlyRate(element: HTMLElement): void {}
+
+    getCssSettings(): string {
+        return "";
+    }
 }

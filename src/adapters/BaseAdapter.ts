@@ -67,6 +67,8 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;
     abstract getCurrencyInfo(el: HTMLElement): CurrencyInfo;
 
-    abstract getCssSettings(): void;
-    // TODO: Each adapter will return custom CSS which will be injected within main.ts
+    abstract setHourlyRate(element: HTMLElement): void;
+
+    abstract getCssSettings(): string;
+    // TODO: Each adapter will return custom CSS which will be injected within runContentScript.ts
 }

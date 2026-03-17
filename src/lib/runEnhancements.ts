@@ -79,7 +79,6 @@ async function runEnhancements(changed?: SettingsUpdate) {
         return;
     }
 
-    // Initial run
     const settings = await store.get(adapter.url.name, [...ENABLE_KEYS]);
 
     for (const config of SORTED) {

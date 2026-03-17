@@ -4,6 +4,10 @@ type StoreUpdateMessage = SettingsUpdate & {
     siteName: string;
 };
 
+type StoreSetMessage = SettingsUpdate & {
+    siteName: string;
+};
+
 type StoreFetchMessage = {
     url: string;
     settings: (keyof Settings)[];
@@ -18,6 +22,7 @@ interface MessageMap {
         surveyLink: string;
     };
     "store-update": StoreUpdateMessage;
+    "store-set": StoreSetMessage;
     "store-changed": SettingsUpdate;
 }
 
@@ -25,6 +30,7 @@ interface ResponseMap {
     "store-fetch": { siteName: string; data: Settings } | null;
     "survey-notification": void;
     "store-update": void;
+    "store-set": void;
     "store-changed": void;
 }
 

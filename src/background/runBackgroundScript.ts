@@ -82,6 +82,11 @@ function runBackgroundScript() {
         const { siteName, ...settings } = payload;
         await store.update(siteName, settings);
     });
+
+    onExtensionMessage("store-set", async (payload) => {
+        const { siteName, ...settings } = payload;
+        await store.set(siteName, settings);
+    });
 }
 
 export { runBackgroundScript };

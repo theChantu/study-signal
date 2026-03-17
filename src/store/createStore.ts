@@ -217,7 +217,9 @@ export function createStore() {
         const arr = current[key] as unknown[];
         const unique = items.filter((item) => !arr.includes(item));
         if (unique.length === 0) return;
-        await set(siteName, { [key]: [...arr, ...unique] } as SiteSettingsUpdate);
+        await set(siteName, {
+            [key]: [...arr, ...unique],
+        } as SiteSettingsUpdate);
     }
 
     async function remove<K extends ArrayKeys>(

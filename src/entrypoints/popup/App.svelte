@@ -1,5 +1,6 @@
 <script lang="ts">
     import { defaultSettings } from "@/store/defaultSettings";
+    import { sites } from "@/adapters/sites";
     import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
     import Toggle from "@/components/Toggle.svelte";
     import ResearcherList from "@/components/ResearcherList.svelte";
@@ -12,12 +13,10 @@
         Bug,
         LoaderCircle,
     } from "@lucide/svelte";
+    import { capitalize } from "@/lib/utils";
 
     import type { Settings, SettingsUpdate } from "@/store/createStore";
-    import type {
-        SiteSettings,
-        NewSurveyNotificationsSettings,
-    } from "@/store/types";
+    import type { NewSurveyNotificationsSettings } from "@/store/types";
 
     let invalidUrl = false;
     let siteName = "";
@@ -28,6 +27,15 @@
         settings = { ...settings, ...values };
         sendExtensionMessage({
             type: "store-update",
+            data: { siteName, ...values },
+        });
+    }
+
+    function setSetting(values: SettingsUpdate) {
+        if (!siteName || !settings) return;
+        settings = { ...settings, ...values };
+        sendExtensionMessage({
+            type: "store-set",
             data: { siteName, ...values },
         });
     }
@@ -47,14 +55,17 @@
         updateSetting({ [key]: settings[key].filter((n) => n !== name) });
     }
 
-    function resetKey(key: keyof SiteSettings) {
-        updateSetting({ [key]: defaultSettings[key] });
+    type ResettableKey = Exclude<keyof typeof defaultSettings, "enableDebug">;
+
+    function resetKey(key: ResettableKey) {
+        if (!settings) return;
+        setSetting({ [key]: defaultSettings[key] });
     }
 
     // Exclude enableDebug because there's already a dedicated toggle for it
-    const siteSettingKeys = Object.keys(defaultSettings).filter(
+    const resettableKeys = Object.keys(defaultSettings).filter(
         (k) => k in defaultSettings && k !== "enableDebug",
-    ) as (keyof SiteSettings)[];
+    ) as ResettableKey[];
 
     function formatKey(key: string) {
         return key.replace(/([A-Z])/g, " $1").toLowerCase();
@@ -97,7 +108,6 @@
     });
 </script>
 
-<!-- TODO: Return the list of supported sites via getSupportedSites and make use of hosts.ts inside getSiteAdapter by feeding in those URLs. Define type supportedSites as the union of all supported site domains using hosts.ts -->
 {#if invalidUrl}
     <div class="popup">
         <div class="card error-card">
@@ -107,6 +117,19 @@
                 <div class="error-description">
                     Navigate to a supported site to configure settings.
                 </div>
+                <ul class="supported-sites">
+                    {#each Object.entries(sites) as [host, site]}
+                        <li>
+                            <a
+                                href="https://{host}{site.surveyPath}"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                {capitalize(site.name)}
+                            </a>
+                        </li>
+                    {/each}
+                </ul>
             </div>
         </div>
     </div>
@@ -239,7 +262,7 @@
                 <div class="debug-resets">
                     <span class="list-label">Reset to default</span>
                     <div class="debug-buttons">
-                        {#each siteSettingKeys as key}
+                        {#each resettableKeys as key}
                             <button
                                 class="debug-btn"
                                 on:click={() => resetKey(key)}
@@ -394,6 +417,26 @@
         font-size: 0.76rem;
         line-height: 1.4;
         color: #6b7280;
+    }
+
+    .supported-sites {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        gap: 8px;
+    }
+
+    .supported-sites a {
+        color: #818cf8;
+        text-decoration: none;
+        font-size: 0.76rem;
+        text-transform: capitalize;
+    }
+
+    .supported-sites a:hover {
+        color: #a5b4fc;
+        text-decoration: underline;
     }
 
     .debug-resets {
