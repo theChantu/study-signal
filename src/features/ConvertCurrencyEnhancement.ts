@@ -3,6 +3,7 @@ import { CONVERSION_RATES_FETCH_INTERVAL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
 import extractHourlyRate from "@/lib/extractHourlyRate";
 import { getCurrency } from "@/lib/utils";
+import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import {
     currencyKeysSet,
     type SiteSettings,
@@ -42,10 +43,10 @@ async function fetchRates(
     const clonedConversionRates = structuredClone(conversionRates);
 
     try {
-        const response = await fetch(
-            `https://open.er-api.com/v6/latest/${currency}`,
-        );
-        const data: ExchangeRatesResponse = await response.json();
+        const data = await sendExtensionMessage({
+            type: "fetch",
+            data: { url: `https://open.er-api.com/v6/latest/${currency}` },
+        });
         if (!isExchangeRatesResponse(data)) {
             throw new Error("Invalid exchange rates response");
         }

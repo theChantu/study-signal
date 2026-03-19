@@ -78,6 +78,16 @@ function runBackgroundScript() {
         }
     });
 
+    onExtensionMessage("fetch", async (payload) => {
+        try {
+            const response = await fetch(payload.url);
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return null;
+        }
+    });
+
     onExtensionMessage("store-update", async (payload) => {
         const { siteName, ...settings } = payload;
         await store.update(siteName, settings);
