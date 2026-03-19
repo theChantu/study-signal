@@ -155,7 +155,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         surveyId: string,
         assets: Awaited<ReturnType<typeof getSiteResources>>,
     ) {
-        const surveyTitle = this.adapter.getSurveyTitle(survey)?.textContent;
+        const surveyTitle = this.adapter.getSurveyTitle(survey);
         const rewardElement = this.adapter.getRewardElement(survey);
         const hourlyRateElement = this.adapter.getHourlyRateElement(survey);
         const displaySymbol = rewardElement
@@ -178,7 +178,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const siteLabel = capitalize(this.adapter.url.name);
 
         const notificationData = {
-            title: surveyTitle || siteLabel,
+            title: surveyTitle ?? siteLabel,
             message: `${siteLabel} • ${displaySymbol}${rewardText} • ${displaySymbol}${hourlyRateText}/hr`,
             iconUrl: assets[this.adapter.iconUrl],
             surveyLink,

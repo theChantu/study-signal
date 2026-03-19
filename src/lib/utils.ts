@@ -1,3 +1,5 @@
+import { currencyKeysSet, type Currency } from "@/store/types";
+
 function capitalize(text: string) {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -53,6 +55,20 @@ function cleanResearcherName(name: string): string {
     return name.trim().toLowerCase();
 }
 
+const symbolToCurrency: Record<string, Currency> = {
+    "£": "GBP",
+    $: "USD",
+    "€": "EUR",
+};
+function getCurrency(symbolOrCode: string): Currency | undefined {
+    return (
+        symbolToCurrency[symbolOrCode] ??
+        (currencyKeysSet.has(symbolOrCode as Currency)
+            ? (symbolOrCode as Currency)
+            : undefined)
+    );
+}
+
 export {
     clamp,
     cleanResearcherName,
@@ -60,4 +76,5 @@ export {
     getRandomTimeoutMs,
     scheduleTimeout,
     capitalize,
+    getCurrency,
 };

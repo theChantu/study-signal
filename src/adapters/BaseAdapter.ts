@@ -49,10 +49,14 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         return this.buildUrl([this.url.iconPath]);
     }
 
+    protected queryText(el: HTMLElement, selector: string): string | null {
+        return el.querySelector<HTMLElement>(selector)?.textContent ?? null;
+    }
+
     abstract getSurveyElements(): NodeListOf<HTMLElement>;
-    abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyContainer(el: HTMLElement): HTMLElement | null;
-    abstract getSurveyTitle(el: HTMLElement): HTMLElement | null;
+    abstract getSurveyTitle(el: HTMLElement): string | null;
+    abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyResearcher(el: HTMLElement): string | null;
 
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;

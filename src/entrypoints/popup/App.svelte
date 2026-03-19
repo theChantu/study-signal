@@ -15,6 +15,7 @@
         RefreshCw,
     } from "@lucide/svelte";
     import { capitalize } from "@/lib/utils";
+    import { currencyKeys } from "@/store/types";
 
     import type { Settings, SettingsUpdate } from "@/store/createStore";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
@@ -212,8 +213,9 @@
                                         .value as Settings["selectedCurrency"],
                                 })}
                         >
-                            <option value="USD">USD</option>
-                            <option value="GBP">GBP</option>
+                            {#each currencyKeys as currency}
+                                <option value={currency}>{currency}</option>
+                            {/each}
                         </select>
                         <ChevronDown size={14} />
                     </div>

@@ -40,15 +40,15 @@ describe("get", () => {
 
     it("deep merges nested objects with defaults", async () => {
         await mockStorage.setItem("local:prolific", {
-            conversionRates: { timestamp: 999 },
+            conversionRates: { USD: { timestamp: 999 } },
         });
 
         const store = createStore();
         const result = await store.get(siteName, ["conversionRates"]);
 
-        expect(result.conversionRates.timestamp).toBe(999);
-        expect(result.conversionRates.USD).toEqual(
-            defaultSiteSettings.conversionRates.USD,
+        expect(result.conversionRates.USD.timestamp).toBe(999);
+        expect(result.conversionRates.USD.rates).toEqual(
+            defaultSiteSettings.conversionRates.USD.rates,
         );
         expect(result.conversionRates.GBP).toEqual(
             defaultSiteSettings.conversionRates.GBP,
@@ -182,22 +182,26 @@ describe("set", () => {
 describe("update", () => {
     it("deep merges nested objects", async () => {
         const store = createStore();
-        await store.set(siteName, {
+        await store.update(siteName, {
             conversionRates: {
-                timestamp: 100,
-                USD: { rates: { GBP: 0.8, USD: 1 } },
-                GBP: { rates: { USD: 1.2, GBP: 1 } },
+                USD: { timestamp: 100, rates: { GBP: 0.8, USD: 1 } },
+                GBP: { timestamp: 100, rates: { USD: 1.2, GBP: 1 } },
             },
         });
 
         await store.update(siteName, {
-            conversionRates: { timestamp: 200 },
-        } as any);
+            conversionRates: {
+                USD: { timestamp: 200, rates: { GBP: 0.2, USD: 1.4 } },
+            },
+        });
 
         const result = await store.get(siteName, ["conversionRates"]);
-        expect(result.conversionRates.timestamp).toBe(200);
-        expect(result.conversionRates.USD).toEqual({ rates: { GBP: 0.8, USD: 1 } });
-        expect(result.conversionRates.GBP).toEqual({ rates: { USD: 1.2, GBP: 1 } });
+        expect(result.conversionRates.USD.timestamp).toBe(200);
+        expect(result.conversionRates.USD.rates.GBP).toBe(0.2);
+        expect(result.conversionRates.USD.rates.USD).toBe(1.4);
+        expect(result.conversionRates.GBP.timestamp).toBe(100);
+        expect(result.conversionRates.GBP.rates.USD).toBe(1.2);
+        expect(result.conversionRates.GBP.rates.GBP).toBe(1);
     });
 
     it("replaces primitive values", async () => {
@@ -350,7 +354,13 @@ describe("remove", () => {
 
     it("removes multiple items at once", async () => {
         const store = createStore();
-        await store.push(siteName, "excludedResearchers", "alice", "bob", "charlie");
+        await store.push(
+            siteName,
+            "excludedResearchers",
+            "alice",
+            "bob",
+            "charlie",
+        );
         await store.remove(siteName, "excludedResearchers", "alice", "charlie");
 
         const result = await store.get(siteName, ["excludedResearchers"]);

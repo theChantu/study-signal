@@ -37,6 +37,10 @@ type DeepNonNullable<T> = T extends (...args: any[]) => any
       ? { [K in keyof T]-?: DeepNonNullable<T[K]> }
       : NonNullable<T>;
 
+type DeepPartial<T> = T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;
+
 function deepMerge(target: any, source: any): any {
     if (source === undefined) return target;
 
@@ -179,7 +183,7 @@ export function createStore() {
         );
     }
 
-    const update = async (siteName: SiteName, values: SiteSettingsUpdate) => {
+    const update = async (siteName: SiteName, values: DeepPartial<SiteSettings>) => {
         const keys = Object.keys(values) as (keyof SiteSettings)[];
         const current = await get(siteName, keys);
 

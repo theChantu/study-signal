@@ -9,10 +9,10 @@ class SurveyLinksEnhancement extends BaseEnhancement {
         const surveys = this.adapter.getSurveyElements();
         for (const survey of surveys) {
             const surveyId = this.adapter.getSurveyId(survey);
-            const studyContent = this.adapter.getSurveyContainer(survey);
+            const surveyContainer = this.adapter.getSurveyContainer(survey);
 
-            if (!surveyId || !studyContent) continue;
-            const previousLink = studyContent.querySelector(".pe-link");
+            if (!surveyId || !surveyContainer) continue;
+            const previousLink = surveyContainer.querySelector(".pe-link");
             if (previousLink) continue;
 
             const { surveyPath, suffix } = this.adapter.url;
@@ -31,7 +31,7 @@ class SurveyLinksEnhancement extends BaseEnhancement {
             link.textContent = "Take part in this study";
             link.target = "_blank";
             link.rel = "noopener noreferrer";
-            studyContent.appendChild(container);
+            surveyContainer.appendChild(container);
         }
     }
 

@@ -1,6 +1,6 @@
 import type BaseModule from "./BaseModule";
 
-export default interface CurrencyConversion extends BaseModule {
+export default interface CurrencyConversionModule extends BaseModule {
     getRewardElements(): HTMLElement[];
     getRewardElement(el: HTMLElement): HTMLElement | null;
     getHourlyRateElements(): HTMLElement[];

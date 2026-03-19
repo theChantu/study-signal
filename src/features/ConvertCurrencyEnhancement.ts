@@ -1,46 +1,68 @@
 import store from "../store/store";
 import { CONVERSION_RATES_FETCH_INTERVAL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
-import { defaultSiteSettings } from "../store/defaultSiteSettings";
 import extractHourlyRate from "@/lib/extractHourlyRate";
-
-import type { SiteSettings } from "../store/types";
+import { getCurrency } from "@/lib/utils";
+import {
+    currencyKeysSet,
+    type SiteSettings,
+    type Currency,
+    type ExchangeRatesResponse,
+} from "../store/types";
 
 type ConversionRates = SiteSettings["conversionRates"];
+function isExchangeRatesResponse(
+    value: unknown,
+): value is ExchangeRatesResponse {
+    if (!value || typeof value !== "object") return false;
 
-async function fetchRates() {
-    const { timestamp, ...conversionRates } = structuredClone(
-        defaultSiteSettings.conversionRates,
-    );
-    const currencies = Object.keys(
-        conversionRates,
-    ) as (keyof typeof conversionRates)[];
-    const responses = await Promise.all(
-        currencies.map(async (currency) => {
-            try {
-                const res = await fetch(
-                    `https://open.er-api.com/v6/latest/${currency}`,
-                );
-                const data = await res.json();
-                return { currency, data };
-            } catch {
-                return null;
-            }
-        }),
-    );
-    for (const resp of responses) {
-        if (!resp) continue;
-        const { currency, data } = resp;
-        for (const c of currencies) {
-            if (c === currency) continue;
-            conversionRates[currency].rates[c] = data.rates[c];
+    const data = value as Record<string, unknown>;
+
+    if (data.result !== "success" && data.result !== "error") return false;
+    if (typeof data.base_code !== "string") return false;
+    if (!currencyKeysSet.has(data.base_code as Currency)) return false;
+
+    if (!data.rates || typeof data.rates !== "object") return false;
+
+    const rates = data.rates as Record<string, unknown>;
+
+    for (const code of currencyKeysSet) {
+        if (typeof rates[code] !== "number") {
+            return false;
         }
     }
 
-    return conversionRates as ConversionRates;
+    return true;
 }
 
-function getSymbol(currency: string) {
+async function fetchRates(
+    conversionRates: ConversionRates,
+    currency: Currency,
+) {
+    const clonedConversionRates = structuredClone(conversionRates);
+
+    try {
+        const response = await fetch(
+            `https://open.er-api.com/v6/latest/${currency}`,
+        );
+        const data: ExchangeRatesResponse = await response.json();
+        if (!isExchangeRatesResponse(data)) {
+            throw new Error("Invalid exchange rates response");
+        }
+
+        const { base_code, rates } = data;
+
+        for (const [k, v] of Object.entries(rates) as [Currency, number][]) {
+            clonedConversionRates[base_code].rates[k] = v;
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    return clonedConversionRates as ConversionRates;
+}
+
+function getSymbol(currency: Currency) {
     return new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: currency,
@@ -51,33 +73,27 @@ function getSymbol(currency: string) {
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
-        await this.updateRates();
-
-        const elements = this.adapter.getRewardElements();
         const { selectedCurrency, conversionRates } = await store.get(
             this.adapter.url.name,
             ["selectedCurrency", "conversionRates"],
         );
+        await this.updateRates(conversionRates, selectedCurrency);
+
+        const elements = this.adapter.getRewardElements();
 
         const selectedSymbol = getSymbol(selectedCurrency);
-        const rate =
-            selectedCurrency === "USD"
-                ? conversionRates.GBP.rates.USD
-                : conversionRates.USD.rates.GBP;
 
         for (const element of elements) {
+            let sourceHtml = element.getAttribute("data-original-html");
             let sourceText = element.getAttribute("data-original-text");
 
-            if (!sourceText) {
-                element.setAttribute(
-                    "data-original-text",
-                    element.textContent || "",
-                );
-                sourceText = element.textContent || "";
+            if (!sourceText || !sourceHtml) {
+                element.setAttribute("data-original-text", element.textContent);
+                element.setAttribute("data-original-html", element.innerHTML);
+                sourceText = element.textContent;
+                sourceHtml = element.innerHTML;
                 const sourceSymbol = this.adapter.getInitCurrencyInfo(element);
 
-                element.classList.add(`source-${sourceSymbol}`);
-                // TODO: Replace classes with attributes for easier access
                 element.setAttribute("source", sourceSymbol ?? "");
             }
 
@@ -86,19 +102,24 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
 
             if (sourceSymbol === selectedSymbol) {
                 // Selected symbol matches source, so revert element text
-                if (element.textContent !== sourceText) {
-                    element.textContent = sourceText;
+                if (element.innerHTML !== sourceHtml) {
+                    element.innerHTML = sourceHtml;
                 }
 
-                this.updateDisplay(element, `display-${sourceSymbol}`);
+                element.setAttribute("display", sourceSymbol ?? "");
                 continue;
             }
 
-            this.updateDisplay(element, `display-${selectedSymbol}`);
+            element.setAttribute("display", selectedSymbol ?? "");
 
             // Continue if currency is already converted
-            if (displaySymbol === selectedSymbol) continue;
+            if (displaySymbol === selectedSymbol || !sourceSymbol) continue;
 
+            const sourceCurrency = getCurrency(sourceSymbol);
+            if (!sourceCurrency) continue;
+
+            const rate =
+                conversionRates[sourceCurrency].rates[selectedCurrency];
             const elementRate = extractHourlyRate(sourceText);
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
 
@@ -109,50 +130,36 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         }
     }
 
-    private async updateRates() {
-        const { conversionRates } = await store.get(this.adapter.url.name, [
-            "conversionRates",
-        ]);
-
+    private async updateRates(
+        conversionRates: ConversionRates,
+        selectedCurrency: Currency,
+    ) {
         const now = Date.now();
+
         if (
-            now - conversionRates.timestamp <
+            now - conversionRates[selectedCurrency].timestamp <
             CONVERSION_RATES_FETCH_INTERVAL_MS
         )
             return;
 
-        const newConversionRates = await fetchRates();
-        newConversionRates.timestamp = now;
+        const newConversionRates = await fetchRates(
+            conversionRates,
+            selectedCurrency,
+        );
+        newConversionRates[selectedCurrency].timestamp = now;
 
         await store.set(this.adapter.url.name, {
             conversionRates: newConversionRates,
         });
     }
 
-    private updateDisplay(element: HTMLElement, display: string) {
-        const previousClassName = Array.from(element.classList).find(
-            (className) => className.startsWith("display-"),
-        );
-        if (previousClassName) {
-            element.classList.remove(previousClassName);
-        }
-        element.classList.add(display);
-    }
-
     async revert() {
         document.querySelectorAll("[data-original-text]").forEach((el) => {
-            el.textContent = el.getAttribute("data-original-text") || "";
+            el.innerHTML = el.getAttribute("data-original-html") || "";
             el.removeAttribute("data-original-text");
-
-            const displayClass = Array.from(el.classList).find((className) =>
-                className.startsWith("display-"),
-            );
-            const sourceClass = Array.from(el.classList).find((className) =>
-                className.startsWith("source-"),
-            );
-
-            if (displayClass) el.classList.remove(displayClass);
-            if (sourceClass) el.classList.remove(sourceClass);
+            el.removeAttribute("data-original-html");
+            el.removeAttribute("display");
+            el.removeAttribute("source");
         });
     }
 }

@@ -30,7 +30,7 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getSurveyTitle(el: HTMLElement) {
-        return el.querySelector<HTMLElement>("h2") ?? null;
+        return el.querySelector<HTMLElement>("h2")?.textContent ?? null;
     }
 
     getSurveyResearcher(el: HTMLElement): string | null {
@@ -45,21 +45,12 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getCurrencyInfo(el: HTMLElement) {
-        let displayClass = Array.from(el.classList).find((className) =>
-            className.startsWith("display-"),
-        );
-
-        let sourceClass = Array.from(el.classList).find((className) =>
-            className.startsWith("source-"),
-        );
-
-        const displaySymbol = displayClass?.replace("display-", "");
-        const sourceSymbol = sourceClass?.replace("source-", "");
+        const displaySymbol = el.getAttribute("display");
+        const sourceSymbol = el.getAttribute("source");
 
         return {
-            displaySymbol:
-                displaySymbol ?? this.getInitCurrencyInfo(el) ?? null,
-            sourceSymbol: sourceSymbol ?? this.getInitCurrencyInfo(el) ?? null,
+            displaySymbol: displaySymbol ?? this.getInitCurrencyInfo(el),
+            sourceSymbol: sourceSymbol ?? this.getInitCurrencyInfo(el),
         };
     }
 
