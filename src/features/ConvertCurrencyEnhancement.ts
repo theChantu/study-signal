@@ -78,28 +78,30 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             this.adapter.url.name,
             ["selectedCurrency", "conversionRates"],
         );
-        await this.updateRates(conversionRates, selectedCurrency);
 
         const elements = this.adapter.getRewardElements();
-
         const selectedSymbol = getSymbol(selectedCurrency);
 
+        // Update conversion rates for all source currencies found in the elements
+        const sourceCurrencies = new Set<Currency>();
         for (const element of elements) {
-            let sourceHtml = element.getAttribute("data-original-html");
-            let sourceText = element.getAttribute("data-original-text");
+            const sourceSymbol = element.getAttribute("data-original-currency");
+            if (!sourceSymbol) continue;
+            const currency = getCurrency(sourceSymbol);
+            if (currency) sourceCurrencies.add(currency);
+        }
 
-            if (!sourceText || !sourceHtml) {
-                element.setAttribute("data-original-text", element.textContent);
-                element.setAttribute("data-original-html", element.innerHTML);
-                sourceText = element.textContent;
-                sourceHtml = element.innerHTML;
-                const sourceSymbol = this.adapter.getInitCurrencyInfo(element);
+        const updatedConversionRates = await this.updateRates(conversionRates, [
+            selectedCurrency,
+            ...sourceCurrencies,
+        ]);
 
-                element.setAttribute("source", sourceSymbol ?? "");
-            }
+        for (const element of elements) {
+            const sourceText = element.getAttribute("data-original-text");
+            const sourceHtml = element.getAttribute("data-original-html");
+            const sourceSymbol = element.getAttribute("data-original-currency");
 
-            const { sourceSymbol, displaySymbol } =
-                this.adapter.getCurrencyInfo(element);
+            if (!sourceText || !sourceHtml || !sourceSymbol) continue;
 
             if (sourceSymbol === selectedSymbol) {
                 // Selected symbol matches source, so revert element text
@@ -107,20 +109,21 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
                     element.innerHTML = sourceHtml;
                 }
 
-                element.setAttribute("display", sourceSymbol ?? "");
+                element.setAttribute("display", sourceSymbol);
                 continue;
             }
 
+            const { displaySymbol } = this.adapter.getCurrencyInfo(element);
             element.setAttribute("display", selectedSymbol ?? "");
 
             // Continue if currency is already converted
-            if (displaySymbol === selectedSymbol || !sourceSymbol) continue;
+            if (displaySymbol === selectedSymbol) continue;
 
             const sourceCurrency = getCurrency(sourceSymbol);
             if (!sourceCurrency) continue;
 
             const rate =
-                conversionRates[sourceCurrency].rates[selectedCurrency];
+                updatedConversionRates[sourceCurrency].rates[selectedCurrency];
             const elementRate = extractHourlyRate(sourceText);
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
 
@@ -133,34 +136,37 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
 
     private async updateRates(
         conversionRates: ConversionRates,
-        selectedCurrency: Currency,
+        currencies: Currency[],
     ) {
         const now = Date.now();
+        let updated = false;
+        let rates = conversionRates;
 
-        if (
-            now - conversionRates[selectedCurrency].timestamp <
-            CONVERSION_RATES_FETCH_INTERVAL_MS
-        )
-            return;
+        for (const currency of new Set(currencies)) {
+            if (
+                now - rates[currency].timestamp <
+                CONVERSION_RATES_FETCH_INTERVAL_MS
+            )
+                continue;
 
-        const newConversionRates = await fetchRates(
-            conversionRates,
-            selectedCurrency,
-        );
-        newConversionRates[selectedCurrency].timestamp = now;
+            rates = await fetchRates(rates, currency);
+            rates[currency].timestamp = now;
+            updated = true;
+        }
 
-        await store.set(this.adapter.url.name, {
-            conversionRates: newConversionRates,
-        });
+        if (updated) {
+            await store.set(this.adapter.url.name, {
+                conversionRates: rates,
+            });
+        }
+
+        return rates;
     }
 
     async revert() {
-        document.querySelectorAll("[data-original-text]").forEach((el) => {
+        document.querySelectorAll("[data-original-html]").forEach((el) => {
             el.innerHTML = el.getAttribute("data-original-html") || "";
-            el.removeAttribute("data-original-text");
-            el.removeAttribute("data-original-html");
             el.removeAttribute("display");
-            el.removeAttribute("source");
         });
     }
 }

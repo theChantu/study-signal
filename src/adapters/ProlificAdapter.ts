@@ -46,7 +46,7 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
 
     getCurrencyInfo(el: HTMLElement) {
         const displaySymbol = el.getAttribute("display");
-        const sourceSymbol = el.getAttribute("source");
+        const sourceSymbol = el.getAttribute("data-original-currency");
 
         return {
             displaySymbol: displaySymbol ?? this.getInitCurrencyInfo(el),

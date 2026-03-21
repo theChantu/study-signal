@@ -55,6 +55,7 @@ const adapter = getSiteAdapter();
 
 async function runEnhancements(changed?: SettingsUpdate) {
     log("Running enhancements...");
+    adapter.prepareElements();
 
     if (changed) {
         for (const config of SORTED) {

@@ -33,14 +33,21 @@ class HighlightRatesEnhancement extends BaseEnhancement {
                 continue;
             }
 
-            const rate = extractHourlyRate(element.textContent);
-            const { displaySymbol } = this.adapter.getCurrencyInfo(element);
-            if (isNaN(rate) || !displaySymbol) return;
+            const originalText =
+                element.getAttribute("data-original-text") ??
+                element.textContent;
+            const originalSymbol = element.getAttribute(
+                "data-original-currency",
+            );
 
-            const displayCurrency = getCurrency(displaySymbol);
-            if (!displayCurrency) continue;
+            const rate = extractHourlyRate(originalText);
+            if (isNaN(rate) || !originalSymbol) return;
 
-            const currencyToUsd = conversionRates[displayCurrency].rates.USD;
+            const originalCurrency = getCurrency(originalSymbol);
+            if (!originalCurrency) continue;
+
+            const currencyToUsd =
+                conversionRates[originalCurrency].rates.USD;
 
             element.style.backgroundColor = rateToColor(
                 rate * currencyToUsd,

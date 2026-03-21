@@ -62,8 +62,24 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;
     abstract getCurrencyInfo(el: HTMLElement): CurrencyInfo;
 
+    abstract getRewardElements(): HTMLElement[];
+    abstract getHourlyRateElements(): HTMLElement[];
+
     abstract setHourlyRate(element: HTMLElement): void;
 
     abstract getCssSettings(): string;
     // TODO: Each adapter will return custom CSS which will be injected within runContentScript.ts
+
+    prepareElements() {
+        const elements = this.getRewardElements();
+        for (const el of elements) {
+            if (el.hasAttribute("data-original-text")) continue;
+            el.setAttribute("data-original-text", el.textContent ?? "");
+            el.setAttribute("data-original-html", el.innerHTML);
+            el.setAttribute(
+                "data-original-currency",
+                this.getInitCurrencyInfo(el) ?? "",
+            );
+        }
+    }
 }
