@@ -86,8 +86,4 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     setHourlyRate(element: HTMLElement): void {}
-
-    getCssSettings(): string {
-        return "";
-    }
 }

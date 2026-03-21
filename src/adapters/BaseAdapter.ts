@@ -67,9 +67,6 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
 
     abstract setHourlyRate(element: HTMLElement): void;
 
-    abstract getCssSettings(): string;
-    // TODO: Each adapter will return custom CSS which will be injected within runContentScript.ts
-
     prepareElements() {
         const elements = this.getRewardElements();
         for (const el of elements) {

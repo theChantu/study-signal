@@ -12,8 +12,9 @@ class SurveyLinksEnhancement extends BaseEnhancement {
             const surveyContainer = this.adapter.getSurveyContainer(survey);
 
             if (!surveyId || !surveyContainer) continue;
-            const previousLink = surveyContainer.querySelector(".pe-link");
-            if (previousLink) continue;
+            const previousButton =
+                surveyContainer.querySelector(".se-custom-btn");
+            if (previousButton) continue;
 
             const { surveyPath, suffix } = this.adapter.url;
             const surveyLink = this.adapter.buildUrl([
@@ -24,9 +25,9 @@ class SurveyLinksEnhancement extends BaseEnhancement {
 
             const container = document.createElement("div");
             const link = document.createElement("a");
-            container.className = "pe-btn-container";
+            container.className = "se-btn-container";
             container.appendChild(link);
-            link.className = "pe-link pe-custom-btn";
+            link.className = "se-custom-btn";
             link.href = surveyLink;
             link.textContent = "Take part in this study";
             link.target = "_blank";
@@ -36,7 +37,7 @@ class SurveyLinksEnhancement extends BaseEnhancement {
     }
 
     async revert() {
-        const elements = document.querySelectorAll(".pe-btn-container");
+        const elements = document.querySelectorAll(".se-btn-container");
         for (const el of elements) {
             if (!el) continue;
             el.remove();

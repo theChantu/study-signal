@@ -29,7 +29,7 @@ class HighlightRatesEnhancement extends BaseEnhancement {
         const elements = this.adapter.getHourlyRateElements();
         for (const element of elements) {
             // Check if the element should be ignored
-            if (element.classList.contains("pe-rate-highlight")) {
+            if (element.classList.contains("se-rate-highlight")) {
                 continue;
             }
 
@@ -46,8 +46,7 @@ class HighlightRatesEnhancement extends BaseEnhancement {
             const originalCurrency = getCurrency(originalSymbol);
             if (!originalCurrency) continue;
 
-            const currencyToUsd =
-                conversionRates[originalCurrency].rates.USD;
+            const currencyToUsd = conversionRates[originalCurrency].rates.USD;
 
             element.style.backgroundColor = rateToColor(
                 rate * currencyToUsd,
@@ -55,17 +54,17 @@ class HighlightRatesEnhancement extends BaseEnhancement {
                 MAX_AMOUNT_PER_HOUR,
             );
 
-            if (!element.classList.contains("pe-rate-highlight"))
-                element.classList.add("pe-rate-highlight");
+            if (!element.classList.contains("se-rate-highlight"))
+                element.classList.add("se-rate-highlight");
         }
     }
     async revert() {
         const elements =
-            document.querySelectorAll<HTMLElement>(".pe-rate-highlight");
+            document.querySelectorAll<HTMLElement>(".se-rate-highlight");
         for (const el of elements) {
             if (!el) continue;
             el.style.backgroundColor = "";
-            el.classList.remove("pe-rate-highlight");
+            el.classList.remove("se-rate-highlight");
         }
     }
 }
