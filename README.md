@@ -11,6 +11,7 @@ A browser extension that enhances the survey experience on [Prolific](https://ap
 - **Currency Conversion:** Converts rewards into USD or GBP.
 - **Direct Survey Links:** Adds direct links to each survey.
 - **Notifications:** Desktop alerts when new studies appear, with researcher include/exclude filters.
+- **Auto Reload:** Automatically refreshes the page at random intervals to check for new studies.
 - **Per-Site Settings:** Configure each supported site independently from the popup.
 
 ## Supported Sites

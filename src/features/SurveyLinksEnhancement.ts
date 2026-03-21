@@ -9,9 +9,11 @@ class SurveyLinksEnhancement extends BaseEnhancement {
         const surveys = this.adapter.getSurveyElements();
         for (const survey of surveys) {
             const surveyId = this.adapter.getSurveyId(survey);
-            const studyContent = this.adapter.getSurveyContainer(survey);
+            const surveyContainer = this.adapter.getSurveyContainer(survey);
 
-            if (!surveyId) continue;
+            if (!surveyId || !surveyContainer) continue;
+            const previousLink = surveyContainer.querySelector(".pe-link");
+            if (previousLink) continue;
 
             const { surveyPath, suffix } = this.adapter.url;
             const surveyLink = this.adapter.buildUrl([
@@ -20,18 +22,16 @@ class SurveyLinksEnhancement extends BaseEnhancement {
                 ...(suffix ? [suffix] : []),
             ]);
 
-            if (studyContent && !studyContent.querySelector(".pe-link")) {
-                const container = document.createElement("div");
-                const link = document.createElement("a");
-                container.className = "pe-btn-container";
-                container.appendChild(link);
-                link.className = "pe-link pe-custom-btn";
-                link.href = surveyLink;
-                link.textContent = "Take part in this study";
-                link.target = "_blank";
-                link.rel = "noopener noreferrer";
-                studyContent.appendChild(container);
-            }
+            const container = document.createElement("div");
+            const link = document.createElement("a");
+            container.className = "pe-btn-container";
+            container.appendChild(link);
+            link.className = "pe-link pe-custom-btn";
+            link.href = surveyLink;
+            link.textContent = "Take part in this study";
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            surveyContainer.appendChild(container);
         }
     }
 

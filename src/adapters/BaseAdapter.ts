@@ -16,9 +16,6 @@ export type UrlSettings<H extends SupportedSites = SupportedSites> =
 // enableHighlightRates: boolean;
 // enableSurveyLinks: boolean;
 // enableNewSurveyNotifications: boolean;
-export type AdapterSettings = {
-    enableAutoReload: boolean;
-};
 
 type CurrencyInfo = {
     displaySymbol: string | null;
@@ -27,16 +24,10 @@ type CurrencyInfo = {
 
 export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     readonly url: Readonly<UrlSettings<H>>;
-    readonly settings: Readonly<AdapterSettings>;
     abstract readonly modules: readonly ModuleName[];
 
-    constructor(
-        url: UrlSettings<H>,
-        defaults: AdapterSettings,
-        overrides: Partial<AdapterSettings> = {},
-    ) {
+    constructor(url: UrlSettings<H>) {
         this.url = url;
-        this.settings = { ...defaults, ...overrides };
     }
 
     private _moduleSet?: ReadonlySet<ModuleName>;
@@ -58,10 +49,14 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         return this.buildUrl([this.url.iconPath]);
     }
 
+    protected queryText(el: HTMLElement, selector: string): string | null {
+        return el.querySelector<HTMLElement>(selector)?.textContent ?? null;
+    }
+
     abstract getSurveyElements(): NodeListOf<HTMLElement>;
-    abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyContainer(el: HTMLElement): HTMLElement | null;
-    abstract getSurveyTitle(el: HTMLElement): HTMLElement | null;
+    abstract getSurveyTitle(el: HTMLElement): string | null;
+    abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyResearcher(el: HTMLElement): string | null;
 
     abstract getInitCurrencyInfo(el: HTMLElement): string | null;

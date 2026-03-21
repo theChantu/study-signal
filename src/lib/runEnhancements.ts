@@ -7,13 +7,16 @@ import {
     surveyLinksEnhancement,
 } from "../features";
 import getSiteAdapter from "./getSiteAdapter";
+import { moduleToEnableKey } from "@/adapters/sites";
 
 import type { ModuleName } from "../adapters/modules/BaseModule";
 import type Enhancement from "../features/BaseEnhancement";
 import type { Settings, SettingsUpdate } from "@/store/createStore";
 
+type EnhancementSettingKeys = (typeof moduleToEnableKey)[ModuleName];
+
 type EnhancementConfig = {
-    enableKey: keyof Settings & `enable${string}`;
+    enableKey: EnhancementSettingKeys;
     triggers?: (keyof Settings)[];
     module: ModuleName;
     enhancement: Enhancement;
@@ -22,24 +25,24 @@ type EnhancementConfig = {
 
 const ENHANCEMENTS: EnhancementConfig[] = [
     {
-        enableKey: "enableCurrencyConversion",
+        enableKey: moduleToEnableKey["CurrencyConversion"],
         triggers: ["selectedCurrency"],
         module: "CurrencyConversion",
         enhancement: convertCurrencyEnhancement,
         priority: true,
     },
     {
-        enableKey: "enableHighlightRates",
+        enableKey: moduleToEnableKey["HighlightRates"],
         module: "HighlightRates",
         enhancement: highlightRatesEnhancement,
     },
     {
-        enableKey: "enableSurveyLinks",
+        enableKey: moduleToEnableKey["SurveyLinks"],
         module: "SurveyLinks",
         enhancement: surveyLinksEnhancement,
     },
     {
-        enableKey: "enableNewSurveyNotifications",
+        enableKey: moduleToEnableKey["NewSurveyNotifications"],
         module: "NewSurveyNotifications",
         enhancement: newSurveyNotificationsEnhancement,
     },
@@ -58,8 +61,10 @@ async function runEnhancements(changed?: SettingsUpdate) {
             if (!adapter.hasModule(config.module)) continue;
 
             const keyChanged = config.enableKey in changed;
-            const keyEnabled = changed[config.enableKey];
-            if (keyEnabled === undefined) {
+            const enabled = changed[config.enableKey];
+
+            // If the key is not in the changed object, check the store
+            if (enabled === undefined) {
                 const settings = await store.get(adapter.url.name, [
                     config.enableKey,
                 ]);
@@ -70,7 +75,7 @@ async function runEnhancements(changed?: SettingsUpdate) {
 
             if (!keyChanged && !triggerChanged) continue;
 
-            if (keyChanged && !keyEnabled) {
+            if (keyChanged && !enabled) {
                 await config.enhancement.revert();
             } else {
                 await config.enhancement.run();
@@ -82,10 +87,14 @@ async function runEnhancements(changed?: SettingsUpdate) {
     const settings = await store.get(adapter.url.name, [...ENABLE_KEYS]);
 
     for (const config of SORTED) {
-        if (!adapter.hasModule(config.module) || !settings[config.enableKey])
-            continue;
+        if (!adapter.hasModule(config.module)) continue;
+        const enabled = settings[config.enableKey];
 
-        await config.enhancement.run();
+        if (enabled) {
+            await config.enhancement.apply();
+        } else {
+            await config.enhancement.revert();
+        }
     }
 }
 

@@ -2,13 +2,6 @@ import { BaseAdapter } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
 import { sites } from "./sites";
 
-import type { AdapterSettings } from "./BaseAdapter";
-import type { ModuleName } from "./modules/BaseModule";
-
-const PROLIFIC_SETTINGS: AdapterSettings = {
-    enableAutoReload: false,
-};
-
 const HOST = "app.prolific.com";
 const PROLIFIC_URL = {
     ...sites[HOST],
@@ -16,17 +9,11 @@ const PROLIFIC_URL = {
 } as const;
 
 export class ProlificAdapter extends BaseAdapter<typeof HOST> {
-    constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(PROLIFIC_URL, PROLIFIC_SETTINGS, overrides);
+    constructor() {
+        super(PROLIFIC_URL);
     }
 
-    override modules: readonly ModuleName[] = [
-        "CurrencyConversion",
-        "HighlightRates",
-        "NewSurveyNotifications",
-        "SurveyLinks",
-        "UI",
-    ];
+    override modules = sites[HOST].modules;
 
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>(
@@ -43,7 +30,7 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getSurveyTitle(el: HTMLElement) {
-        return el.querySelector<HTMLElement>("h2") ?? null;
+        return el.querySelector<HTMLElement>("h2")?.textContent ?? null;
     }
 
     getSurveyResearcher(el: HTMLElement): string | null {
@@ -58,21 +45,12 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getCurrencyInfo(el: HTMLElement) {
-        let displayClass = Array.from(el.classList).find((className) =>
-            className.startsWith("display-"),
-        );
-
-        let sourceClass = Array.from(el.classList).find((className) =>
-            className.startsWith("source-"),
-        );
-
-        const displaySymbol = displayClass?.replace("display-", "");
-        const sourceSymbol = sourceClass?.replace("source-", "");
+        const displaySymbol = el.getAttribute("display");
+        const sourceSymbol = el.getAttribute("source");
 
         return {
-            displaySymbol:
-                displaySymbol ?? this.getInitCurrencyInfo(el) ?? null,
-            sourceSymbol: sourceSymbol ?? this.getInitCurrencyInfo(el) ?? null,
+            displaySymbol: displaySymbol ?? this.getInitCurrencyInfo(el),
+            sourceSymbol: sourceSymbol ?? this.getInitCurrencyInfo(el),
         };
     }
 

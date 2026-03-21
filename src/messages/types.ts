@@ -25,6 +25,7 @@ interface MessageMap {
     "store-update": StoreUpdateMessage;
     "store-set": StoreSetMessage;
     "store-changed": SettingsUpdate;
+    "fetch": { url: string };
 }
 
 interface ResponseMap {
@@ -33,6 +34,7 @@ interface ResponseMap {
     "store-update": void;
     "store-set": void;
     "store-changed": void;
+    "fetch": unknown;
 }
 
 type MessageResponse<K extends keyof MessageMap> = K extends keyof ResponseMap

@@ -1,14 +1,6 @@
 import { BaseAdapter } from "./BaseAdapter";
 import { sites } from "./sites";
 
-import type { AdapterSettings } from "./BaseAdapter";
-import type { ModuleName } from "./modules/BaseModule";
-import type CurrencyConversion from "./modules/CurrencyConversion";
-
-const CLOUD_RESEARCH_SETTINGS: AdapterSettings = {
-    enableAutoReload: true,
-};
-
 const HOST = "connect.cloudresearch.com";
 const CLOUD_RESEARCH_URL = {
     ...sites[HOST],
@@ -20,21 +12,12 @@ const CLOUD_RESEARCH_URL = {
     },
 } as const;
 
-export class CloudResearchAdapter
-    extends BaseAdapter<typeof HOST>
-    implements CurrencyConversion
-{
-    constructor(overrides: Partial<AdapterSettings> = {}) {
-        super(CLOUD_RESEARCH_URL, CLOUD_RESEARCH_SETTINGS, overrides);
+export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
+    constructor() {
+        super(CLOUD_RESEARCH_URL);
     }
 
-    override modules: readonly ModuleName[] = [
-        "CurrencyConversion",
-        "HighlightRates",
-        "NewSurveyNotifications",
-        "SurveyLinks",
-        "UI",
-    ];
+    override modules = sites[HOST].modules;
 
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>("div.project-card");
@@ -53,14 +36,11 @@ export class CloudResearchAdapter
     }
 
     getSurveyTitle(el: HTMLElement) {
-        return el.querySelector<HTMLElement>("p") ?? null;
+        return this.queryText(el, "p");
     }
 
     getSurveyResearcher(el: HTMLElement): string | null {
-        return (
-            el.querySelector<HTMLElement>("label div div:last-child")
-                ?.textContent ?? null
-        );
+        return this.queryText(el, "label div div:last-child");
     }
 
     getInitCurrencyInfo(el: HTMLElement) {
@@ -68,17 +48,12 @@ export class CloudResearchAdapter
     }
 
     getCurrencyInfo(el: HTMLElement) {
-        let displayClass = Array.from(el.classList).find((className) =>
-            className.startsWith("display-"),
-        );
-
-        const displaySymbol = displayClass?.replace("display-", "");
+        const displaySymbol = el.getAttribute("display");
 
         return {
             // CloudResearch uses USD by default
-            displaySymbol:
-                displaySymbol ?? this.getInitCurrencyInfo(el) ?? null,
-            sourceSymbol: this.getInitCurrencyInfo(el) ?? null,
+            displaySymbol: displaySymbol ?? this.getInitCurrencyInfo(el),
+            sourceSymbol: this.getInitCurrencyInfo(el),
         };
     }
 
@@ -91,10 +66,8 @@ export class CloudResearchAdapter
     }
 
     getRewardElement(el: HTMLElement) {
-        return (
-            el.querySelector<HTMLElement>(
-                '[class*="project-pay-per-hour-"] > *',
-            ) ?? null
+        return el.querySelector<HTMLElement>(
+            '[class*="project-pay-per-hour-"] > *',
         );
     }
 
@@ -107,10 +80,8 @@ export class CloudResearchAdapter
     }
 
     getHourlyRateElement(el: HTMLElement) {
-        return (
-            el.querySelector<HTMLElement>(
-                '[class*="project-pay-per-hour-"] > *:last-child',
-            ) ?? null
+        return el.querySelector<HTMLElement>(
+            '[class*="project-pay-per-hour-"] > *:last-child',
         );
     }
 

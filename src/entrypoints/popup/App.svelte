@@ -12,8 +12,10 @@
         Bell,
         Bug,
         LoaderCircle,
+        RefreshCw,
     } from "@lucide/svelte";
     import { capitalize } from "@/lib/utils";
+    import { currencyKeys } from "@/store/types";
 
     import type { Settings, SettingsUpdate } from "@/store/createStore";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
@@ -21,7 +23,6 @@
     const siteKeys = Object.keys(sites) as SupportedSites[];
 
     let selectedSite: SupportedSites = siteKeys[0];
-
     let loadedSites = {} as Partial<Record<SupportedSites, Settings>>;
 
     $: currentSite = loadedSites[selectedSite];
@@ -116,8 +117,12 @@
 
         await loadSite(selectedSite);
     });
+
+    $: siteModules = new Set(sites[selectedSite].modules);
 </script>
 
+<!-- TODO: Map modules to their respective enable toggles -->
+<!-- Loop through site modules -->
 <div class="popup">
     <div class="header">
         <div class="site-select-wrap">
@@ -145,101 +150,167 @@
             <span>Loading settings...</span>
         </div>
     {:else}
-        <div class="card section">
-            <h2>
-                <SettingsIcon size={14} strokeWidth={2.5} />
-                General
-            </h2>
+        {#if siteModules.has("SurveyLinks") || siteModules.has("HighlightRates")}
+            <div class="card section">
+                <h2>
+                    <SettingsIcon size={14} strokeWidth={2.5} />
+                    General
+                </h2>
 
-            <Toggle
-                title="Survey links"
-                description="Show direct survey links when available."
-                value={currentSite?.enableSurveyLinks}
-                onClick={() =>
-                    updateSetting({
-                        enableSurveyLinks: !currentSite?.enableSurveyLinks,
-                    })}
-            />
-
-            <Toggle
-                title="Highlight rates"
-                description="Visually emphasize stronger survey rates."
-                value={currentSite?.enableHighlightRates}
-                onClick={() =>
-                    updateSetting({
-                        enableHighlightRates:
-                            !currentSite?.enableHighlightRates,
-                    })}
-            />
-        </div>
-
-        <div class="card section">
-            <h2>
-                <CircleDollarSign size={14} strokeWidth={2.5} />
-                Currency
-            </h2>
-            <Toggle
-                title="Currency conversion"
-                description="Convert rewards into your selected currency."
-                value={currentSite?.enableCurrencyConversion}
-                onClick={() =>
-                    updateSetting({
-                        enableCurrencyConversion:
-                            !currentSite?.enableCurrencyConversion,
-                    })}
-            />
-            <div class="field">
-                <label for="currency">Selected currency</label>
-                <div class="select-wrap">
-                    <select
-                        id="currency"
-                        bind:value={currentSite.selectedCurrency}
-                        on:change={(e) =>
+                {#if siteModules.has("SurveyLinks")}
+                    <Toggle
+                        title="Survey links"
+                        description="Show direct survey links when available."
+                        value={currentSite?.enableSurveyLinks}
+                        onClick={() =>
                             updateSetting({
-                                selectedCurrency: e.currentTarget
-                                    .value as Settings["selectedCurrency"],
+                                enableSurveyLinks:
+                                    !currentSite?.enableSurveyLinks,
                             })}
-                    >
-                        <option value="USD">USD</option>
-                        <option value="GBP">GBP</option>
-                    </select>
-                    <ChevronDown size={14} />
+                    />
+                {/if}
+
+                {#if siteModules.has("HighlightRates")}
+                    <Toggle
+                        title="Highlight rates"
+                        description="Visually emphasize stronger survey rates."
+                        value={currentSite?.enableHighlightRates}
+                        onClick={() =>
+                            updateSetting({
+                                enableHighlightRates:
+                                    !currentSite?.enableHighlightRates,
+                            })}
+                    />
+                {/if}
+            </div>
+        {/if}
+
+        {#if siteModules.has("CurrencyConversion")}
+            <div class="card section">
+                <h2>
+                    <CircleDollarSign size={14} strokeWidth={2.5} />
+                    Currency
+                </h2>
+                <Toggle
+                    title="Currency conversion"
+                    description="Convert rewards into your selected currency."
+                    value={currentSite?.enableCurrencyConversion}
+                    onClick={() =>
+                        updateSetting({
+                            enableCurrencyConversion:
+                                !currentSite?.enableCurrencyConversion,
+                        })}
+                />
+                <div class="field">
+                    <label for="currency">Selected currency</label>
+                    <div class="select-wrap">
+                        <select
+                            id="currency"
+                            bind:value={currentSite.selectedCurrency}
+                            on:change={(e) =>
+                                updateSetting({
+                                    selectedCurrency: e.currentTarget
+                                        .value as Settings["selectedCurrency"],
+                                })}
+                        >
+                            {#each currencyKeys as currency}
+                                <option value={currency}>{currency}</option>
+                            {/each}
+                        </select>
+                        <ChevronDown size={14} />
+                    </div>
                 </div>
             </div>
-        </div>
+        {/if}
+
+        {#if siteModules.has("NewSurveyNotifications")}
+            <div class="card section">
+                <h2>
+                    <Bell size={14} strokeWidth={2.5} />
+                    Notifications
+                </h2>
+                <Toggle
+                    title="New survey notifications"
+                    description="Send a desktop notification when a new survey appears."
+                    value={currentSite?.enableNewSurveyNotifications}
+                    onClick={() =>
+                        updateSetting({
+                            enableNewSurveyNotifications:
+                                !currentSite?.enableNewSurveyNotifications,
+                        })}
+                />
+                {#if currentSite?.enableNewSurveyNotifications}
+                    <ResearcherList
+                        title="Included researchers"
+                        names={currentSite?.includedResearchers}
+                        suggestions={Object.keys(
+                            currentSite?.cachedResearchers,
+                        )}
+                        onAdd={(name) =>
+                            addResearcher("includedResearchers", name)}
+                        onRemove={(name) =>
+                            removeResearcher("includedResearchers", name)}
+                    />
+                    <ResearcherList
+                        title="Excluded researchers"
+                        names={currentSite?.excludedResearchers}
+                        suggestions={Object.keys(
+                            currentSite?.cachedResearchers,
+                        )}
+                        onAdd={(name) =>
+                            addResearcher("excludedResearchers", name)}
+                        onRemove={(name) =>
+                            removeResearcher("excludedResearchers", name)}
+                    />
+                {/if}
+            </div>
+        {/if}
 
         <div class="card section">
             <h2>
-                <Bell size={14} strokeWidth={2.5} />
-                Notifications
+                <RefreshCw size={14} strokeWidth={2.5} />
+                Auto Reload
             </h2>
             <Toggle
-                title="New survey notifications"
-                description="Send a desktop notification when a new survey appears."
-                value={currentSite?.enableNewSurveyNotifications}
+                title="Auto reload"
+                description="Periodically refresh the page in the background to check for new studies."
+                value={currentSite?.enableAutoReload}
                 onClick={() =>
                     updateSetting({
-                        enableNewSurveyNotifications:
-                            !currentSite?.enableNewSurveyNotifications,
+                        enableAutoReload: !currentSite?.enableAutoReload,
                     })}
             />
-            {#if currentSite?.enableNewSurveyNotifications}
-                <ResearcherList
-                    title="Included researchers"
-                    names={currentSite?.includedResearchers}
-                    suggestions={Object.keys(currentSite?.cachedResearchers)}
-                    onAdd={(name) => addResearcher("includedResearchers", name)}
-                    onRemove={(name) =>
-                        removeResearcher("includedResearchers", name)}
-                />
-                <ResearcherList
-                    title="Excluded researchers"
-                    names={currentSite?.excludedResearchers}
-                    suggestions={Object.keys(currentSite?.cachedResearchers)}
-                    onAdd={(name) => addResearcher("excludedResearchers", name)}
-                    onRemove={(name) =>
-                        removeResearcher("excludedResearchers", name)}
-                />
+            {#if currentSite?.enableAutoReload}
+                <div class="field">
+                    <label for="min-interval">Min interval (minutes)</label>
+                    <input
+                        id="min-interval"
+                        type="number"
+                        min="1"
+                        value={currentSite?.minReloadInterval}
+                        on:change={(e) =>
+                            updateSetting({
+                                minReloadInterval: Number(
+                                    e.currentTarget.value,
+                                ),
+                            })}
+                    />
+                </div>
+                <div class="field">
+                    <label for="max-interval">Max interval (minutes)</label>
+                    <input
+                        id="max-interval"
+                        type="number"
+                        min="1"
+                        value={currentSite?.maxReloadInterval}
+                        on:change={(e) =>
+                            updateSetting({
+                                maxReloadInterval: Number(
+                                    e.currentTarget.value,
+                                ),
+                            })}
+                    />
+                </div>
             {/if}
         </div>
 
@@ -399,6 +470,23 @@
     }
 
     .select-wrap select:focus {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    input[type="number"] {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: #d1d5db;
+        font-size: 0.82rem;
+        font-family: inherit;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    input[type="number"]:focus {
         border-color: rgba(255, 255, 255, 0.2);
     }
 
