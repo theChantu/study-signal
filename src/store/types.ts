@@ -53,13 +53,6 @@ type SiteSettings = CurrencyConversionSettings &
     ReloadSettings &
     Analytics;
 
-type ProviderConfig = Partial<{
-    discord: { apiKey: string; userId: string };
-    telegram: { apiKey: string; chatId: string };
-}>;
-
-export type ProviderName = keyof ProviderConfig;
-
 interface GlobalSettings {
     enableDebug: boolean;
     providers: Partial<ProviderConfigMap>;
