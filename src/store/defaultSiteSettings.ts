@@ -33,6 +33,15 @@ const defaultSiteSettings: SiteSettings = Object.freeze({
     minReloadInterval: 5,
     maxReloadInterval: 7,
     enableAutoReload: false,
+    totalSurveyCompletions: 0,
+    dailySurveyCompletions: {
+        timestamp: Date.now(),
+        urls: [],
+    },
 });
 
-export { defaultSiteSettings };
+const defaultSiteSettingsKeys = Object.keys(
+    defaultSiteSettings,
+) as (keyof typeof defaultSiteSettings)[];
+
+export { defaultSiteSettings, defaultSiteSettingsKeys };

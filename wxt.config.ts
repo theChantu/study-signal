@@ -12,7 +12,7 @@ export default defineConfig({
     modules: ["@wxt-dev/module-svelte"],
     manifest: {
         host_permissions: hostPermissions,
-        permissions: ["storage", "notifications", "tabs"],
+        permissions: ["storage", "notifications", "tabs", "webRequest"],
 
         browser_specific_settings: {
             gecko: {

@@ -7,25 +7,12 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { SettingsUpdate } from "@/store/createStore";
 import { defaultSettings, defaultSettingsKeys } from "@/store/defaultSettings";
+import debounce from "@/lib/debounce";
 
 import type { ContentScriptContext } from "#imports";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
-
-    function debounce<F extends (...args: any[]) => any>(
-        fn: F,
-        delay = 300,
-    ): (...args: Parameters<F>) => void {
-        let timeoutId: ReturnType<typeof setTimeout>;
-
-        return (...args) => {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                Promise.resolve(fn(...args)).catch(console.error);
-            }, delay);
-        };
-    }
 
     let observer: MutationObserver;
     const observerConfig = { childList: true, subtree: true };
@@ -66,7 +53,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     let siteSettings = (await sendExtensionMessage({
         type: "store-fetch",
         data: {
-            url: `https://${adapter.url.host}`,
+            siteName: adapter.url.name,
             settings: defaultSettingsKeys,
         },
     })) ?? { data: defaultSettings };
@@ -130,6 +117,15 @@ async function runContentScript(ctx: ContentScriptContext) {
         if (keys.length === 1 && keys[0] === "surveys") return;
 
         debounced(payload);
+    });
+
+    const unsubscribeNetwork = adapter.observeNetwork();
+
+    adapter.on("surveyCompletion", (data) => {
+        sendExtensionMessage({
+            type: "track-survey-completion",
+            data: { siteName: adapter.url.name, url: data.url },
+        });
     });
 }
 

@@ -7,6 +7,7 @@ const defaultSettings = Object.freeze({
     ...defaultSiteSettings,
     ...defaultGlobalSettings,
 }) satisfies SiteSettings & GlobalSettings;
+
 const defaultSettingsKeys = Object.keys(
     defaultSettings,
 ) as (keyof typeof defaultSettings)[];

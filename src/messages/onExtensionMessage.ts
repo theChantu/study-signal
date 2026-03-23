@@ -12,17 +12,23 @@ export function onExtensionMessage<K extends keyof MessageMap>(
         sender: Browser.runtime.MessageSender,
     ) => MessageResponse<K> | Promise<MessageResponse<K>>,
 ) {
-    browser.runtime.onMessage.addListener(
-        (message: Message, sender, sendResponse) => {
-            if (message.type !== type) return false;
+    const listener = (
+        message: Message,
+        sender: Browser.runtime.MessageSender,
+        sendResponse: (response?: MessageResponse<K>) => void,
+    ) => {
+        if (message.type !== type) return false;
 
-            const payload = (
-                "data" in message ? message.data : undefined
-            ) as HandlerPayload<K>;
+        const payload = (
+            "data" in message ? message.data : undefined
+        ) as HandlerPayload<K>;
 
-            Promise.resolve(handler(payload, sender)).then(sendResponse);
+        Promise.resolve(handler(payload, sender)).then(sendResponse);
 
-            return true;
-        },
-    );
+        return true;
+    };
+
+    browser.runtime.onMessage.addListener(listener);
+
+    return () => browser.runtime.onMessage.removeListener(listener);
 }

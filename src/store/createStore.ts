@@ -1,5 +1,6 @@
 import { defaultSiteSettings } from "./defaultSiteSettings";
-import { defaultGlobalSettings } from "./defaultGlobalSettings";
+import { defaultGlobalSettingsKeys } from "./defaultGlobalSettings";
+import { defaultSettings } from "./defaultSettings";
 import { storage } from "#imports";
 
 import type { SiteSettings, GlobalSettings } from "./types";
@@ -9,19 +10,8 @@ export type SettingsUpdate = Partial<Settings>;
 export type GlobalSettingsUpdate = Partial<GlobalSettings>;
 export type SiteSettingsUpdate = Partial<SiteSettings>;
 
-type SiteName = string;
-
-type ResolvedGlobalSettings<K extends readonly (keyof GlobalSettings)[]> = Pick<
-    {
-        [P in keyof GlobalSettings]: DeepNonNullable<GlobalSettings[P]>;
-    },
-    K[number]
->;
-
 export type ResolvedSettings<K extends readonly (keyof Settings)[]> = Pick<
-    {
-        [P in keyof Settings]: DeepNonNullable<Settings[P]>;
-    },
+    { [P in keyof Settings]: DeepNonNullable<Settings[P]> },
     K[number]
 >;
 
@@ -30,6 +20,13 @@ export type SiteListener = (
     siteName: SiteName,
     changed: SiteSettingsUpdate,
 ) => void;
+
+type SiteName = string;
+
+type ResolvedGlobalSettings<K extends readonly (keyof GlobalSettings)[]> = Pick<
+    { [P in keyof GlobalSettings]: DeepNonNullable<GlobalSettings[P]> },
+    K[number]
+>;
 
 type DeepNonNullable<T> = T extends (...args: any[]) => any
     ? T
@@ -41,9 +38,31 @@ type DeepPartial<T> = T extends object
     ? { [K in keyof T]?: DeepPartial<T[K]> }
     : T;
 
+type FieldPolicy = {
+    field: keyof SiteSettings;
+    shouldReset: (value: any) => boolean;
+};
+
+type ArrayKeys = {
+    [K in keyof SiteSettings]: SiteSettings[K] extends any[] ? K : never;
+}[keyof SiteSettings];
+
+const GLOBALS_KEY = localKey("globals");
+const globalKeys = new Set<string>(defaultGlobalSettingsKeys);
+
+const fieldPolicies: FieldPolicy[] = [
+    {
+        field: "dailySurveyCompletions",
+        shouldReset: (v) => Date.now() - v.timestamp > 24 * 60 * 60 * 1000,
+    },
+];
+
+function localKey(key: string) {
+    return `local:${key}` as const;
+}
+
 function deepMerge(target: any, source: any): any {
     if (source === undefined) return target;
-
     if (Array.isArray(source) || Array.isArray(target)) return source;
 
     if (
@@ -62,19 +81,94 @@ function deepMerge(target: any, source: any): any {
     return source;
 }
 
-const localKey = (key: string) => `local:${key}` as const;
+function parseOverloadArgs(
+    siteNameOrFirst: SiteName | any,
+    second?: any,
+): { siteName: SiteName | null; value: any } {
+    const hasSiteName = typeof siteNameOrFirst === "string";
+    return {
+        siteName: hasSiteName ? siteNameOrFirst : null,
+        value: hasSiteName ? second : siteNameOrFirst,
+    };
+}
 
-const GLOBALS_KEY = localKey("globals");
-const globalKeys = new Set<string>(Object.keys(defaultGlobalSettings));
+function splitByScope(entries: [string, unknown][]) {
+    const global: [string, unknown][] = [];
+    const site: [string, unknown][] = [];
+    for (const entry of entries) {
+        (globalKeys.has(entry[0]) ? global : site).push(entry);
+    }
+    return { global, site };
+}
 
-const defaults: Settings = {
-    ...defaultSiteSettings,
-    ...defaultGlobalSettings,
-};
+async function readStorage(siteName: SiteName | null, keys: readonly string[]) {
+    const needsGlobals = keys.some((k) => globalKeys.has(k));
+    const needsSite = siteName !== null && keys.some((k) => !globalKeys.has(k));
+
+    const [globals, site] = await Promise.all([
+        needsGlobals
+            ? storage.getItem<Partial<GlobalSettings>>(GLOBALS_KEY)
+            : null,
+        needsSite
+            ? storage.getItem<SiteSettingsUpdate>(localKey(siteName))
+            : null,
+    ]);
+
+    return { globals: globals ?? {}, site: site ?? {} };
+}
+
+function resolveValues(
+    keys: readonly (keyof Settings)[],
+    globals: Record<string, unknown>,
+    site: Record<string, unknown>,
+) {
+    return Object.fromEntries(
+        keys.map((k) => {
+            const stored = globalKeys.has(k as string)
+                ? (globals as Record<string, unknown>)[k as string]
+                : site[k as string];
+            return [k, deepMerge(defaultSettings[k], stored)];
+        }),
+    );
+}
+
+function applyPolicies(
+    result: Record<string, any>,
+    siteName: SiteName | null,
+    storedSite: Record<string, unknown>,
+) {
+    const resets: Partial<SiteSettings> = {};
+    for (const policy of fieldPolicies) {
+        if (!(policy.field in result)) continue;
+        if (!policy.shouldReset(result[policy.field])) continue;
+        result[policy.field] = structuredClone(
+            defaultSiteSettings[policy.field],
+        );
+        resets[policy.field] = result[policy.field];
+    }
+
+    if (Object.keys(resets).length > 0 && siteName !== null) {
+        storage.setItem(localKey(siteName), { ...storedSite, ...resets });
+    }
+}
 
 export function createStore() {
     const globalListeners = new Set<GlobalListener>();
     const siteListeners = new Set<SiteListener>();
+
+    function notify(
+        siteName: SiteName | null,
+        globalValues: GlobalSettingsUpdate,
+        siteValues: SiteSettingsUpdate,
+    ) {
+        if (Object.keys(globalValues).length > 0) {
+            for (const listener of globalListeners) listener(globalValues);
+        }
+        if (Object.keys(siteValues).length > 0 && siteName !== null) {
+            for (const listener of siteListeners)
+                listener(siteName, siteValues);
+        }
+    }
 
     async function get<K extends readonly (keyof GlobalSettings)[]>(
         keys: K,
@@ -87,49 +181,15 @@ export function createStore() {
         siteNameOrKeys: SiteName | readonly (keyof Settings)[],
         maybeKeys?: readonly (keyof Settings)[],
     ) {
-        const hasSiteName = typeof siteNameOrKeys === "string";
-        const siteName = hasSiteName ? siteNameOrKeys : null;
-        const keys = hasSiteName ? maybeKeys! : siteNameOrKeys;
-
-        const needsGlobals = keys.some((k) => globalKeys.has(k as string));
-        const needsSite =
-            siteName !== null && keys.some((k) => !globalKeys.has(k as string));
-
-        const [globals, siteStored] = await Promise.all([
-            needsGlobals
-                ? storage.getItem<Partial<GlobalSettings>>(GLOBALS_KEY)
-                : null,
-            needsSite
-                ? storage.getItem<SiteSettingsUpdate>(localKey(siteName))
-                : null,
-        ]);
-
-        const g = globals ?? {};
-        const s = siteStored ?? {};
-
-        return Object.fromEntries(
-            keys.map((k) => {
-                const stored = globalKeys.has(k as string)
-                    ? (g as Record<string, unknown>)[k as string]
-                    : s[k as keyof SiteSettings];
-                return [k, deepMerge(defaults[k], stored)];
-            }),
+        const { siteName, value: keys } = parseOverloadArgs(
+            siteNameOrKeys,
+            maybeKeys,
         );
+        const stored = await readStorage(siteName, keys as string[]);
+        const result = resolveValues(keys, stored.globals, stored.site);
+        applyPolicies(result, siteName, stored.site);
+        return result;
     }
-
-    const notify = (
-        siteName: SiteName | null,
-        globalValues: GlobalSettingsUpdate,
-        siteValues: SiteSettingsUpdate,
-    ) => {
-        if (Object.keys(globalValues).length > 0) {
-            for (const listener of globalListeners) listener(globalValues);
-        }
-        if (Object.keys(siteValues).length > 0 && siteName !== null) {
-            for (const listener of siteListeners)
-                listener(siteName, siteValues);
-        }
-    };
 
     async function set(values: GlobalSettingsUpdate): Promise<void>;
     async function set(
@@ -140,39 +200,42 @@ export function createStore() {
         siteNameOrValues: SiteName | SettingsUpdate,
         maybeValues?: SettingsUpdate,
     ) {
-        const hasSiteName = typeof siteNameOrValues === "string";
-        const siteName = hasSiteName ? siteNameOrValues : null;
-        const values = hasSiteName ? maybeValues! : siteNameOrValues;
+        const { siteName, value: values } = parseOverloadArgs(
+            siteNameOrValues,
+            maybeValues,
+        );
 
         const filtered = Object.fromEntries(
             Object.entries(values).filter(([, v]) => v !== undefined),
         );
-
-        const globalEntries = Object.entries(filtered).filter(([k]) =>
-            globalKeys.has(k),
-        );
-        const siteEntries = Object.entries(filtered).filter(
-            ([k]) => !globalKeys.has(k),
+        const { global: globalEntries, site: siteEntries } = splitByScope(
+            Object.entries(filtered),
         );
 
         const writes: Promise<void>[] = [];
 
         if (globalEntries.length > 0) {
-            const globalValues = Object.fromEntries(globalEntries);
             const stored =
                 (await storage.getItem<Partial<GlobalSettings>>(GLOBALS_KEY)) ??
                 {};
             writes.push(
-                storage.setItem(GLOBALS_KEY, { ...stored, ...globalValues }),
+                storage.setItem(GLOBALS_KEY, {
+                    ...stored,
+                    ...Object.fromEntries(globalEntries),
+                }),
             );
         }
 
         if (siteEntries.length > 0 && siteName !== null) {
-            const siteValues = Object.fromEntries(siteEntries);
             const siteKey = localKey(siteName);
             const stored =
                 (await storage.getItem<SiteSettingsUpdate>(siteKey)) ?? {};
-            writes.push(storage.setItem(siteKey, { ...stored, ...siteValues }));
+            writes.push(
+                storage.setItem(siteKey, {
+                    ...stored,
+                    ...Object.fromEntries(siteEntries),
+                }),
+            );
         }
 
         await Promise.all(writes);
@@ -183,7 +246,10 @@ export function createStore() {
         );
     }
 
-    const update = async (siteName: SiteName, values: DeepPartial<SiteSettings>) => {
+    async function update(
+        siteName: SiteName,
+        values: DeepPartial<SiteSettings>,
+    ) {
         const keys = Object.keys(values) as (keyof SiteSettings)[];
         const current = await get(siteName, keys);
 
@@ -192,25 +258,7 @@ export function createStore() {
         ) as SiteSettingsUpdate;
 
         await set(siteName, merged);
-    };
-
-    function subscribe(topic: "globals", listener: GlobalListener): () => void;
-    function subscribe(topic: "site", listener: SiteListener): () => void;
-    function subscribe(
-        topic: "globals" | "site",
-        listener: GlobalListener | SiteListener,
-    ) {
-        if (topic === "globals") {
-            globalListeners.add(listener as GlobalListener);
-            return () => globalListeners.delete(listener as GlobalListener);
-        }
-        siteListeners.add(listener as SiteListener);
-        return () => siteListeners.delete(listener as SiteListener);
     }
-
-    type ArrayKeys = {
-        [K in keyof SiteSettings]: SiteSettings[K] extends any[] ? K : never;
-    }[keyof SiteSettings];
 
     async function push<K extends ArrayKeys>(
         siteName: SiteName,
@@ -237,6 +285,20 @@ export function createStore() {
         const filtered = arr.filter((item) => !removeSet.has(item));
         if (filtered.length === arr.length) return;
         await set(siteName, { [key]: filtered } as SiteSettingsUpdate);
+    }
+
+    function subscribe(topic: "globals", listener: GlobalListener): () => void;
+    function subscribe(topic: "site", listener: SiteListener): () => void;
+    function subscribe(
+        topic: "globals" | "site",
+        listener: GlobalListener | SiteListener,
+    ) {
+        if (topic === "globals") {
+            globalListeners.add(listener as GlobalListener);
+            return () => globalListeners.delete(listener as GlobalListener);
+        }
+        siteListeners.add(listener as SiteListener);
+        return () => siteListeners.delete(listener as SiteListener);
     }
 
     return { get, set, update, push, remove, subscribe };

@@ -10,7 +10,7 @@ type StoreSetMessage = SettingsUpdate & {
 };
 
 type StoreFetchMessage = {
-    url: string;
+    siteName: SiteName;
     settings: (keyof Settings)[];
 };
 
@@ -25,7 +25,9 @@ interface MessageMap {
     "store-update": StoreUpdateMessage;
     "store-set": StoreSetMessage;
     "store-changed": SettingsUpdate;
-    "fetch": { url: string };
+    fetch: { url: string };
+    "network-event": { url: string; method: string; statusCode: number };
+    "track-survey-completion": { siteName: SiteName; url: string };
 }
 
 interface ResponseMap {
@@ -34,7 +36,9 @@ interface ResponseMap {
     "store-update": void;
     "store-set": void;
     "store-changed": void;
-    "fetch": unknown;
+    fetch: unknown;
+    "network-event": void;
+    "track-survey-completion": void;
 }
 
 type MessageResponse<K extends keyof MessageMap> = K extends keyof ResponseMap

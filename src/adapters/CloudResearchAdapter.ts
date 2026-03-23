@@ -19,6 +19,10 @@ export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
 
     override modules = sites[HOST].modules;
 
+    override networkPatterns = {
+        surveyCompletion: "/submitRedirect",
+    };
+
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>("div.project-card");
     }

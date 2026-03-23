@@ -1,4 +1,6 @@
 import { joinURL } from "ufo";
+import debounce from "@/lib/debounce";
+import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
 import type { ModuleName } from "./modules/BaseModule";
 import type { SupportedSites, sites } from "./sites";
@@ -20,6 +22,19 @@ export type UrlSettings<H extends SupportedSites = SupportedSites> =
 type CurrencyInfo = {
     displaySymbol: string | null;
     sourceSymbol: string | null;
+};
+
+type EventType = "surveyCompletion" | "newSurvey";
+
+interface EventResponseMap {
+    surveyCompletion: NetworkEvent;
+    newSurvey: NetworkEvent;
+}
+
+type NetworkEvent = {
+    url: string;
+    method?: string;
+    status?: number;
 };
 
 export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
@@ -78,5 +93,79 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
                 this.getInitCurrencyInfo(el) ?? "",
             );
         }
+    }
+
+    protected networkPatterns: Partial<Record<EventType, string>> = {};
+
+    protected handleDomMutation(mutations: MutationRecord[]) {}
+
+    protected matchNetworkEvent(event: NetworkEvent): EventType | null {
+        for (const [eventType, pattern] of Object.entries(
+            this.networkPatterns,
+        ) as [EventType, string][]) {
+            if (event.url.includes(pattern)) {
+                return eventType;
+            }
+        }
+        return null;
+    }
+
+    protected handleNetworkEvent(event: NetworkEvent) {}
+
+    private listeners = new Map<EventType, Array<(data: any) => void>>();
+    private observerConfig: MutationObserverInit = {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true,
+    };
+    private observer?: MutationObserver;
+    private pendingMutations: MutationRecord[] = [];
+    private resetMutations = debounce(() => {
+        if (this.pendingMutations.length > 0) {
+            this.observer?.disconnect();
+            this.handleDomMutation(this.pendingMutations);
+            this.pendingMutations = [];
+            this.observer?.observe(document.body, this.observerConfig);
+        }
+    }, 100);
+
+    on<E extends EventType>(
+        event: E,
+        callback: (data: EventResponseMap[E]) => void,
+    ) {
+        if (!this.listeners.has(event)) {
+            this.listeners.set(event, []);
+        }
+        this.listeners.get(event)?.push(callback);
+    }
+
+    emit<E extends EventType>(event: E, data: EventResponseMap[E]): void {
+        const callbacks = this.listeners.get(event) ?? [];
+        for (const callback of callbacks) {
+            callback(data);
+        }
+    }
+
+    observeDom() {
+        this.observer = new MutationObserver((mutations) => {
+            this.pendingMutations.push(...mutations);
+            this.resetMutations();
+        });
+        this.observer.observe(document.body, this.observerConfig);
+
+        return () => this.observer?.disconnect();
+    }
+
+    observeNetwork() {
+        const unsubscribe = onExtensionMessage("network-event", (payload) => {
+            this.handleNetworkEvent({
+                url: payload.url,
+                method: payload.method,
+                status: payload.statusCode,
+            });
+        });
+
+        return unsubscribe;
     }
 }

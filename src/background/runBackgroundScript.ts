@@ -3,9 +3,26 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
 import { createStore } from "@/store/createStore";
 import { supportedSites } from "@/adapters/sites";
-import getSiteAdapter from "@/lib/getSiteAdapter";
 
 function runBackgroundScript() {
+    const filteredUrls = supportedSites.map((site) => `https://${site}/*`);
+
+    browser.webRequest.onCompleted.addListener(
+        (details) => {
+            if (!details.tabId || details.tabId < 0) return;
+
+            sendTabMessage(details.tabId, {
+                type: "network-event",
+                data: {
+                    url: details.url,
+                    method: details.method,
+                    statusCode: details.statusCode,
+                },
+            });
+        },
+        { urls: filteredUrls },
+    );
+
     const notificationActions = new Map<string, () => void | Promise<void>>();
 
     browser.notifications.onClicked.addListener(async (id) => {
@@ -41,12 +58,9 @@ function runBackgroundScript() {
     const store = createStore();
 
     onExtensionMessage("store-fetch", async (payload) => {
-        const { url, settings } = payload;
-        const adapter = getSiteAdapter(url);
-        if (!adapter) return null;
-
-        const data = await store.get(adapter.url.name, settings);
-        return { siteName: adapter.url.name, data };
+        const { siteName, settings } = payload;
+        const data = await store.get(siteName, settings);
+        return { siteName, data };
     });
 
     store.subscribe("globals", async (changed) => {
@@ -96,6 +110,24 @@ function runBackgroundScript() {
     onExtensionMessage("store-set", async (payload) => {
         const { siteName, ...settings } = payload;
         await store.set(siteName, settings);
+    });
+
+    onExtensionMessage("track-survey-completion", async (payload) => {
+        const { siteName, url } = payload;
+        const { totalSurveyCompletions, dailySurveyCompletions } =
+            await store.get(siteName, [
+                "totalSurveyCompletions",
+                "dailySurveyCompletions",
+            ]);
+
+        if (dailySurveyCompletions.urls.includes(url)) return;
+
+        await store.update(siteName, {
+            totalSurveyCompletions: totalSurveyCompletions + 1,
+            dailySurveyCompletions: {
+                urls: [...dailySurveyCompletions.urls, url],
+            },
+        });
     });
 }
 

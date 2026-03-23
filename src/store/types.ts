@@ -36,11 +36,20 @@ interface ReloadSettings {
     enableAutoReload: boolean;
 }
 
+interface Analytics {
+    totalSurveyCompletions: number;
+    dailySurveyCompletions: {
+        timestamp: ReturnType<typeof Date.now>;
+        urls: string[];
+    };
+}
+
 type SiteSettings = CurrencyConversionSettings &
     HighlightRatesSettings &
     SurveyLinksSettings &
     NewSurveyNotificationsSettings &
-    ReloadSettings;
+    ReloadSettings &
+    Analytics;
 
 interface GlobalSettings {
     enableDebug: boolean;

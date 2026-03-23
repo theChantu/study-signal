@@ -4,4 +4,8 @@ const defaultGlobalSettings = Object.freeze({
     enableDebug: false,
 }) satisfies GlobalSettings;
 
-export { defaultGlobalSettings };
+const defaultGlobalSettingsKeys = Object.keys(
+    defaultGlobalSettings,
+) as (keyof typeof defaultGlobalSettings)[];
+
+export { defaultGlobalSettings, defaultGlobalSettingsKeys };

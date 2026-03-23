@@ -15,6 +15,8 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
 
     override modules = sites[HOST].modules;
 
+    override networkPatterns = {};
+
     getSurveyElements() {
         return document.querySelectorAll<HTMLElement>(
             'li[data-testid^="study-"]',

@@ -88,7 +88,7 @@
             const response = await sendExtensionMessage({
                 type: "store-fetch",
                 data: {
-                    url: `https://${siteUrl}`,
+                    siteName: sites[siteUrl].name,
                     settings: Object.keys(
                         defaultSettings,
                     ) as (keyof Settings)[],
