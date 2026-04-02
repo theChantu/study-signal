@@ -55,6 +55,7 @@ type SiteSettings = CurrencyConversionSettings &
 
 interface GlobalSettings {
     enableDebug: boolean;
+    idleThreshold: number;
     providers: Partial<ProviderConfigMap>;
 }
 

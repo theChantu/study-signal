@@ -4,18 +4,31 @@ import { BaseProvider } from "./BaseProvider";
 
 type ProviderClass = new (config: any) => BaseProvider;
 
-export const providers = {
+export const nameToProvider = {
     discord: DiscordProvider,
     telegram: TelegramProvider,
 } as const satisfies Record<string, ProviderClass>;
 
-const providerNames = Object.keys(providers) as (keyof typeof providers)[];
+const providerNames = Object.keys(
+    nameToProvider,
+) as (keyof typeof nameToProvider)[];
 
 export type ProviderName = (typeof providerNames)[number];
 
 type ProviderConfig<T> = { enabled: boolean } & T;
 
 export type ProviderConfigMap = {
-    discord: ProviderConfig<{ botToken: string; userId: string; channelId?: string }>;
-    telegram: ProviderConfig<{ botToken: string; chatId: string }>;
+    discord: ProviderConfig<{
+        botToken: string;
+        userId: string;
+        channelId?: string;
+    }>;
+    telegram: ProviderConfig<{ botToken: string; chatId?: number }>;
 };
+
+export function getProvider<K extends ProviderName>(
+    name: K,
+    config: ProviderConfigMap[K],
+): BaseProvider<ProviderConfigMap[K]> {
+    return new (nameToProvider[name] as any)(config);
+}

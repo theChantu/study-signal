@@ -1,4 +1,4 @@
-import { BaseProvider } from "./BaseProvider";
+import { BaseProvider, type MessageData } from "./BaseProvider";
 
 import type { ProviderConfigMap } from "./providers";
 
@@ -39,6 +39,10 @@ export class DiscordProvider extends BaseProvider<
 
     override onRetry(): void {
         this.config.channelId = undefined;
+    }
+
+    protected override formatMessage(data: MessageData): string {
+        return `**${data.title}**\n\n${data.body}${data.url ? `\n\n${data.url}` : ""}`;
     }
 
     protected async send(message: string): Promise<boolean> {

@@ -15,9 +15,14 @@ type StoreFetchMessage = {
     settings: (keyof Settings)[];
 };
 
+type SurveyNotificationMessage = {
+    siteName: SiteName;
+    notifications: NotificationData[];
+};
+
 interface MessageMap {
     "store-fetch": StoreFetchMessage;
-    "survey-notification": NotificationData[];
+    "survey-notification": SurveyNotificationMessage;
     "store-update": StoreUpdateMessage;
     "store-set": StoreSetMessage;
     "store-changed": SettingsUpdate;

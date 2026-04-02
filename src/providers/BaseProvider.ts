@@ -1,3 +1,9 @@
+export interface MessageData {
+    title: string;
+    body: string;
+    url?: string;
+}
+
 export abstract class BaseProvider<T = unknown> {
     constructor(protected config: T) {}
 
@@ -37,17 +43,25 @@ export abstract class BaseProvider<T = unknown> {
         return parts;
     }
 
+    protected formatMessage(data: MessageData): string {
+        let message = `${data.title}\n\n${data.body}`;
+        if (data.url) {
+            message += `\n\n${data.url}`;
+        }
+        return message;
+    }
+
     async sendMessage(
-        message: string,
+        data: MessageData,
         attempts = 0,
         timeout = 5000,
     ): Promise<void> {
-        const ok = await this.send(message);
+        const ok = await this.send(this.formatMessage(data));
 
         if (!ok && attempts < 3) {
             this.onRetry();
             setTimeout(
-                () => this.sendMessage(message, attempts + 1, timeout + 5000),
+                () => this.sendMessage(data, attempts + 1, timeout + 5000),
                 timeout,
             );
         }

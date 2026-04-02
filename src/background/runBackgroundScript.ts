@@ -3,6 +3,7 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
 import { createStore } from "@/store/createStore";
 import { supportedSites } from "@/adapters/sites";
+import { getProvider, type ProviderName } from "@/providers/providers";
 
 function runBackgroundScript() {
     const filteredUrls = supportedSites.map((site) => `https://${site}/*`);
@@ -39,13 +40,35 @@ function runBackgroundScript() {
     });
 
     onExtensionMessage("survey-notification", async (payload) => {
-        const notifications = payload;
+        const { siteName, notifications } = payload;
 
-        // TODO: Query for custom idle time from the extension's settings
-        // TODO: Route to Discord if queryState is idle
-        const state = await browser.idle.queryState(15 * 60);
-        if (state === "idle" || state === "locked") {
-            // TODO: Send notification to providers
+        const { idleThreshold, providers } = await store.get([
+            "idleThreshold",
+            "providers",
+        ]);
+        const state = await browser.idle.queryState(idleThreshold);
+
+        const enabledProviders = Object.entries(providers).filter(
+            ([, config]) => config.enabled,
+        );
+
+        if (
+            state === "idle" ||
+            (state === "locked" && enabledProviders.length > 0)
+        ) {
+            for (const [name, config] of enabledProviders) {
+                const provider = getProvider(name as ProviderName, config);
+                const combined = notifications
+                    .map((notification) => {
+                        const { title, message, surveyLink } = notification;
+                        return `${title}\n${message}\n${surveyLink}`;
+                    })
+                    .join("\n\n");
+                await provider.sendMessage({
+                    title: `${siteName} - ${notifications.length} New Survey${notifications.length > 1 ? "s" : ""}`,
+                    body: combined,
+                });
+            }
         } else {
             for (const notification of notifications) {
                 const { title, message, surveyLink, iconUrl } = notification;
