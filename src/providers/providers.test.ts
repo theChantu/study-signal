@@ -9,6 +9,11 @@ function createResponse(ok: boolean, body: unknown = {}) {
     } as unknown as Response;
 }
 
+async function settleRetriedSend(sendPromise: Promise<boolean>) {
+    await vi.runAllTimersAsync();
+    return await sendPromise;
+}
+
 class RetryTestProvider extends BaseProvider<{ enabled: boolean }> {
     private outcomes: boolean[];
     public sendCalls = 0;
@@ -39,8 +44,8 @@ describe("BaseProvider", () => {
         vi.useFakeTimers();
         const provider = new RetryTestProvider([false, false, true]);
 
-        await provider.sendMessage({ title: "t", body: "b" });
-        await vi.runAllTimersAsync();
+        const sendPromise = provider.sendMessage({ title: "t", body: "b" });
+        await expect(settleRetriedSend(sendPromise)).resolves.toBe(true);
 
         expect(provider.sendCalls).toBe(3);
         expect(provider.retryCalls).toBe(2);
@@ -57,8 +62,8 @@ describe("BaseProvider", () => {
             false,
         ]);
 
-        await provider.sendMessage({ title: "t", body: "b" });
-        await vi.runAllTimersAsync();
+        const sendPromise = provider.sendMessage({ title: "t", body: "b" });
+        await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         expect(provider.sendCalls).toBe(4);
         expect(provider.retryCalls).toBe(3);
@@ -123,8 +128,8 @@ describe("TelegramProvider", () => {
             chatId: 123,
         });
 
-        await provider.sendMessage({ title: "Fail", body: "Body" });
-        await vi.runAllTimersAsync();
+        const sendPromise = provider.sendMessage({ title: "Fail", body: "Body" });
+        await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         expect(fetchMock).toHaveBeenCalledTimes(4);
     });
@@ -140,8 +145,8 @@ describe("TelegramProvider", () => {
             chatId: 123,
         });
 
-        await provider.sendMessage({ title: "Throw", body: "Body" });
-        await vi.runAllTimersAsync();
+        const sendPromise = provider.sendMessage({ title: "Throw", body: "Body" });
+        await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         expect(fetchMock).toHaveBeenCalledTimes(4);
     });
@@ -156,8 +161,8 @@ describe("TelegramProvider", () => {
             botToken: "token",
         });
 
-        await provider.sendMessage({ title: "Missing", body: "Body" });
-        await vi.runAllTimersAsync();
+        const sendPromise = provider.sendMessage({ title: "Missing", body: "Body" });
+        await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         const updateCalls = fetchMock.mock.calls.filter(([input]) =>
             String(input).includes("/getUpdates"),
@@ -215,8 +220,11 @@ describe("TelegramProvider", () => {
             chatId: 111,
         });
 
-        await provider.sendMessage({ title: "Recover", body: "Body" });
-        await vi.runAllTimersAsync();
+        const sendPromise = provider.sendMessage({
+            title: "Recover",
+            body: "Body",
+        });
+        await expect(settleRetriedSend(sendPromise)).resolves.toBe(true);
 
         const updateCalls = fetchMock.mock.calls.filter(([input]) =>
             String(input).includes("/getUpdates"),
