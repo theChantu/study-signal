@@ -1,8 +1,9 @@
 import BaseEnhancement from "./BaseEnhancement";
 import store from "@/store/store";
 import { MIN_AMOUNT_PER_HOUR, MAX_AMOUNT_PER_HOUR } from "@/constants";
-import extractHourlyRate from "@/lib/extractHourlyRate";
+import extractNumericValue from "@/lib/extractNumericValue";
 import { getCurrency } from "@/lib/utils";
+import { DataAttr } from "@/adapters/BaseAdapter";
 
 function rateToColor(rate: number, min = 7, max = 15) {
     const clamped = Math.min(Math.max(rate, min), max);
@@ -34,13 +35,13 @@ class HighlightRatesEnhancement extends BaseEnhancement {
             }
 
             const originalText =
-                element.getAttribute("data-original-text") ??
+                element.getAttribute(DataAttr.ORIGINAL_TEXT) ??
                 element.textContent;
             const originalSymbol = element.getAttribute(
-                "data-original-currency",
+                DataAttr.ORIGINAL_SYMBOL,
             );
 
-            const rate = extractHourlyRate(originalText);
+            const rate = extractNumericValue(originalText);
             if (isNaN(rate) || !originalSymbol) return;
 
             const originalCurrency = getCurrency(originalSymbol);

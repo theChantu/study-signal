@@ -26,7 +26,6 @@
     import type { Settings, SettingsUpdate } from "@/store/createStore";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
     import type { ProviderConfigMap } from "@/providers/providers";
-    import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 
     const siteKeys = Object.keys(sites) as SupportedSites[];
     const providerSetupUrl =
@@ -43,7 +42,7 @@
         name: K,
         values: Partial<ProviderConfigMap[K]>,
     ) {
-        updateSetting({
+        void queueSettingsMutation("store-update", {
             providers: { [name]: values },
         });
     }
@@ -81,20 +80,6 @@
         return settingsMutationQueue;
     }
 
-    function updateSetting(
-        values: SettingsUpdate,
-        siteUrl: SupportedSites = selectedSite,
-    ) {
-        void queueSettingsMutation("store-update", values, siteUrl);
-    }
-
-    function setSetting(
-        values: SettingsUpdate,
-        siteUrl: SupportedSites = selectedSite,
-    ) {
-        return queueSettingsMutation("store-set", values, siteUrl);
-    }
-
     type ResearcherKey = Exclude<
         keyof NewSurveyNotificationsSettings,
         "enableNewSurveyNotifications" | "cachedResearchers"
@@ -103,13 +88,15 @@
     function addResearcher(key: ResearcherKey, name: string) {
         const loadedSite = loadedSites[selectedSite];
         if (!loadedSite || loadedSite[key].includes(name)) return;
-        updateSetting({ [key]: [...loadedSite[key], name] });
+        void queueSettingsMutation("store-update", {
+            [key]: [...loadedSite[key], name],
+        });
     }
 
     function removeResearcher(key: ResearcherKey, name: string) {
         const loadedSite = loadedSites[selectedSite];
         if (!loadedSite) return;
-        updateSetting({
+        void queueSettingsMutation("store-update", {
             [key]: loadedSite[key].filter((n) => n !== name),
         });
     }
@@ -124,12 +111,17 @@
         const previousValue = structuredClone(siteSettings[key]);
         const resetValue = structuredClone(defaultSettings[key]);
 
-        void setSetting({ [key]: resetValue }, siteUrl);
+        void queueSettingsMutation("store-set", { [key]: resetValue }, siteUrl);
 
         showActionToast({
             message: `Reset ${formatKey(key)}.`,
             actionLabel: "Undo",
-            onAction: () => setSetting({ [key]: previousValue }, siteUrl),
+            onAction: () =>
+                queueSettingsMutation(
+                    "store-set",
+                    { [key]: previousValue },
+                    siteUrl,
+                ),
         });
     }
 
@@ -143,36 +135,42 @@
     }
 
     const testNotificationModes = ["auto", "provider", "browser"] as const;
-    async function sendTestNotification(
-        delivery: (typeof testNotificationModes)[number] = "auto",
-    ) {
-        const notifications: NotificationData[] = [
-            {
-                title: "Test Notification",
-                message: "This is a test notification.",
-                surveyLink: "https://example.com",
-                iconUrl: browser.runtime.getURL("/icon-48.png"),
-            },
-        ];
+    type TestNotificationDelivery = (typeof testNotificationModes)[number];
+
+    async function notifyTestNotification(
+        delivery: TestNotificationDelivery,
+    ): Promise<boolean> {
         try {
-            const ok = await sendExtensionMessage({
+            return await sendExtensionMessage({
                 type: "notification",
                 data: {
                     siteName: sites[selectedSite].name,
-                    notifications,
+                    notifications: [
+                        {
+                            title: "Test Notification",
+                            message: "This is a test notification.",
+                            link: "https://example.com",
+                            iconUrl: browser.runtime.getURL("/icon-48.png"),
+                        },
+                    ],
                     delivery,
                 },
             });
-
-            showToast(
-                ok
-                    ? "Notification sent successfully."
-                    : "Failed to send notification.",
-            );
         } catch (error) {
-            console.error(error);
-            showToast("Failed to send notification.");
+            console.error("Failed to send test notification:", error);
+            return false;
         }
+    }
+
+    async function sendTestNotification(
+        delivery: TestNotificationDelivery = "auto",
+    ) {
+        const success = await notifyTestNotification(delivery);
+        showToast(
+            success
+                ? "Notification sent successfully."
+                : "Failed to send notification.",
+        );
     }
 
     function parsePositiveInt(raw: string): number | null {
@@ -261,7 +259,7 @@
                         description="Show direct survey links when available."
                         value={currentSite?.enableSurveyLinks}
                         onClick={() =>
-                            updateSetting({
+                            queueSettingsMutation("store-update", {
                                 enableSurveyLinks:
                                     !currentSite?.enableSurveyLinks,
                             })}
@@ -274,7 +272,7 @@
                         description="Visually emphasize stronger survey rates."
                         value={currentSite?.enableHighlightRates}
                         onClick={() =>
-                            updateSetting({
+                            queueSettingsMutation("store-update", {
                                 enableHighlightRates:
                                     !currentSite?.enableHighlightRates,
                             })}
@@ -290,7 +288,7 @@
                     description="Convert rewards into your selected currency."
                     value={currentSite?.enableCurrencyConversion}
                     onClick={() =>
-                        updateSetting({
+                        queueSettingsMutation("store-update", {
                             enableCurrencyConversion:
                                 !currentSite?.enableCurrencyConversion,
                         })}
@@ -302,7 +300,7 @@
                             class="w-full py-2 pl-2.5 pr-8 rounded-md border border-white/8 bg-white/4 hover:bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none appearance-none cursor-pointer focus:border-white/20 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
                             bind:value={currentSite.selectedCurrency}
                             on:change={(e) =>
-                                updateSetting({
+                                queueSettingsMutation("store-update", {
                                     selectedCurrency: e.currentTarget
                                         .value as Settings["selectedCurrency"],
                                 })}
@@ -328,7 +326,7 @@
                     description="Send a desktop notification when a new survey appears."
                     value={currentSite?.enableNewSurveyNotifications}
                     onClick={() =>
-                        updateSetting({
+                        queueSettingsMutation("store-update", {
                             enableNewSurveyNotifications:
                                 !currentSite?.enableNewSurveyNotifications,
                         })}
@@ -390,7 +388,7 @@
                     on:change={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);
                         if (minutes === null) return;
-                        updateSetting({
+                        queueSettingsMutation("store-update", {
                             idleThreshold: minutes * 60,
                         });
                     }}
@@ -431,7 +429,7 @@
                 description="Periodically refresh the page in the background to check for new studies."
                 value={currentSite?.enableAutoReload}
                 onClick={() =>
-                    updateSetting({
+                    queueSettingsMutation("store-update", {
                         enableAutoReload: !currentSite?.enableAutoReload,
                     })}
             />
@@ -449,7 +447,7 @@
                                 e.currentTarget.value,
                             );
                             if (minutes === null) return;
-                            updateSetting({
+                            queueSettingsMutation("store-update", {
                                 minReloadInterval: minutes,
                             });
                         }}
@@ -468,7 +466,7 @@
                                 e.currentTarget.value,
                             );
                             if (minutes === null) return;
-                            updateSetting({
+                            queueSettingsMutation("store-update", {
                                 maxReloadInterval: minutes,
                             });
                         }}
@@ -483,7 +481,7 @@
                 description="Log extension activity to the browser console."
                 value={currentSite?.enableDebug}
                 onClick={() =>
-                    updateSetting({
+                    queueSettingsMutation("store-update", {
                         enableDebug: !currentSite?.enableDebug,
                     })}
             />

@@ -1,4 +1,4 @@
-import { BaseAdapter } from "./BaseAdapter";
+import { BaseAdapter, DataAttr } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
 import { sites } from "./siteConfigs";
 
@@ -24,42 +24,28 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getSurveyTitle(el: HTMLElement) {
-        return el.querySelector<HTMLElement>("h2")?.textContent ?? null;
+        return this.queryText(el, "h2");
     }
 
     getSurveyResearcher(el: HTMLElement): string | null {
-        return (
-            el.querySelector<HTMLElement>('[aria-labelledby*="host-name-"]')
-                ?.textContent ?? null
-        );
+        return this.queryText(el, '[aria-labelledby*="host-name-"]');
     }
 
-    getInitCurrencyInfo(el: HTMLElement) {
-        return extractSymbol(el.textContent) ?? null;
-    }
-
-    getCurrencyInfo(el: HTMLElement) {
-        const displaySymbol = el.getAttribute("display");
-        const sourceSymbol = el.getAttribute("data-original-currency");
-
-        return {
-            displaySymbol: displaySymbol ?? this.getInitCurrencyInfo(el),
-            sourceSymbol: sourceSymbol ?? this.getInitCurrencyInfo(el),
-        };
+    getSourceSymbol(el: HTMLElement) {
+        return extractSymbol(el.textContent);
     }
 
     getRewardElements() {
         return Array.from(
             document.querySelectorAll<HTMLElement>(
-                "[data-testid='study-tag-reward-per-hour'], [data-testid='study-tag-reward']",
+                "[data-testid='study-tag-reward-per-hour'], [data-testid='study-tag-reward'], ul.info-hint li span.amount",
             ),
         );
     }
 
     getRewardElement(el: HTMLElement) {
-        return (
-            el.querySelector<HTMLElement>("[data-testid='study-tag-reward']") ??
-            null
+        return el.querySelector<HTMLElement>(
+            "[data-testid='study-tag-reward']",
         );
     }
 
@@ -72,10 +58,8 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getHourlyRateElement(el: HTMLElement) {
-        return (
-            el.querySelector<HTMLElement>(
-                "[data-testid='study-tag-reward-per-hour']",
-            ) ?? null
+        return el.querySelector<HTMLElement>(
+            "[data-testid='study-tag-reward-per-hour']",
         );
     }
 

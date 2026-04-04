@@ -11,19 +11,25 @@ export type AdapterConfig<H extends SupportedSites = SupportedSites> =
             host: H;
         };
 
-type CurrencyInfo = {
-    displaySymbol: string | null;
-    sourceSymbol: string | null;
-};
+export interface CurrencyInfo {}
 
-// TODO: Extract these properties from each survey element
-interface SurveyInfo {
+export interface SurveyInfo {
     id: string;
     title: string | null;
     researcher: string | null;
-    payment: string | null;
-    rate: number | null;
+    reward: string | null;
+    rate: string | null;
+    link: string | null;
+    displaySymbol: string | null;
+    sourceSymbol: string | null;
 }
+
+export const DataAttr = {
+    ORIGINAL_TEXT: "data-original-text",
+    ORIGINAL_HTML: "data-original-html",
+    DISPLAY_SYMBOL: "data-display-symbol",
+    ORIGINAL_SYMBOL: "data-original-symbol",
+} as const;
 
 export interface EventResponseMap {
     surveyCompletion: NetworkEvent;
@@ -74,24 +80,96 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     abstract getSurveyId(el: HTMLElement): string | null;
     abstract getSurveyResearcher(el: HTMLElement): string | null;
 
-    abstract getInitCurrencyInfo(el: HTMLElement): string | null;
-    abstract getCurrencyInfo(el: HTMLElement): CurrencyInfo;
-
     abstract getRewardElements(): HTMLElement[];
+    abstract getRewardElement(el: HTMLElement): HTMLElement | null;
     abstract getHourlyRateElements(): HTMLElement[];
+    abstract getHourlyRateElement(el: HTMLElement): HTMLElement | null;
+
+    abstract getSourceSymbol(el: HTMLElement): string | null;
 
     abstract setHourlyRate(element: HTMLElement): void;
+
+    getCurrencyInfo(
+        el: HTMLElement,
+    ): Pick<SurveyInfo, "displaySymbol" | "sourceSymbol"> {
+        return {
+            displaySymbol: el.getAttribute(DataAttr.DISPLAY_SYMBOL),
+            sourceSymbol: el.getAttribute(DataAttr.ORIGINAL_SYMBOL),
+        };
+    }
+
+    protected getSurveyLink(el: HTMLElement): string | null {
+        const surveyId = this.getSurveyId(el);
+        if (!surveyId) return null;
+
+        const { surveyPath, suffix } = this.config;
+        return this.buildUrl([
+            surveyPath,
+            surveyId,
+            ...(suffix ? [suffix] : []),
+        ]);
+    }
+
+    protected getSurveyReward(el: HTMLElement): string | null {
+        const rewardEl = this.getRewardElement(el);
+        if (!rewardEl) return null;
+        const sourceText = rewardEl.getAttribute(DataAttr.ORIGINAL_TEXT);
+        return sourceText ?? rewardEl.textContent ?? null;
+    }
+
+    protected getSurveyHourlyRate(el: HTMLElement): string | null {
+        const rateEl = this.getHourlyRateElement(el);
+        if (!rateEl) return null;
+        const sourceText = rateEl.getAttribute(DataAttr.ORIGINAL_TEXT);
+        return sourceText ?? rateEl.textContent ?? null;
+    }
+
+    extractSurvey(el: HTMLElement): SurveyInfo | null {
+        const id = this.getSurveyId(el);
+        if (!id) return null;
+
+        return {
+            id,
+            title: this.getSurveyTitle(el),
+            researcher: this.getSurveyResearcher(el),
+            reward: this.getSurveyReward(el),
+            rate: this.getSurveyHourlyRate(el),
+            link: this.getSurveyLink(el),
+            ...this.getCurrencyInfo(
+                this.getRewardElement(el) ??
+                    this.getHourlyRateElement(el) ??
+                    el,
+            ),
+        };
+    }
+
+    extractSurveys(): SurveyInfo[] {
+        const elements = this.getSurveyElements();
+        const surveys: SurveyInfo[] = [];
+
+        for (const el of elements) {
+            const surveyInfo = this.extractSurvey(el);
+            if (!surveyInfo) continue;
+
+            surveys.push(surveyInfo);
+        }
+
+        return surveys;
+    }
 
     prepareElements() {
         const elements = this.getRewardElements();
         for (const el of elements) {
-            if (el.hasAttribute("data-original-text")) continue;
-            el.setAttribute("data-original-text", el.textContent ?? "");
-            el.setAttribute("data-original-html", el.innerHTML);
+            if (el.hasAttribute(DataAttr.ORIGINAL_TEXT)) continue;
+            el.setAttribute(DataAttr.ORIGINAL_TEXT, el.textContent ?? "");
+            el.setAttribute(DataAttr.ORIGINAL_HTML, el.innerHTML);
+
+            const sourceSymbol = this.getSourceSymbol(el);
             el.setAttribute(
-                "data-original-currency",
-                this.getInitCurrencyInfo(el) ?? "",
+                DataAttr.DISPLAY_SYMBOL,
+                el.getAttribute(DataAttr.DISPLAY_SYMBOL) ?? sourceSymbol ?? "",
             );
+            el.setAttribute(DataAttr.ORIGINAL_SYMBOL, sourceSymbol ?? "");
         }
     }
 

@@ -32,18 +32,9 @@ export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
         return this.queryText(el, "label div div:last-child");
     }
 
-    getInitCurrencyInfo(el: HTMLElement) {
+    getSourceSymbol(el: HTMLElement): string | null {
+        // CloudResearch doesn't provide a source currency, but it's always USD
         return "$";
-    }
-
-    getCurrencyInfo(el: HTMLElement) {
-        const displaySymbol = el.getAttribute("display");
-
-        return {
-            // CloudResearch uses USD by default
-            displaySymbol: displaySymbol ?? this.getInitCurrencyInfo(el),
-            sourceSymbol: this.getInitCurrencyInfo(el),
-        };
     }
 
     getRewardElements() {

@@ -5,16 +5,18 @@ import BaseEnhancement from "./BaseEnhancement";
 import getSiteResources from "../lib/getSiteResources";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 
+import type { SurveyInfo } from "../adapters/BaseAdapter";
+
 export interface NotificationData {
     title: string;
     message: string;
     iconUrl?: string;
-    surveyLink: string;
+    link?: string;
 }
 
 class NewSurveyNotificationsEnhancement extends BaseEnhancement {
     async apply() {
-        const surveys = this.adapter.getSurveyElements();
+        const surveys = this.adapter.extractSurveys();
         if (surveys.length === 0) return;
 
         const {
@@ -30,10 +32,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
         const assets = await getSiteResources();
 
-        await this.saveNewSurveys(
-            previousSurveys,
-            this.extractSurveyFingerprints(newSurveys),
-        );
+        await this.saveNewSurveys(previousSurveys, newSurveys);
 
         const newResearchers = this.extractNewSurveyResearchers(
             previousCachedResearchers,
@@ -54,23 +53,23 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
         const notifications: NotificationData[] = [];
         for (const survey of newSurveys) {
-            const surveyId = this.adapter.getSurveyId(survey);
-            const rawName = this.adapter.getSurveyResearcher(survey);
-            if (!surveyId || !rawName) continue;
-            const researcher = cleanResearcherName(rawName);
+            const { researcher } = survey;
+            if (!researcher) continue;
+            const cleanedResearcherName = cleanResearcherName(researcher);
 
-            if (excludedResearchersSet.has(researcher) || !document.hidden)
+            if (
+                excludedResearchersSet.has(cleanedResearcherName) ||
+                !document.hidden
+            )
                 continue;
 
             if (
                 includedResearchersSet.size > 0 &&
-                !includedResearchersSet.has(researcher)
+                !includedResearchersSet.has(cleanedResearcherName)
             )
                 continue;
 
-            notifications.push(
-                this.buildNotification(survey, surveyId, assets),
-            );
+            notifications.push(this.buildNotification(survey, assets));
         }
         await sendExtensionMessage({
             type: "notification",
@@ -106,14 +105,13 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
     private extractNewSurveyResearchers(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        surveys: HTMLElement[],
+        surveys: SurveyInfo[],
     ) {
         const researchers = new Set<string>();
         for (const survey of surveys) {
-            const rawName = this.adapter.getSurveyResearcher(survey);
-            if (!rawName) continue;
+            if (!survey.researcher) continue;
 
-            const researcher = cleanResearcherName(rawName);
+            const researcher = cleanResearcherName(survey.researcher);
             if (researcher in previous) continue;
             researchers.add(researcher);
         }
@@ -122,7 +120,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
     private async saveNewSurveys(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        fingerprints: string[],
+        surveys: SurveyInfo[],
     ) {
         const now = Date.now();
 
@@ -135,8 +133,8 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             }
         }
 
-        for (const fingerprint of fingerprints) {
-            previousClone[fingerprint] = now;
+        for (const survey of surveys) {
+            previousClone[survey.id] = now;
         }
 
         await store.set(this.adapter.config.name, {
@@ -146,57 +144,34 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
     private extractNewSurveys(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        current: NodeListOf<HTMLElement>,
+        current: SurveyInfo[],
     ) {
-        return Array.from(current).filter((survey) => {
-            const id = this.adapter.getSurveyId(survey);
-            return id !== null && !(id in previous);
-        });
+        return Array.from(current).filter((survey) => !(survey.id in previous));
     }
 
-    private extractSurveyFingerprints(surveys: HTMLElement[]) {
-        return Array.from(surveys)
-            .map((survey) => this.adapter.getSurveyId(survey))
-            .filter((id): id is string => id !== null);
-    }
-
-    private extractSurveyRate(survey: HTMLElement) {
-        return survey.textContent?.match(/\d+(\.\d+)?/)?.[0];
+    private extractSurveyRate(rate: string) {
+        return rate?.match(/\d+(\.\d+)?/)?.[0];
     }
 
     private buildNotification(
-        survey: HTMLElement,
-        surveyId: string,
+        survey: SurveyInfo,
         assets: Awaited<ReturnType<typeof getSiteResources>>,
     ) {
-        const surveyTitle = this.adapter.getSurveyTitle(survey);
-        const rewardElement = this.adapter.getRewardElement(survey);
-        const hourlyRateElement = this.adapter.getHourlyRateElement(survey);
-        const displaySymbol = rewardElement
-            ? this.adapter.getCurrencyInfo(rewardElement).displaySymbol
-            : "";
+        const { title, reward, rate, displaySymbol, link } = survey;
+        console.log(survey);
 
         const rewardText =
-            (rewardElement && this.extractSurveyRate(rewardElement)) ||
-            "Unknown reward";
+            (reward && this.extractSurveyRate(reward)) || "Unknown reward";
         const hourlyRateText =
-            (hourlyRateElement && this.extractSurveyRate(hourlyRateElement)) ||
-            "Unknown rate";
-
-        const { surveyPath, suffix } = this.adapter.config;
-        const surveyLink = this.adapter.buildUrl([
-            surveyPath,
-            surveyId,
-            ...(suffix ? [suffix] : []),
-        ]);
+            (rate && this.extractSurveyRate(rate)) || "Unknown rate";
 
         const siteLabel = capitalize(this.adapter.config.name);
 
         const notificationData = {
-            title: surveyTitle ?? siteLabel,
+            title: title ?? siteLabel,
             message: `${siteLabel} • ${displaySymbol}${rewardText} • ${displaySymbol}${hourlyRateText}/hr`,
             iconUrl: assets[this.adapter.iconUrl],
-            surveyLink,
+            link: link ?? undefined,
         };
         return notificationData;
     }

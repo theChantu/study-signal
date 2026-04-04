@@ -6,6 +6,8 @@ import { supportedSites } from "@/adapters/siteConfigs";
 import { getProvider, type ProviderName } from "@/providers/providers";
 import { capitalize } from "@/lib/utils";
 
+import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
+
 function runBackgroundScript() {
     const filteredUrls = supportedSites.map((site) => `https://${site}/*`);
     const defaultNotificationIconUrl = browser.runtime.getURL("/icon-48.png");
@@ -43,11 +45,7 @@ function runBackgroundScript() {
 
     async function sendProviderNotifications(
         siteName: string,
-        notifications: {
-            title: string;
-            message: string;
-            surveyLink: string;
-        }[],
+        notifications: NotificationData[],
         providers: Awaited<ReturnType<typeof store.get>>["providers"],
     ): Promise<boolean> {
         const enabledProviders = Object.entries(providers).filter(
@@ -62,8 +60,8 @@ function runBackgroundScript() {
                 const provider = getProvider(name as ProviderName, config);
                 const combined = notifications
                     .map((notification) => {
-                        const { title, message, surveyLink } = notification;
-                        return `${title}\n${message}\n${surveyLink}`;
+                        const { title, message, link } = notification;
+                        return `${title}\n${message}\n${link}`;
                     })
                     .join("\n\n");
 
@@ -74,7 +72,9 @@ function runBackgroundScript() {
 
                 if (ok) {
                     hasSuccess = true;
-                    await store.set({ providers: { [name]: provider.configData } });
+                    await store.set({
+                        providers: { [name]: provider.configData },
+                    });
                 } else {
                     console.error(`Provider "${name}" failed to send.`);
                 }
@@ -87,18 +87,13 @@ function runBackgroundScript() {
     }
 
     async function sendBrowserNotifications(
-        notifications: {
-            title: string;
-            message: string;
-            surveyLink: string;
-            iconUrl?: string;
-        }[],
+        notifications: NotificationData[],
     ): Promise<boolean> {
         let hasSuccess = false;
 
         for (const notification of notifications) {
             try {
-                const { title, message, surveyLink, iconUrl } = notification;
+                const { title, message, link, iconUrl } = notification;
                 const resolvedIconUrl =
                     iconUrl && iconUrl.length > 0
                         ? iconUrl
@@ -114,7 +109,7 @@ function runBackgroundScript() {
                 notificationActions.set(notificationId, async () => {
                     await browser.tabs.create({
                         active: true,
-                        url: surveyLink,
+                        url: link,
                     });
                 });
             } catch (error) {
