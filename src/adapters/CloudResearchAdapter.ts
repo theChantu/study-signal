@@ -64,6 +64,4 @@ export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
             '[class*="project-pay-per-hour-"] > *:last-child',
         );
     }
-
-    setHourlyRate(element: HTMLElement): void {}
 }

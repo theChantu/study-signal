@@ -1,4 +1,4 @@
-import { BaseAdapter, DataAttr } from "./BaseAdapter";
+import { BaseAdapter } from "./BaseAdapter";
 import { extractSymbol } from "../lib/utils";
 import { sites } from "./siteConfigs";
 
@@ -62,6 +62,4 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
             "[data-testid='study-tag-reward-per-hour']",
         );
     }
-
-    setHourlyRate(element: HTMLElement): void {}
 }

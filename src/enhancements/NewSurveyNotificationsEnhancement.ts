@@ -149,7 +149,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         return Array.from(current).filter((survey) => !(survey.id in previous));
     }
 
-    private extractSurveyRate(rate: string) {
+    private extractNumber(rate: string) {
         return rate?.match(/\d+(\.\d+)?/)?.[0];
     }
 
@@ -158,12 +158,11 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         assets: Awaited<ReturnType<typeof getSiteResources>>,
     ) {
         const { title, reward, rate, displaySymbol, link } = survey;
-        console.log(survey);
 
         const rewardText =
-            (reward && this.extractSurveyRate(reward)) || "Unknown reward";
+            (reward && this.extractNumber(reward)) || "Unknown reward";
         const hourlyRateText =
-            (rate && this.extractSurveyRate(rate)) || "Unknown rate";
+            (rate && this.extractNumber(rate)) || "Unknown rate";
 
         const siteLabel = capitalize(this.adapter.config.name);
 

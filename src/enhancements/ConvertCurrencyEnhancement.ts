@@ -10,7 +10,6 @@ import {
     type Currency,
     type ExchangeRatesResponse,
 } from "../store/types";
-import { DataAttr } from "@/adapters/BaseAdapter";
 
 type ConversionRates = SiteSettings["conversionRates"];
 function isExchangeRatesResponse(
@@ -86,11 +85,10 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         // Update conversion rates for all source currencies found in the elements
         const sourceCurrencies = new Set<Currency>();
         for (const rewardEl of rewardElements) {
-            const sourceSymbol = rewardEl.getAttribute(
-                DataAttr.ORIGINAL_SYMBOL,
-            );
-            if (!sourceSymbol) continue;
-            const currency = getCurrency(sourceSymbol);
+            const { originalSymbol } = this.adapter.getRewardState(rewardEl);
+
+            if (!originalSymbol) continue;
+            const currency = getCurrency(originalSymbol);
             if (currency) sourceCurrencies.add(currency);
         }
 
@@ -100,49 +98,40 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         ]);
 
         for (const rewardEl of rewardElements) {
-            const sourceText = rewardEl.getAttribute(DataAttr.ORIGINAL_TEXT);
-            const sourceHtml = rewardEl.getAttribute(DataAttr.ORIGINAL_HTML);
+            const {
+                originalHtml,
+                originalText,
+                displaySymbol,
+                originalSymbol,
+            } = this.adapter.getRewardState(rewardEl);
 
-            const sourceSymbol = rewardEl.getAttribute(
-                DataAttr.ORIGINAL_SYMBOL,
-            );
+            if (!originalText || !originalHtml || !originalSymbol) continue;
 
-            if (!sourceText || !sourceHtml || !sourceSymbol) continue;
-
-            const sourceCurrency = getCurrency(sourceSymbol);
+            const sourceCurrency = getCurrency(originalSymbol);
             if (!sourceCurrency) continue;
 
             if (sourceCurrency === selectedCurrency) {
                 // Selected currency matches source, so revert element text
-                if (rewardEl.innerHTML !== sourceHtml) {
-                    rewardEl.innerHTML = sourceHtml;
+                if (rewardEl.innerHTML !== originalHtml) {
+                    this.adapter.restoreRewardState(rewardEl);
                 }
 
-                rewardEl.setAttribute(DataAttr.DISPLAY_SYMBOL, sourceSymbol);
                 continue;
             }
-
-            const displaySymbol = rewardEl.getAttribute(
-                DataAttr.DISPLAY_SYMBOL,
-            );
 
             // Continue if currency is already converted
             if (displaySymbol === selectedSymbol) continue;
 
-            rewardEl.setAttribute(
-                DataAttr.DISPLAY_SYMBOL,
-                selectedSymbol ?? "",
-            );
+            this.adapter.setRewardState(rewardEl, {
+                displaySymbol: selectedSymbol,
+            });
 
             const rate =
                 updatedConversionRates[sourceCurrency].rates[selectedCurrency];
-            const elementRate = extractNumericValue(sourceText);
+            const elementRate = extractNumericValue(originalText);
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
 
-            rewardEl.textContent = sourceText.replace(
-                /[$£€]?\s*\d+(?:\.\d+)?/,
-                converted,
-            );
+            this.adapter.setRewardText(rewardEl, converted);
         }
     }
 
@@ -179,11 +168,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         document
             .querySelectorAll<HTMLElement>("[data-original-html]")
             .forEach((el) => {
-                el.innerHTML = el.getAttribute(DataAttr.ORIGINAL_HTML) ?? "";
-                el.setAttribute(
-                    DataAttr.DISPLAY_SYMBOL,
-                    el.getAttribute(DataAttr.ORIGINAL_SYMBOL) ?? "",
-                );
+                this.adapter.restoreRewardState(el);
             });
     }
 }

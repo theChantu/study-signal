@@ -21,7 +21,15 @@ export interface SurveyInfo {
     rate: string | null;
     link: string | null;
     displaySymbol: string | null;
-    sourceSymbol: string | null;
+    originalSymbol: string | null;
+}
+
+interface RewardState {
+    element: HTMLElement;
+    originalText: string;
+    originalHtml: string;
+    displaySymbol: string | null;
+    originalSymbol: string | null;
 }
 
 export const DataAttr = {
@@ -74,6 +82,67 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         return el.querySelector<HTMLElement>(selector)?.textContent ?? null;
     }
 
+    prepareRewardElement(el: HTMLElement) {
+        if (el.hasAttribute(DataAttr.ORIGINAL_TEXT)) return;
+        el.setAttribute(DataAttr.ORIGINAL_TEXT, el.textContent ?? "");
+        el.setAttribute(DataAttr.ORIGINAL_HTML, el.innerHTML);
+
+        const sourceSymbol = this.getSourceSymbol(el);
+        el.setAttribute(
+            DataAttr.DISPLAY_SYMBOL,
+            el.getAttribute(DataAttr.DISPLAY_SYMBOL) ?? sourceSymbol ?? "",
+        );
+        el.setAttribute(DataAttr.ORIGINAL_SYMBOL, sourceSymbol ?? "");
+    }
+
+    getRewardState(el: HTMLElement): RewardState {
+        this.prepareRewardElement(el);
+        return {
+            element: el,
+            originalText: el.getAttribute(DataAttr.ORIGINAL_TEXT) ?? "",
+            originalHtml: el.getAttribute(DataAttr.ORIGINAL_HTML) ?? "",
+            displaySymbol: el.getAttribute(DataAttr.DISPLAY_SYMBOL),
+            originalSymbol: el.getAttribute(DataAttr.ORIGINAL_SYMBOL),
+        };
+    }
+
+    setRewardState(
+        el: HTMLElement,
+        state: Partial<Omit<RewardState, "element">>,
+    ) {
+        this.prepareRewardElement(el);
+
+        const attrMap = {
+            originalText: DataAttr.ORIGINAL_TEXT,
+            originalHtml: DataAttr.ORIGINAL_HTML,
+            displaySymbol: DataAttr.DISPLAY_SYMBOL,
+            originalSymbol: DataAttr.ORIGINAL_SYMBOL,
+        } as const;
+
+        for (const [key, attr] of Object.entries(attrMap) as [
+            keyof typeof attrMap,
+            string,
+        ][]) {
+            const value = state[key];
+            if (value !== undefined) {
+                el.setAttribute(attr, value ?? "");
+            }
+        }
+    }
+
+    restoreRewardState(el: HTMLElement) {
+        const { originalHtml, originalSymbol } = this.getRewardState(el);
+        el.innerHTML = originalHtml;
+        this.setRewardState(el, {
+            displaySymbol: originalSymbol,
+        });
+    }
+
+    setRewardText(el: HTMLElement, text: string) {
+        const { originalText } = this.getRewardState(el);
+        el.textContent = originalText.replace(/[$£€]?\s*\d+(?:\.\d+)?/, text);
+    }
+
     abstract getSurveyElements(): NodeListOf<HTMLElement>;
     abstract getSurveyContainer(el: HTMLElement): HTMLElement | null;
     abstract getSurveyTitle(el: HTMLElement): string | null;
@@ -86,17 +155,6 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     abstract getHourlyRateElement(el: HTMLElement): HTMLElement | null;
 
     abstract getSourceSymbol(el: HTMLElement): string | null;
-
-    abstract setHourlyRate(element: HTMLElement): void;
-
-    getCurrencyInfo(
-        el: HTMLElement,
-    ): Pick<SurveyInfo, "displaySymbol" | "sourceSymbol"> {
-        return {
-            displaySymbol: el.getAttribute(DataAttr.DISPLAY_SYMBOL),
-            sourceSymbol: el.getAttribute(DataAttr.ORIGINAL_SYMBOL),
-        };
-    }
 
     protected getSurveyLink(el: HTMLElement): string | null {
         const surveyId = this.getSurveyId(el);
@@ -113,20 +171,24 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
     protected getSurveyReward(el: HTMLElement): string | null {
         const rewardEl = this.getRewardElement(el);
         if (!rewardEl) return null;
-        const sourceText = rewardEl.getAttribute(DataAttr.ORIGINAL_TEXT);
-        return sourceText ?? rewardEl.textContent ?? null;
+        const { originalText } = this.getRewardState(rewardEl);
+        return originalText ?? rewardEl.textContent ?? null;
     }
 
     protected getSurveyHourlyRate(el: HTMLElement): string | null {
         const rateEl = this.getHourlyRateElement(el);
         if (!rateEl) return null;
-        const sourceText = rateEl.getAttribute(DataAttr.ORIGINAL_TEXT);
-        return sourceText ?? rateEl.textContent ?? null;
+        const { originalText } = this.getRewardState(rateEl);
+        return originalText ?? rateEl.textContent ?? null;
     }
 
     extractSurvey(el: HTMLElement): SurveyInfo | null {
         const id = this.getSurveyId(el);
         if (!id) return null;
+
+        const { displaySymbol, originalSymbol } = this.getRewardState(
+            this.getRewardElement(el) ?? this.getHourlyRateElement(el) ?? el,
+        );
 
         return {
             id,
@@ -135,11 +197,8 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
             reward: this.getSurveyReward(el),
             rate: this.getSurveyHourlyRate(el),
             link: this.getSurveyLink(el),
-            ...this.getCurrencyInfo(
-                this.getRewardElement(el) ??
-                    this.getHourlyRateElement(el) ??
-                    el,
-            ),
+            displaySymbol,
+            originalSymbol,
         };
     }
 
@@ -155,22 +214,6 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         }
 
         return surveys;
-    }
-
-    prepareElements() {
-        const elements = this.getRewardElements();
-        for (const el of elements) {
-            if (el.hasAttribute(DataAttr.ORIGINAL_TEXT)) continue;
-            el.setAttribute(DataAttr.ORIGINAL_TEXT, el.textContent ?? "");
-            el.setAttribute(DataAttr.ORIGINAL_HTML, el.innerHTML);
-
-            const sourceSymbol = this.getSourceSymbol(el);
-            el.setAttribute(
-                DataAttr.DISPLAY_SYMBOL,
-                el.getAttribute(DataAttr.DISPLAY_SYMBOL) ?? sourceSymbol ?? "",
-            );
-            el.setAttribute(DataAttr.ORIGINAL_SYMBOL, sourceSymbol ?? "");
-        }
     }
 
     protected handleDomMutation(mutations: MutationRecord[]) {}
