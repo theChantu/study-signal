@@ -59,11 +59,11 @@ export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
         this.config = config;
     }
 
-    private _moduleSet?: ReadonlySet<EnhancementKey>;
+    private enhancements?: ReadonlySet<EnhancementKey>;
 
-    hasModule(module: EnhancementKey): boolean {
-        this._moduleSet ??= new Set(this.config.modules);
-        return this._moduleSet.has(module);
+    hasModule(enhancements: EnhancementKey): boolean {
+        this.enhancements ??= new Set(this.config.enhancements);
+        return this.enhancements.has(enhancements);
     }
 
     get origin(): string {

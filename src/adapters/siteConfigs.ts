@@ -7,7 +7,7 @@ export interface SiteInfo {
     iconPath: string;
     suffix?: string;
     query?: Record<string, string | number | boolean>;
-    modules: EnhancementKey[];
+    enhancements: EnhancementKey[];
     networkPatterns: Partial<Record<keyof EventResponseMap, string>>;
 }
 
@@ -16,7 +16,7 @@ export const sites = {
         name: "prolific",
         surveyPath: "/studies",
         iconPath: "/apple-touch-icon.png",
-        modules: [
+        enhancements: [
             "currencyConversion",
             "highlightRates",
             "newSurveyNotifications",
@@ -35,7 +35,7 @@ export const sites = {
             page: 1,
             size: 100,
         },
-        modules: [
+        enhancements: [
             "currencyConversion",
             "highlightRates",
             "newSurveyNotifications",

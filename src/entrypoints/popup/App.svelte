@@ -227,7 +227,7 @@
         await loadSite(selectedSite);
     });
 
-    $: siteModules = new Set(sites[selectedSite].modules);
+    $: siteEnhancements = new Set(sites[selectedSite].enhancements);
 </script>
 
 <div class="p-4 flex flex-col gap-4">
@@ -263,9 +263,9 @@
             <span>Loading settings...</span>
         </div>
     {:else}
-        {#if siteModules.has("surveyLinks") || siteModules.has("highlightRates")}
+        {#if siteEnhancements.has("surveyLinks") || siteEnhancements.has("highlightRates")}
             <Section title="General" icon={SettingsIcon}>
-                {#if siteModules.has("surveyLinks")}
+                {#if siteEnhancements.has("surveyLinks")}
                     <Toggle
                         title="Survey links"
                         description="Show direct survey links when available."
@@ -279,7 +279,7 @@
                     />
                 {/if}
 
-                {#if siteModules.has("highlightRates")}
+                {#if siteEnhancements.has("highlightRates")}
                     <Toggle
                         title="Highlight rates"
                         description="Visually emphasize stronger survey rates."
@@ -296,7 +296,7 @@
             </Section>
         {/if}
 
-        {#if siteModules.has("currencyConversion")}
+        {#if siteEnhancements.has("currencyConversion")}
             <Section title="Currency" icon={CircleDollarSign}>
                 <Toggle
                     title="Currency conversion"
@@ -340,7 +340,7 @@
             </Section>
         {/if}
 
-        {#if siteModules.has("newSurveyNotifications")}
+        {#if siteEnhancements.has("newSurveyNotifications")}
             <Section title="Notifications" icon={Bell}>
                 <Toggle
                     title="New survey notifications"
