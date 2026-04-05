@@ -1,4 +1,5 @@
-import type { Settings, SettingsUpdate } from "@/store/createStore";
+import type { Settings } from "@/store/types";
+import type { SettingsUpdate } from "@/store/createStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 

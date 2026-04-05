@@ -1,4 +1,4 @@
-import type { Settings } from "@/store/createStore";
+import { Settings } from "@/store/types";
 import type { ModuleName } from "./modules/BaseModule";
 import type { EventResponseMap } from "./BaseAdapter";
 

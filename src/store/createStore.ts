@@ -3,9 +3,9 @@ import { defaultGlobalSettingsKeys } from "./defaultGlobalSettings";
 import { defaultSettings } from "./defaultSettings";
 import { storage } from "#imports";
 
-import type { SiteSettings, GlobalSettings } from "./types";
+import type { SiteSettings, GlobalSettings, Settings } from "./types";
+import { SiteName, sites } from "@/adapters/siteConfigs";
 
-export type Settings = SiteSettings & GlobalSettings;
 export type SettingsUpdate = Partial<Settings>;
 export type GlobalSettingsUpdate = Partial<GlobalSettings>;
 export type SiteSettingsUpdate = Partial<SiteSettings>;
@@ -20,8 +20,6 @@ export type SiteListener = (
     siteName: SiteName,
     changed: SiteSettingsUpdate,
 ) => void;
-
-type SiteName = string;
 
 type ResolvedGlobalSettings<K extends readonly (keyof GlobalSettings)[]> = Pick<
     { [P in keyof GlobalSettings]: DeepNonNullable<GlobalSettings[P]> },
@@ -49,6 +47,9 @@ type ArrayKeys = {
 
 const GLOBALS_KEY = localKey("globals");
 const globalKeys = new Set<string>(defaultGlobalSettingsKeys);
+const siteNames = new Set<SiteName>(
+    Object.values(sites).map((site) => site.name),
+);
 
 const fieldPolicies: FieldPolicy[] = [
     {
@@ -82,12 +83,14 @@ function deepMerge(target: any, source: any): any {
 }
 
 function parseOverloadArgs(
-    siteNameOrFirst: SiteName | any,
+    siteNameOrFirst: SiteName | unknown,
     second?: any,
 ): { siteName: SiteName | null; value: any } {
-    const hasSiteName = typeof siteNameOrFirst === "string";
+    const hasSiteName =
+        typeof siteNameOrFirst === "string" &&
+        siteNames.has(siteNameOrFirst as SiteName);
     return {
-        siteName: hasSiteName ? siteNameOrFirst : null,
+        siteName: hasSiteName ? (siteNameOrFirst as SiteName) : null,
         value: hasSiteName ? second : siteNameOrFirst,
     };
 }

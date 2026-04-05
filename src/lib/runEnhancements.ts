@@ -11,7 +11,8 @@ import { moduleToEnableKey } from "@/adapters/siteConfigs";
 
 import type { ModuleName } from "../adapters/modules/BaseModule";
 import type Enhancement from "../enhancements/BaseEnhancement";
-import type { Settings, SettingsUpdate } from "@/store/createStore";
+import type { Settings } from "@/store/types";
+import type { SettingsUpdate } from "@/store/createStore";
 
 type EnhancementSettingKeys = (typeof moduleToEnableKey)[ModuleName];
 
