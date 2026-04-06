@@ -1,7 +1,10 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { defaultSettings } from "@/store/defaultSettings";
-    import { sites, type SupportedSites } from "@/adapters/siteConfigs";
+    import {
+        defaultGlobalSettings,
+        defaultGlobalSettingsKeys,
+    } from "@/store/defaultGlobalSettings";
+    import { sites, type SupportedHosts } from "@/adapters/siteConfigs";
     import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
     import Toggle from "@/components/Toggle.svelte";
     import Section from "@/components/Section.svelte";
@@ -22,63 +25,72 @@
     } from "@lucide/svelte";
     import { capitalize, cleanResearcherName } from "@/lib/utils";
     import { currencyKeys } from "@/store/types";
+    import {
+        defaultSiteSettings,
+        defaultSiteSettingsKeys,
+    } from "@/store/defaultSiteSettings";
+    import { applyMutation } from "./handlers/mutations";
 
-    import type { SettingsPatch } from "@/store/createStore";
-    import type { Message } from "@/messages/types";
-    import type { Settings } from "@/store/types";
+    import type { GlobalSettings, SiteSettings } from "@/store/types";
     import type { NewSurveyNotificationsSettings } from "@/store/types";
-    import type { ProviderConfigMap } from "@/providers/providers";
+    import type {
+        MessageMap,
+        StoreMutationMessageType,
+    } from "@/messages/types";
 
-    const siteKeys = Object.keys(sites) as SupportedSites[];
+    const siteKeys = Object.keys(sites) as SupportedHosts[];
     const providerSetupUrl =
         "https://github.com/theChantu/survey-enhancer#provider-setup";
 
-    let selectedSite: SupportedSites = siteKeys[0];
-    let loadedSites = {} as Partial<Record<SupportedSites, Settings>>;
+    let selectedSite: SupportedHosts = siteKeys[0];
+    type LoadedSettings = {
+        globals: GlobalSettings;
+        sites: Partial<Record<SupportedHosts, SiteSettings>>;
+    };
 
-    $: currentSite = loadedSites[selectedSite];
+    let loadedSettings: LoadedSettings = {
+        globals: defaultGlobalSettings,
+        sites: {},
+    };
+
+    $: currentSite = loadedSettings.sites[selectedSite];
 
     let settingsMutationQueue = Promise.resolve();
 
-    function updateProvider<K extends keyof ProviderConfigMap>(
-        name: K,
-        values: Partial<ProviderConfigMap[K]>,
-    ) {
-        void queueSettingsMutation("store-update", {
-            providers: { [name]: values },
-        });
-    }
+    type QueueMutationType = Exclude<StoreMutationMessageType, "store-fetch">;
 
-    async function applySettingsMutation(
-        type: "store-set" | "store-update",
-        siteUrl: SupportedSites,
-        values: SettingsPatch,
-    ) {
-        if (!loadedSites[siteUrl]) return;
-
-        try {
-            const response = await sendExtensionMessage({
-                type,
-                data: { siteName: sites[siteUrl].name, data: values },
-            } as Message<"store-update">);
-            const current = loadedSites[siteUrl];
-            if (!current) return;
-            loadedSites[siteUrl] = { ...current, ...response.data };
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function queueSettingsMutation(
-        type: "store-update" | "store-set",
-        values: SettingsPatch,
-        siteUrl: SupportedSites = selectedSite,
-    ) {
+    function queueMutation<T extends QueueMutationType>(
+        type: T,
+        values: MessageMap[T],
+    ): Promise<void> {
         settingsMutationQueue = settingsMutationQueue
+            .then(async () => {
+                const result = await applyMutation(type, values);
+                if (result.namespace === "globals") {
+                    loadedSettings.globals = {
+                        ...loadedSettings.globals,
+                        ...result.data,
+                    };
+                    return;
+                }
+
+                const siteUrl = siteKeys.find(
+                    (url) => sites[url].name === result.namespace,
+                );
+                if (!siteUrl) return;
+
+                const current = loadedSettings.sites[siteUrl];
+                if (!current) return;
+
+                loadedSettings.sites[siteUrl] = {
+                    ...current,
+                    ...result.data,
+                };
+            })
             .catch((error) => {
                 console.error(error);
-            })
-            .then(() => applySettingsMutation(type, siteUrl, values));
+            });
+
         return settingsMutationQueue;
     }
 
@@ -88,59 +100,97 @@
     >;
 
     function addResearcher(key: ResearcherKey, name: string) {
-        const loadedSite = loadedSites[selectedSite];
+        const loadedSite = loadedSettings.sites[selectedSite];
         if (
             !loadedSite ||
             loadedSite.newSurveyNotifications?.[key].includes(name)
         )
             return;
-        void queueSettingsMutation("store-update", {
-            newSurveyNotifications: {
-                [key]: [...loadedSite.newSurveyNotifications[key], name],
+        void queueMutation("store-patch", {
+            namespace: sites[selectedSite].name,
+            data: {
+                newSurveyNotifications: {
+                    [key]: [...loadedSite.newSurveyNotifications[key], name],
+                },
             },
         });
     }
 
     function removeResearcher(key: ResearcherKey, name: string) {
-        const loadedSite = loadedSites[selectedSite];
+        const loadedSite = loadedSettings.sites[selectedSite];
         if (!loadedSite) return;
-        void queueSettingsMutation("store-update", {
-            newSurveyNotifications: {
-                [key]: loadedSite.newSurveyNotifications[key].filter(
-                    (n) => n !== name,
-                ),
+        void queueMutation("store-patch", {
+            namespace: sites[selectedSite].name,
+            data: {
+                newSurveyNotifications: {
+                    [key]: loadedSite.newSurveyNotifications[key].filter(
+                        (n) => n !== name,
+                    ),
+                },
             },
         });
     }
 
-    type ResettableKey = keyof typeof defaultSettings;
+    type GlobalResetKey = Exclude<
+        keyof typeof defaultGlobalSettings,
+        "enableDebug"
+    >;
+    type SiteResetKey = keyof typeof defaultSiteSettings;
 
-    function resetKey(key: ResettableKey) {
-        const siteUrl = selectedSite;
-        const siteSettings = loadedSites[siteUrl];
-        if (!siteSettings) return;
+    const resettableGlobalKeys = Object.keys(defaultGlobalSettings).filter(
+        (k) => k in defaultGlobalSettings && k !== "enableDebug",
+    ) as GlobalResetKey[];
+    const resettableSiteKeys = Object.keys(
+        defaultSiteSettings,
+    ) as SiteResetKey[];
 
-        const previousValue = structuredClone(siteSettings[key]);
-        const resetValue = structuredClone(defaultSettings[key]);
+    function resetGlobalKey(key: GlobalResetKey) {
+        const previous = structuredClone(loadedSettings.globals?.[key]);
+        const next = structuredClone(defaultGlobalSettings[key]);
 
-        void queueSettingsMutation("store-set", { [key]: resetValue }, siteUrl);
+        void queueMutation("store-set", {
+            namespace: "globals",
+            data: { [key]: next },
+        });
 
         showActionToast({
             message: `Reset ${formatKey(key)}.`,
             actionLabel: "Undo",
             onAction: () =>
-                queueSettingsMutation(
-                    "store-set",
-                    { [key]: previousValue },
-                    siteUrl,
-                ),
+                previous !== undefined
+                    ? queueMutation("store-set", {
+                          namespace: "globals",
+                          data: { [key]: previous },
+                      })
+                    : Promise.resolve(),
         });
     }
 
-    // Exclude enableDebug because there's already a dedicated toggle for it
-    const resettableKeys = Object.keys(defaultSettings).filter(
-        (k) => k in defaultSettings && k !== "enableDebug",
-    ) as ResettableKey[];
+    function resetSiteKey(
+        key: SiteResetKey,
+        siteUrl: SupportedHosts = selectedSite,
+    ) {
+        const site = loadedSettings.sites[siteUrl];
+        if (!site) return;
+
+        const previous = structuredClone(site[key]);
+        const next = structuredClone(defaultSiteSettings[key]);
+
+        void queueMutation("store-set", {
+            namespace: sites[siteUrl].name,
+            data: { [key]: next },
+        });
+
+        showActionToast({
+            message: `Reset ${formatKey(key)}.`,
+            actionLabel: "Undo",
+            onAction: () =>
+                queueMutation("store-set", {
+                    namespace: sites[siteUrl].name,
+                    data: { [key]: previous },
+                }),
+        });
+    }
 
     function formatKey(key: string) {
         return key.replace(/([A-Z])/g, " $1").toLowerCase();
@@ -191,40 +241,67 @@
         return Math.round(value);
     }
 
-    async function loadSite(siteUrl: SupportedSites) {
-        if (siteUrl in loadedSites) return;
+    let hasLoadedGlobals = false;
+
+    async function loadGlobalsOnce() {
+        if (hasLoadedGlobals) return;
         try {
             const response = await sendExtensionMessage({
                 type: "store-fetch",
                 data: {
-                    siteName: sites[siteUrl].name,
-                    settings: Object.keys(
-                        defaultSettings,
-                    ) as (keyof Settings)[],
+                    namespace: "globals",
+                    data: { keys: defaultGlobalSettingsKeys },
                 },
             });
-            if (response?.data) loadedSites[siteUrl] = response.data;
+
+            loadedSettings.globals = {
+                ...defaultGlobalSettings,
+                ...response.data,
+            };
+            hasLoadedGlobals = true;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function handleLoadSite(siteUrl: SupportedHosts) {
+        await loadGlobalsOnce();
+        if (siteUrl in loadedSettings.sites) return;
+        try {
+            const response = await sendExtensionMessage({
+                type: "store-fetch",
+                data: {
+                    namespace: sites[siteUrl].name,
+                    data: { keys: defaultSiteSettingsKeys },
+                },
+            });
+
+            if (response.namespace === "globals") return;
+
+            loadedSettings.sites[siteUrl] = {
+                ...defaultSiteSettings,
+                ...response.data,
+            };
         } catch (error) {
             console.error(error);
         }
     }
 
     onMount(async () => {
-        // Try to detect the current site and load it by default
         const [tab] = await browser.tabs.query({
             active: true,
             currentWindow: true,
         });
         if (tab?.url) {
             try {
-                const host = new URL(tab.url).hostname as SupportedSites;
+                const host = new URL(tab.url).hostname as SupportedHosts;
                 if (host in sites) selectedSite = host;
             } catch (error) {
                 console.error(error);
             }
         }
 
-        await loadSite(selectedSite);
+        await handleLoadSite(selectedSite);
     });
 
     $: siteEnhancements = new Set(sites[selectedSite].enhancements);
@@ -237,8 +314,8 @@
                 class="w-full py-2 pl-2.5 pr-8 rounded-md border border-white/8 bg-white/4 hover:bg-white/4 text-gray-100 text-[0.9rem] font-semibold font-[inherit] outline-none appearance-none cursor-pointer focus:border-white/20 [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
                 value={selectedSite}
                 on:change={(e) => {
-                    selectedSite = e.currentTarget.value as SupportedSites;
-                    loadSite(selectedSite);
+                    selectedSite = e.currentTarget.value as SupportedHosts;
+                    handleLoadSite(selectedSite);
                 }}
             >
                 {#each siteKeys as siteUrl}
@@ -271,9 +348,13 @@
                         description="Show direct survey links when available."
                         value={currentSite?.surveyLinks.enabled}
                         onClick={() =>
-                            queueSettingsMutation("store-update", {
-                                surveyLinks: {
-                                    enabled: !currentSite?.surveyLinks.enabled,
+                            queueMutation("store-patch", {
+                                namespace: sites[selectedSite].name,
+                                data: {
+                                    surveyLinks: {
+                                        enabled:
+                                            !currentSite?.surveyLinks.enabled,
+                                    },
                                 },
                             })}
                     />
@@ -285,10 +366,14 @@
                         description="Visually emphasize stronger survey rates."
                         value={currentSite?.highlightRates.enabled}
                         onClick={() =>
-                            queueSettingsMutation("store-update", {
-                                highlightRates: {
-                                    enabled:
-                                        !currentSite?.highlightRates.enabled,
+                            queueMutation("store-patch", {
+                                namespace: sites[selectedSite].name,
+                                data: {
+                                    highlightRates: {
+                                        enabled:
+                                            !currentSite?.highlightRates
+                                                .enabled,
+                                    },
                                 },
                             })}
                     />
@@ -303,10 +388,14 @@
                     description="Convert rewards into your selected currency."
                     value={currentSite?.currencyConversion.enabled}
                     onClick={() =>
-                        queueSettingsMutation("store-update", {
-                            currencyConversion: {
-                                enabled:
-                                    !currentSite?.currencyConversion.enabled,
+                        queueMutation("store-patch", {
+                            namespace: sites[selectedSite].name,
+                            data: {
+                                currencyConversion: {
+                                    enabled:
+                                        !currentSite?.currencyConversion
+                                            .enabled,
+                                },
                             },
                         })}
                 />
@@ -319,10 +408,13 @@
                                 currentSite.currencyConversion.selectedCurrency
                             }
                             on:change={(e) =>
-                                queueSettingsMutation("store-update", {
-                                    currencyConversion: {
-                                        selectedCurrency: e.currentTarget
-                                            .value as Settings["currencyConversion"]["selectedCurrency"],
+                                queueMutation("store-patch", {
+                                    namespace: sites[selectedSite].name,
+                                    data: {
+                                        currencyConversion: {
+                                            selectedCurrency: e.currentTarget
+                                                .value as SiteSettings["currencyConversion"]["selectedCurrency"],
+                                        },
                                     },
                                 })}
                         >
@@ -347,11 +439,14 @@
                     description="Send a desktop notification when a new survey appears."
                     value={currentSite?.newSurveyNotifications.enabled}
                     onClick={() =>
-                        queueSettingsMutation("store-update", {
-                            newSurveyNotifications: {
-                                enabled:
-                                    !currentSite?.newSurveyNotifications
-                                        .enabled,
+                        queueMutation("store-patch", {
+                            namespace: sites[selectedSite].name,
+                            data: {
+                                newSurveyNotifications: {
+                                    enabled:
+                                        !currentSite?.newSurveyNotifications
+                                            .enabled,
+                                },
                             },
                         })}
                 />
@@ -411,13 +506,16 @@
                     class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
                     value={Math.max(
                         1,
-                        Math.round(currentSite.idleThreshold / 60),
+                        Math.round(loadedSettings.globals.idleThreshold / 60),
                     )}
                     on:change={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);
                         if (minutes === null) return;
-                        queueSettingsMutation("store-update", {
-                            idleThreshold: minutes * 60,
+                        queueMutation("store-patch", {
+                            namespace: "globals",
+                            data: {
+                                idleThreshold: minutes * 60,
+                            },
                         });
                     }}
                 />
@@ -427,23 +525,40 @@
                 <Toggle
                     title="Telegram"
                     description="Send notifications via Telegram bot when idle."
-                    value={currentSite.providers.telegram?.enabled ?? false}
+                    value={loadedSettings.globals.providers.telegram?.enabled ??
+                        false}
                     onClick={() =>
-                        updateProvider("telegram", {
-                            enabled: !currentSite.providers.telegram?.enabled,
+                        queueMutation("store-patch", {
+                            namespace: "globals",
+                            data: {
+                                providers: {
+                                    telegram: {
+                                        enabled:
+                                            !loadedSettings.globals.providers
+                                                .telegram?.enabled,
+                                    },
+                                },
+                            },
                         })}
                 />
-                {#if currentSite.providers.telegram?.enabled}
+                {#if loadedSettings.globals.providers.telegram?.enabled}
                     <Field label="Bot token" id="telegram-bot-token">
                         <input
                             id="telegram-bot-token"
                             type="password"
                             class="w-full py-2 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.82rem] font-[inherit] outline-none box-border focus:border-white/20"
-                            value={currentSite.providers.telegram?.botToken ??
-                                ""}
+                            value={loadedSettings.globals.providers.telegram
+                                ?.botToken ?? ""}
                             on:change={(e) =>
-                                updateProvider("telegram", {
-                                    botToken: e.currentTarget.value,
+                                queueMutation("store-patch", {
+                                    namespace: "globals",
+                                    data: {
+                                        providers: {
+                                            telegram: {
+                                                botToken: e.currentTarget.value,
+                                            },
+                                        },
+                                    },
                                 })}
                         />
                     </Field>
@@ -457,9 +572,12 @@
                 description="Periodically refresh the page in the background to check for new studies."
                 value={currentSite?.autoReload.enabled}
                 onClick={() =>
-                    queueSettingsMutation("store-update", {
-                        autoReload: {
-                            enabled: !currentSite?.autoReload.enabled,
+                    queueMutation("store-patch", {
+                        namespace: sites[selectedSite].name,
+                        data: {
+                            autoReload: {
+                                enabled: !currentSite?.autoReload.enabled,
+                            },
                         },
                     })}
             />
@@ -477,9 +595,12 @@
                                 e.currentTarget.value,
                             );
                             if (minutes === null) return;
-                            queueSettingsMutation("store-update", {
-                                autoReload: {
-                                    minInterval: minutes,
+                            queueMutation("store-patch", {
+                                namespace: sites[selectedSite].name,
+                                data: {
+                                    autoReload: {
+                                        minInterval: minutes,
+                                    },
                                 },
                             });
                         }}
@@ -498,9 +619,12 @@
                                 e.currentTarget.value,
                             );
                             if (minutes === null) return;
-                            queueSettingsMutation("store-update", {
-                                autoReload: {
-                                    maxInterval: minutes,
+                            queueMutation("store-patch", {
+                                namespace: sites[selectedSite].name,
+                                data: {
+                                    autoReload: {
+                                        maxInterval: minutes,
+                                    },
                                 },
                             });
                         }}
@@ -513,14 +637,17 @@
             <Toggle
                 title="Debug mode"
                 description="Log extension activity to the browser console."
-                value={currentSite?.enableDebug}
+                value={loadedSettings.globals.enableDebug}
                 onClick={() =>
-                    queueSettingsMutation("store-update", {
-                        enableDebug: !currentSite?.enableDebug,
+                    queueMutation("store-patch", {
+                        namespace: "globals",
+                        data: {
+                            enableDebug: !loadedSettings.globals.enableDebug,
+                        },
                     })}
             />
 
-            {#if currentSite?.enableDebug}
+            {#if loadedSettings.globals.enableDebug}
                 <Subsection
                     className="flex flex-col gap-2"
                     borderClass="border-white/4"
@@ -529,10 +656,18 @@
                         >Reset to default</span
                     >
                     <div class="flex flex-wrap gap-1">
-                        {#each resettableKeys as key}
+                        {#each resettableGlobalKeys as key}
                             <button
                                 class="py-1 px-2 rounded border border-white/8 bg-white/4 text-gray-300 text-[0.72rem] font-[inherit] cursor-pointer hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300"
-                                on:click={() => resetKey(key)}
+                                on:click={() => resetGlobalKey(key)}
+                            >
+                                {formatKey(key)}
+                            </button>
+                        {/each}
+                        {#each resettableSiteKeys as key}
+                            <button
+                                class="py-1 px-2 rounded border border-white/8 bg-white/4 text-gray-300 text-[0.72rem] font-[inherit] cursor-pointer hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300"
+                                on:click={() => resetSiteKey(key)}
                             >
                                 {formatKey(key)}
                             </button>

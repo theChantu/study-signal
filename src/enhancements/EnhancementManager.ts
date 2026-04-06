@@ -3,10 +3,11 @@ import {
     enhancementConfigs,
     type EnhancementKey,
 } from "@/enhancements/enhancementConfigs";
+import log from "@/lib/log";
 
 import type { Settings } from "@/store/types";
-import type { SettingsUpdate } from "@/store/createStore";
 import type { BaseAdapter } from "@/adapters";
+import type { StoreChangedMessage } from "@/messages/types";
 
 const enhancementConfigArray = Object.entries(enhancementConfigs).map(
     ([key, config]) => ({
@@ -32,17 +33,16 @@ export class EnhancementManager {
 
     async initialize() {}
 
-    private mergeSettings(changed: SettingsUpdate) {
+    async update(changed: StoreChangedMessage["data"]) {
         this.settings = deepMerge(this.settings, changed);
-    }
-
-    async update(changed: SettingsUpdate) {
-        this.mergeSettings(changed);
 
         for (const config of this.enhancementConfigs) {
             if (!(config.key in changed)) continue;
 
-            const enhancement = new config.enhancement(this.adapter);
+            const enhancement = new config.enhancement(
+                this.adapter,
+                this.settings,
+            );
             const enabled = this.settings[config.key].enabled;
 
             enabled ? await enhancement.run() : await enhancement.revert();
@@ -50,8 +50,13 @@ export class EnhancementManager {
     }
 
     async run() {
+        log("Running enhancements...");
+
         for (const config of this.enhancementConfigs) {
-            const enhancement = new config.enhancement(this.adapter);
+            const enhancement = new config.enhancement(
+                this.adapter,
+                this.settings,
+            );
             const enabled = this.settings[config.key]?.enabled;
 
             enabled ? await enhancement.apply() : await enhancement.revert();

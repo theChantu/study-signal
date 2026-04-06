@@ -1,5 +1,4 @@
 import BaseEnhancement from "./BaseEnhancement";
-import store from "@/store/store";
 import { MIN_AMOUNT_PER_HOUR, MAX_AMOUNT_PER_HOUR } from "@/constants";
 import extractNumericValue from "@/lib/extractNumericValue";
 import { getCurrency } from "@/lib/utils";
@@ -22,10 +21,7 @@ function rateToColor(rate: number, min = 7, max = 15) {
 
 class HighlightRatesEnhancement extends BaseEnhancement {
     async apply() {
-        const { currencyConversion } = await store.get(
-            this.adapter.config.name,
-            ["currencyConversion"],
-        );
+        const { currencyConversion } = this.settings;
         const { conversionRates } = currencyConversion;
 
         const rateElements = this.adapter.getHourlyRateElements();

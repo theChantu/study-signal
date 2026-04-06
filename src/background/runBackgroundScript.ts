@@ -1,15 +1,21 @@
 import { browser } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendTabMessage } from "@/messages/sendTabMessage";
-import { createStore } from "@/store/createStore";
-import { supportedSites } from "@/adapters/siteConfigs";
+import { SettingsStore } from "@/store/SettingsStore";
+import { supportedSites, supportedHosts } from "@/adapters/siteConfigs";
 import { getProvider, type ProviderName } from "@/providers/providers";
 import { capitalize } from "@/lib/utils";
+import { handleStoreSet } from "./handleStoreSet";
+import { handleStorePatch } from "./handleStorePatch";
 
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
+import { handleStoreFetch } from "./handleStoreFetch";
 
 function runBackgroundScript() {
-    const filteredUrls = supportedSites.map((site) => `https://${site}/*`);
+    const store = new SettingsStore();
+    const filteredUrls = supportedHosts.map(
+        (host) => `https://${host}/*` as const,
+    );
     const defaultNotificationIconUrl = browser.runtime.getURL("/icon-48.png");
 
     browser.webRequest.onCompleted.addListener(
@@ -46,7 +52,7 @@ function runBackgroundScript() {
     async function sendProviderNotifications(
         siteName: string,
         notifications: NotificationData[],
-        providers: Awaited<ReturnType<typeof store.get>>["providers"],
+        providers: Awaited<ReturnType<typeof store.globals.get>>["providers"],
     ): Promise<boolean> {
         const enabledProviders = Object.entries(providers).filter(
             ([, config]) => config.enabled,
@@ -72,7 +78,7 @@ function runBackgroundScript() {
 
                 if (ok) {
                     hasSuccess = true;
-                    await store.set({
+                    await store.globals.set({
                         providers: { [name]: provider.configData },
                     });
                 } else {
@@ -128,7 +134,10 @@ function runBackgroundScript() {
             return await sendBrowserNotifications(notifications);
         }
 
-        const { providers } = await store.get(["providers"]);
+        const { providers, idleThreshold } = await store.globals.get([
+            "providers",
+            "idleThreshold",
+        ]);
 
         if (mode === "provider") {
             return await sendProviderNotifications(
@@ -145,7 +154,6 @@ function runBackgroundScript() {
             return await sendBrowserNotifications(notifications);
         }
 
-        const { idleThreshold } = await store.get(["idleThreshold"]);
         const state = await browser.idle.queryState(idleThreshold);
 
         if (state === "idle" || state === "locked") {
@@ -159,15 +167,7 @@ function runBackgroundScript() {
         return await sendBrowserNotifications(notifications);
     });
 
-    const store = createStore();
-
-    onExtensionMessage("store-fetch", async (payload) => {
-        const { siteName, settings } = payload;
-        const data = await store.get(siteName, settings);
-        return { siteName, data };
-    });
-
-    store.subscribe("globals", async (changed) => {
+    store.globals.subscribe(async (changed) => {
         const tabs = await browser.tabs.query({});
 
         for (const tab of tabs) {
@@ -177,24 +177,26 @@ function runBackgroundScript() {
 
             await sendTabMessage(tab.id, {
                 type: "store-changed",
-                data: changed,
+                data: { namespace: "globals", data: changed },
             });
         }
     });
 
-    store.subscribe("site", async (siteName, changed) => {
-        const tabs = await browser.tabs.query({});
+    for (const siteName of supportedSites) {
+        store.site(siteName).subscribe(async (changed) => {
+            const tabs = await browser.tabs.query({});
 
-        for (const tab of tabs) {
-            if (!tab.id || !tab.url) continue;
-            if (!tab.url.includes(siteName)) continue;
+            for (const tab of tabs) {
+                if (!tab.id || !tab.url) continue;
+                if (!tab.url.includes(siteName)) continue;
 
-            await sendTabMessage(tab.id, {
-                type: "store-changed",
-                data: changed,
-            });
-        }
-    });
+                await sendTabMessage(tab.id, {
+                    type: "store-changed",
+                    data: { namespace: siteName, data: changed },
+                });
+            }
+        });
+    }
 
     onExtensionMessage("fetch", async (payload) => {
         try {
@@ -206,26 +208,25 @@ function runBackgroundScript() {
         }
     });
 
-    onExtensionMessage("store-update", async (payload) => {
-        const { siteName, data: patch } = payload;
-        const data = await store.update(siteName, patch);
-        return { siteName, data };
-    });
+    onExtensionMessage("store-fetch", (payload) =>
+        handleStoreFetch(store, payload),
+    );
 
-    onExtensionMessage("store-set", async (payload) => {
-        const { siteName, ...settings } = payload;
-        const data = await store.set(siteName, settings.data);
-        return { siteName, data };
-    });
+    onExtensionMessage("store-patch", (payload) =>
+        handleStorePatch(store, payload),
+    );
+    onExtensionMessage("store-set", (payload) =>
+        handleStoreSet(store, payload),
+    );
 
     onExtensionMessage("survey-completion", async (payload) => {
         const { siteName, url } = payload;
-        const { analytics } = await store.get(siteName, ["analytics"]);
+        const { analytics } = await store.site(siteName).get(["analytics"]);
         const { totalSurveyCompletions, dailySurveyCompletions } = analytics;
 
         if (dailySurveyCompletions.urls.includes(url)) return;
 
-        await store.update(siteName, {
+        await store.site(siteName).patch({
             analytics: {
                 totalSurveyCompletions: totalSurveyCompletions + 1,
                 dailySurveyCompletions: {

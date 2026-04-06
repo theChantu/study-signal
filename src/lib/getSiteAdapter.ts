@@ -1,12 +1,12 @@
 import { ProlificAdapter } from "@/adapters/ProlificAdapter";
 import { CloudResearchAdapter } from "@/adapters/CloudResearchAdapter";
 import { BaseAdapter } from "@/adapters/BaseAdapter";
-import type { SupportedSites } from "@/adapters/siteConfigs";
+import type { SupportedHosts } from "@/adapters/siteConfigs";
 
 const siteToAdapter = {
     "app.prolific.com": ProlificAdapter,
     "connect.cloudresearch.com": CloudResearchAdapter,
-} as const satisfies Record<SupportedSites, new () => BaseAdapter>;
+} as const satisfies Record<SupportedHosts, new () => BaseAdapter>;
 
 type SiteAdapter = InstanceType<
     (typeof siteToAdapter)[keyof typeof siteToAdapter]

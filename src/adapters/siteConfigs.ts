@@ -46,7 +46,8 @@ export const sites = {
     },
 } as const satisfies Record<string, SiteInfo>;
 
-export type SupportedSites = keyof typeof sites;
-export type SiteName = (typeof sites)[SupportedSites]["name"];
+export type SupportedHosts = keyof typeof sites;
+export type SiteName = (typeof sites)[SupportedHosts]["name"];
 
-export const supportedSites = Object.keys(sites) as SupportedSites[];
+export const supportedHosts = Object.keys(sites) as SupportedHosts[];
+export const supportedSites = supportedHosts.map((host) => sites[host].name);

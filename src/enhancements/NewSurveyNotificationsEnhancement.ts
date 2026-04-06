@@ -1,4 +1,3 @@
-import store from "../store/store";
 import { capitalize, cleanResearcherName } from "../lib/utils";
 import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
@@ -19,10 +18,7 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         const surveys = this.adapter.extractSurveys();
         if (surveys.length === 0) return;
 
-        const { newSurveyNotifications } = await store.get(
-            this.adapter.config.name,
-            ["newSurveyNotifications"],
-        );
+        const { newSurveyNotifications } = this.settings;
         const {
             surveys: previousSurveys,
             cachedResearchers: previousCachedResearchers,
@@ -97,9 +93,15 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             cachedResearchers[name] = now;
         }
 
-        await store.update(this.adapter.config.name, {
-            newSurveyNotifications: {
-                cachedResearchers,
+        await sendExtensionMessage({
+            type: "store-patch",
+            data: {
+                namespace: this.adapter.config.name,
+                data: {
+                    newSurveyNotifications: {
+                        cachedResearchers,
+                    },
+                },
             },
         });
     }
@@ -138,9 +140,15 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             previousClone[survey.id] = now;
         }
 
-        await store.update(this.adapter.config.name, {
-            newSurveyNotifications: {
-                surveys: previousClone,
+        await sendExtensionMessage({
+            type: "store-patch",
+            data: {
+                namespace: this.adapter.config.name,
+                data: {
+                    newSurveyNotifications: {
+                        surveys: previousClone,
+                    },
+                },
             },
         });
     }

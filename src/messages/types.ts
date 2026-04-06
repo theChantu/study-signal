@@ -1,27 +1,54 @@
-import type { Settings } from "@/store/types";
-import type { SettingsUpdate, SettingsPatch } from "@/store/createStore";
+import type { GlobalSettings, Settings, SiteSettings } from "@/store/types";
+import type {
+    SiteSettingsSet,
+    GlobalSettingsSet,
+    SiteSettingsPatch,
+    GlobalSettingsPatch,
+    SiteSettingsChange,
+    GlobalSettingsChange,
+} from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 
-type StoreUpdateMessage = {
-    siteName: SiteName;
-    data: SettingsPatch;
-};
+type Namespaced<TGlobal, TSite> =
+    | {
+          namespace: "globals";
+          data: TGlobal;
+      }
+    | {
+          namespace: SiteName;
+          data: TSite;
+      };
 
-type StoreSetMessage = {
-    siteName: SiteName;
-    data: SettingsUpdate;
-};
+export type StorePatchMessage = Namespaced<
+    GlobalSettingsPatch,
+    SiteSettingsPatch
+>;
+export type StorePatchResponse = Namespaced<GlobalSettingsSet, SiteSettingsSet>;
 
-type StoreMutationResponse = {
-    siteName: SiteName;
-    data: SettingsUpdate;
-};
+export type StoreSetMessage = Namespaced<GlobalSettingsSet, SiteSettingsSet>;
+export type StoreSetResponse = Namespaced<GlobalSettingsSet, SiteSettingsSet>;
 
-type StoreFetchMessage = {
-    siteName: SiteName;
-    settings: (keyof Settings)[];
-};
+export type StoreChangedMessage = Namespaced<
+    GlobalSettingsChange,
+    SiteSettingsChange
+>;
+
+export type StoreFetchMessage = Namespaced<
+    { keys: readonly (keyof GlobalSettings)[] },
+    { keys: readonly (keyof SiteSettings)[] }
+>;
+export type StoreFetchResponse = Namespaced<
+    Partial<GlobalSettings>,
+    Partial<SiteSettings>
+>;
+
+export interface StoreMutationMessage {
+    "store-set": StoreSetMessage;
+    "store-patch": StorePatchMessage;
+}
+
+export type StoreMutationMessageType = keyof StoreMutationMessage;
 
 type NotificationMessage = {
     siteName: SiteName;
@@ -29,22 +56,20 @@ type NotificationMessage = {
     delivery?: "auto" | "provider" | "browser";
 };
 
-interface MessageMap {
-    "store-fetch": StoreFetchMessage;
+interface MessageMap extends StoreMutationMessage {
     notification: NotificationMessage;
-    "store-set": StoreSetMessage;
-    "store-update": StoreUpdateMessage;
-    "store-changed": SettingsUpdate;
+    "store-fetch": StoreFetchMessage;
+    "store-changed": StoreChangedMessage;
     fetch: { url: string };
     network: { url: string; method: string; statusCode: number };
     "survey-completion": { siteName: SiteName; url: string };
 }
 
 interface ResponseMap {
-    "store-fetch": { siteName: SiteName; data: Settings } | null;
+    "store-fetch": StoreFetchResponse;
     notification: boolean;
-    "store-update": StoreMutationResponse;
-    "store-set": StoreMutationResponse;
+    "store-set": StoreSetResponse;
+    "store-patch": StorePatchResponse;
     "store-changed": void;
     fetch: unknown;
     network: void;

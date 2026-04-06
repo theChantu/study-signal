@@ -1,4 +1,5 @@
-import { ProviderConfigMap } from "@/providers/providers";
+import type { SiteName } from "@/adapters/siteConfigs";
+import type { ProviderConfigMap } from "@/providers/providers";
 
 type Enhancement = {
     apply(): void;
@@ -80,6 +81,14 @@ export interface ExchangeRatesResponse {
     base_code: Currency;
     rates: Partial<Record<Currency, number>>;
 }
+
+export type DeepPartial<T> = T extends readonly (infer U)[]
+    ? readonly U[]
+    : T extends (infer U)[]
+      ? U[]
+      : T extends object
+        ? { [K in keyof T]?: DeepPartial<T[K]> }
+        : T;
 
 export type {
     Enhancement,

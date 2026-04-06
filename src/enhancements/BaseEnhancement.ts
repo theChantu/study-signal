@@ -1,11 +1,11 @@
 import type { BaseAdapter } from "@/adapters";
+import type { Settings } from "@/store/types";
 
 export default abstract class BaseEnhancement {
-    readonly adapter;
-
-    constructor(adapter: BaseAdapter) {
-        this.adapter = adapter;
-    }
+    constructor(
+        protected readonly adapter: BaseAdapter,
+        protected readonly settings: Settings,
+    ) {}
 
     abstract apply(): Promise<void>;
     abstract revert(): Promise<void>;

@@ -4,12 +4,13 @@ import { getRandomTimeoutMs, scheduleTimeout } from "../lib/utils";
 import getSiteAdapter from "../lib/getSiteAdapter";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
-import { SettingsUpdate } from "@/store/createStore";
-import { defaultSettings, defaultSettingsKeys } from "@/store/defaultSettings";
 import debounce from "@/lib/debounce";
+import deepMerge from "@/lib/deepMerge";
+import { loadSettings } from "../lib/loadSettings";
 import { EnhancementManager } from "../enhancements/EnhancementManager";
 
 import type { ContentScriptContext } from "#imports";
+import type { StoreChangedMessage } from "@/messages/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
@@ -19,18 +20,11 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     const adapter = getSiteAdapter();
 
-    let siteSettings = (await sendExtensionMessage({
-        type: "store-fetch",
-        data: {
-            siteName: adapter.config.name,
-            settings: defaultSettingsKeys,
-        },
-    })) ?? { data: defaultSettings };
-
-    const enhancementManager = new EnhancementManager(
-        adapter,
-        siteSettings.data,
-    );
+    let { globals, site } = await loadSettings(adapter.config.name);
+    const enhancementManager = new EnhancementManager(adapter, {
+        ...globals,
+        ...site,
+    });
 
     async function safelyRunEnhancements() {
         observer.disconnect();
@@ -41,17 +35,20 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    const debounced = debounce(async (changed?: SettingsUpdate) => {
-        observer.disconnect();
-        try {
-            if (changed) {
-                enhancementManager.update(changed);
+    const debounced = debounce(
+        async (changed?: StoreChangedMessage["data"]) => {
+            observer.disconnect();
+            try {
+                if (changed) {
+                    enhancementManager.update(changed);
+                }
+                await enhancementManager.run();
+            } finally {
+                observer.observe(document.body, observerConfig);
             }
-            await enhancementManager.run();
-        } finally {
-            observer.observe(document.body, observerConfig);
-        }
-    }, 300);
+        },
+        300,
+    );
 
     // Observe the DOM for changes and re-run the enhancements if necessary
     observer = new MutationObserver((mutations) => {
@@ -66,7 +63,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     // Apply the enhancements initially
     await safelyRunEnhancements();
 
-    const { minInterval, maxInterval, enabled } = siteSettings?.data.autoReload;
+    const { minInterval, maxInterval } = site.autoReload;
 
     const ms = getRandomTimeoutMs(minInterval, maxInterval);
     const pageReloadTimeout = scheduleTimeout(() => {
@@ -89,35 +86,45 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    if (enabled) {
-        handleAutoReloadSettingChange(enabled);
+    if (site.autoReload.enabled) {
+        handleAutoReloadSettingChange(site.autoReload.enabled);
     }
 
     onExtensionMessage("store-changed", (payload) => {
-        if (siteSettings) {
-            siteSettings.data = { ...siteSettings.data, ...payload };
+        if (
+            payload.namespace !== "globals" &&
+            payload.namespace !== adapter.config.name
+        ) {
+            return;
         }
 
-        if (payload.autoReload) {
-            const { minInterval, maxInterval, enabled } = payload.autoReload;
-            if (enabled !== undefined) {
-                handleAutoReloadSettingChange(enabled);
-            }
+        if (payload.namespace === "globals") {
+            globals = deepMerge(globals, payload.data);
+        } else {
+            site = deepMerge(site, payload.data);
 
-            if (minInterval !== undefined || maxInterval !== undefined) {
-                const ms = getRandomTimeoutMs(
-                    siteSettings.data.autoReload.minInterval,
-                    siteSettings.data.autoReload.maxInterval,
-                );
-                log(
-                    "Page refresh interval updated. New interval (ms):",
-                    ms / (60 * 1000),
-                );
-                pageReloadTimeout.setDelay(ms);
+            if (payload.data.autoReload) {
+                const { minInterval, maxInterval, enabled } =
+                    payload.data.autoReload;
+                if (enabled !== undefined) {
+                    handleAutoReloadSettingChange(enabled);
+                }
+
+                if (minInterval !== undefined || maxInterval !== undefined) {
+                    const ms = getRandomTimeoutMs(
+                        site.autoReload.minInterval,
+                        site.autoReload.maxInterval,
+                    );
+                    log(
+                        "Page refresh interval updated. New interval (ms):",
+                        ms / (60 * 1000),
+                    );
+                    pageReloadTimeout.setDelay(ms);
+                }
             }
         }
 
-        debounced(payload);
+        debounced(payload.data);
     });
 
     const unsubscribeNetwork = adapter.observeNetwork();

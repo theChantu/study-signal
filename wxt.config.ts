@@ -1,10 +1,10 @@
 import { defineConfig } from "wxt";
 import tailwindcss from "@tailwindcss/vite";
-import { supportedSites } from "./src/adapters/siteConfigs";
+import { supportedHosts } from "./src/adapters/siteConfigs";
 import { providerHostPermissions } from "./src/providers/providerHosts";
 
-const hostPermissions = supportedSites.map(
-    (site) => `https://${site}/*` as const,
+const hostPermissions = supportedHosts.map(
+    (host) => `https://${host}/*` as const,
 );
 
 // See https://wxt.dev/api/config.html

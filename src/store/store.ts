@@ -1,8 +1,7 @@
-import { createStore } from "./createStore";
+import { SettingsStore } from "./SettingsStore";
 
-export type { GlobalListener, SiteListener } from "./createStore";
-export { createStore };
+export { SettingsStore };
 
-const store = createStore();
+const store = new SettingsStore();
 
 export default store;

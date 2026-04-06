@@ -1,8 +1,8 @@
 import { runContentScript } from "@/content/runContentScript";
-import { supportedSites } from "@/adapters/siteConfigs";
+import { supportedHosts } from "@/adapters/siteConfigs";
 
 export default defineContentScript({
-    matches: supportedSites.map((site) => `*://${site}/*`),
+    matches: supportedHosts.map((host) => `*://${host}/*`),
     async main(ctx) {
         await runContentScript(ctx);
     },

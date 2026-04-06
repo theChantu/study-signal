@@ -1,4 +1,3 @@
-import store from "../store/store";
 import { CONVERSION_RATES_FETCH_INTERVAL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
 import extractNumericValue from "@/lib/extractNumericValue";
@@ -74,10 +73,7 @@ function getSymbol(currency: Currency) {
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
-        const { currencyConversion } = await store.get(
-            this.adapter.config.name,
-            ["currencyConversion"],
-        );
+        const { currencyConversion } = this.settings;
         const { selectedCurrency, conversionRates } = currencyConversion;
 
         const rewardElements = this.adapter.getRewardElements();
@@ -157,8 +153,14 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         }
 
         if (updated) {
-            await store.update(this.adapter.config.name, {
-                currencyConversion: { conversionRates: rates },
+            await sendExtensionMessage({
+                type: "store-patch",
+                data: {
+                    namespace: this.adapter.config.name,
+                    data: {
+                        currencyConversion: { conversionRates: rates },
+                    },
+                },
             });
         }
 

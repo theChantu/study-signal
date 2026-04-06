@@ -2,10 +2,10 @@ import { joinURL } from "ufo";
 import debounce from "@/lib/debounce";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
-import type { SiteInfo, SupportedSites, sites } from "./siteConfigs";
+import type { SiteInfo, SupportedHosts, sites } from "./siteConfigs";
 import { EnhancementKey } from "@/enhancements/enhancementConfigs";
 
-export type AdapterConfig<H extends SupportedSites = SupportedSites> =
+export type AdapterConfig<H extends SupportedHosts = SupportedHosts> =
     (typeof sites)[H] &
         SiteInfo & {
             host: H;
@@ -52,7 +52,7 @@ type NetworkEvent = {
     status?: number;
 };
 
-export abstract class BaseAdapter<H extends SupportedSites = SupportedSites> {
+export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
     readonly config: Readonly<AdapterConfig<H>>;
 
     constructor(config: AdapterConfig<H>) {
