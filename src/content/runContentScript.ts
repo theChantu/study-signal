@@ -7,7 +7,7 @@ import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import debounce from "@/lib/debounce";
 import deepMerge from "@/lib/deepMerge";
 import { loadSettings } from "../lib/loadSettings";
-import { EnhancementManager } from "../enhancements/EnhancementManager";
+import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
 import type { ContentScriptContext } from "#imports";
 import type { StoreChangedMessage } from "@/messages/types";
@@ -21,7 +21,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     const adapter = getSiteAdapter();
 
     let { globals, site } = await loadSettings(adapter.config.name);
-    const enhancementManager = new EnhancementManager(adapter, {
+    const enhancementHandler = new EnhancementHandler(adapter, {
         ...globals,
         ...site,
     });
@@ -29,7 +29,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     async function safelyRunEnhancements() {
         observer.disconnect();
         try {
-            await enhancementManager.run();
+            await enhancementHandler.run();
         } finally {
             observer.observe(document.body, observerConfig);
         }
@@ -40,9 +40,9 @@ async function runContentScript(ctx: ContentScriptContext) {
             observer.disconnect();
             try {
                 if (changed) {
-                    enhancementManager.update(changed);
+                    enhancementHandler.update(changed);
                 }
-                await enhancementManager.run();
+                await enhancementHandler.run();
             } finally {
                 observer.observe(document.body, observerConfig);
             }

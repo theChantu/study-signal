@@ -35,7 +35,7 @@ export type StorePatchResponse = StoreTarget<
 >;
 
 export type StoreSetMessage = StoreTarget<GlobalSettingsSet, SiteSettingsSet>;
-export type StoreSetResponse = StoreTarget<GlobalSettingsSet, SiteSettingsSet>;
+export type StoreSetResponse = StoreSetMessage;
 
 export type StoreChangedMessage = StoreTarget<
     GlobalSettingsChange,
@@ -58,7 +58,7 @@ export interface StoreMutationMessage {
 
 export type StoreMutationMessageType = keyof StoreMutationMessage;
 
-type NotificationMessage = {
+export type NotificationMessage = {
     siteName: SiteName;
     notifications: NotificationData[];
     delivery?: "auto" | "provider" | "browser";

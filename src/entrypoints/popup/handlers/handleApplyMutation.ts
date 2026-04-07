@@ -7,7 +7,7 @@ import type {
     StoreMutationMessageType,
 } from "@/messages/types";
 
-export async function applyMutation<T extends StoreMutationMessageType>(
+export async function handleApplyMutation<T extends StoreMutationMessageType>(
     type: T,
     data: MessageMap[T],
 ): Promise<MessageResponse<T>> {

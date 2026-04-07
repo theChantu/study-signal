@@ -1,4 +1,4 @@
-import deepMerge from "../lib/deepMerge";
+import deepMerge from "../../lib/deepMerge";
 import {
     enhancementConfigs,
     type EnhancementKey,
@@ -19,7 +19,7 @@ enhancementConfigArray.sort(
     (a, b) => Number(Boolean(b.priority)) - Number(Boolean(a.priority)),
 );
 
-export class EnhancementManager {
+export class EnhancementHandler {
     private enhancementConfigs: typeof enhancementConfigArray;
 
     constructor(
