@@ -5,11 +5,11 @@ import { SettingsStore } from "@/store/SettingsStore";
 import { supportedSites, supportedHosts } from "@/adapters/siteConfigs";
 import { getProvider, type ProviderName } from "@/providers/providers";
 import { capitalize } from "@/lib/utils";
-import { handleStoreSet } from "./handleStoreSet";
-import { handleStorePatch } from "./handleStorePatch";
+import { handleStoreSet } from "./handlers/handleStoreSet";
+import { handleStorePatch } from "./handlers/handleStorePatch";
 
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
-import { handleStoreFetch } from "./handleStoreFetch";
+import { handleStoreFetch } from "./handlers/handleStoreFetch";
 
 function runBackgroundScript() {
     const store = new SettingsStore();
@@ -192,7 +192,11 @@ function runBackgroundScript() {
 
                 await sendTabMessage(tab.id, {
                     type: "store-changed",
-                    data: { namespace: "sites", entry: siteName, data: changed },
+                    data: {
+                        namespace: "sites",
+                        entry: siteName,
+                        data: changed,
+                    },
                 });
             }
         });
@@ -221,9 +225,9 @@ function runBackgroundScript() {
 
     onExtensionMessage("survey-completion", async (payload) => {
         const { siteName, url } = payload;
-        const { analytics } = await store.sites.entry(siteName).get([
-            "analytics",
-        ]);
+        const { analytics } = await store.sites
+            .entry(siteName)
+            .get(["analytics"]);
         const { totalSurveyCompletions, dailySurveyCompletions } = analytics;
 
         if (dailySurveyCompletions.urls.includes(url)) return;

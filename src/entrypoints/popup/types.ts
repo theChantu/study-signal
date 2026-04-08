@@ -1,6 +1,5 @@
 import type { GlobalSettings, SiteSettings } from "@/store/types";
 import type { SiteName, SupportedHosts } from "@/adapters/siteConfigs";
-import type { NotificationMessage } from "@/messages/types";
 
 export type SettingsState = {
     globals: GlobalSettings;
@@ -13,7 +12,12 @@ export type ActiveSiteState = {
     settings?: SiteSettings;
 };
 
-export type GlobalResetKey = Exclude<keyof GlobalSettings, "enableDebug">;
-export type SiteResetKey = keyof SiteSettings;
+export type SettingComponentProps = {
+    activeSite: ActiveSiteState;
+    settingsState: SettingsState;
+};
 
-export type TestNotificationDelivery = NotificationMessage["delivery"];
+export type ToggleControlComponentProps = {
+    value: boolean;
+    onToggle: () => void;
+};
