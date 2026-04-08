@@ -10,11 +10,10 @@
     import { capitalize } from "@/lib/utils";
     import { settingsState, uiState } from "./state.svelte";
     import {
-        handleAddResearcher,
-        handleRemoveResearcher,
-    } from "./handlers/handleResearcher";
-    import { initPopup, selectHost } from "./popupModel.svelte";
-    import { patch } from "./popupMutations";
+        initPopup,
+        queueMutation,
+        selectHost,
+    } from "./popupModel.svelte";
     import DebugSettings from "./components/settings/debug/DebugSettings.svelte";
     import HighlightSettings from "./components/settings/HighlightSettings.svelte";
     import AutoReloadSettings from "./components/settings/AutoReloadSettings.svelte";
@@ -72,21 +71,9 @@
         {#if siteEnhancements.has("highlightRates")}
             <HighlightSettings
                 model={{
+                    queueMutation,
+                    siteName: activeSite.name,
                     highlightRates: siteSettings.highlightRates,
-                    onToggle: () => {
-                        if (!siteSettings) return;
-
-                        void patch({
-                            namespace: "sites",
-                            entry: activeSite.name,
-                            data: {
-                                highlightRates: {
-                                    enabled:
-                                        !siteSettings.highlightRates.enabled,
-                                },
-                            },
-                        });
-                    },
                 }}
             />
         {/if}
@@ -94,35 +81,9 @@
         {#if siteEnhancements.has("currencyConversion")}
             <CurrencySettings
                 model={{
+                    queueMutation,
+                    siteName: activeSite.name,
                     currencyConversion: siteSettings.currencyConversion,
-                    onToggle: () => {
-                        if (!siteSettings) return;
-
-                        void patch({
-                            namespace: "sites",
-                            entry: activeSite.name,
-                            data: {
-                                currencyConversion: {
-                                    enabled:
-                                        !siteSettings.currencyConversion
-                                            .enabled,
-                                },
-                            },
-                        });
-                    },
-                    onCurrencyChange: (currency) => {
-                        if (!siteSettings) return;
-
-                        void patch({
-                            namespace: "sites",
-                            entry: activeSite.name,
-                            data: {
-                                currencyConversion: {
-                                    selectedCurrency: currency,
-                                },
-                            },
-                        });
-                    },
                 }}
             />
         {/if}
@@ -130,133 +91,32 @@
         {#if siteEnhancements.has("newSurveyNotifications")}
             <NotificationSettings
                 model={{
+                    queueMutation,
+                    siteName: activeSite.name,
                     newSurveyNotifications: siteSettings.newSurveyNotifications,
-                    onToggle: () => {
-                        if (!siteSettings) return;
-
-                        void patch({
-                            namespace: "sites",
-                            entry: activeSite.name,
-                            data: {
-                                newSurveyNotifications: {
-                                    enabled:
-                                        !siteSettings.newSurveyNotifications
-                                            .enabled,
-                                },
-                            },
-                        });
-                    },
-                    onAddIncluded: (name) =>
-                        handleAddResearcher(
-                            activeSite,
-                            "includedResearchers",
-                            name,
-                        ),
-                    onRemoveIncluded: (name) =>
-                        handleRemoveResearcher(
-                            activeSite,
-                            "includedResearchers",
-                            name,
-                        ),
-                    onAddExcluded: (name) =>
-                        handleAddResearcher(
-                            activeSite,
-                            "excludedResearchers",
-                            name,
-                        ),
-                    onRemoveExcluded: (name) =>
-                        handleRemoveResearcher(
-                            activeSite,
-                            "excludedResearchers",
-                            name,
-                        ),
                 }}
             />
         {/if}
 
         <ProviderSettings
             model={{
+                queueMutation,
                 idleThreshold: settingsState.globals.idleThreshold,
                 providers: settingsState.globals.providers,
-                onBotTokenChange: (token) => {
-                    void patch({
-                        namespace: "globals",
-                        data: {
-                            providers: {
-                                telegram: {
-                                    botToken: token,
-                                },
-                            },
-                        },
-                    });
-                },
-                onIdleThresholdChange: (minutes) => {
-                    void patch({
-                        namespace: "globals",
-                        data: {
-                            idleThreshold: minutes * 60,
-                        },
-                    });
-                },
-                onTelegramToggle: () => {
-                    void patch({
-                        namespace: "globals",
-                        data: {
-                            providers: {
-                                telegram: {
-                                    enabled:
-                                        !settingsState.globals.providers
-                                            .telegram?.enabled,
-                                },
-                            },
-                        },
-                    });
-                },
             }}
         />
         <AutoReloadSettings
             model={{
+                queueMutation,
+                siteName: activeSite.name,
                 autoReload: siteSettings.autoReload,
-                onToggle: () => {
-                    if (!siteSettings) return;
-
-                    void patch({
-                        namespace: "sites",
-                        entry: activeSite.name,
-                        data: {
-                            autoReload: {
-                                enabled: !siteSettings.autoReload.enabled,
-                            },
-                        },
-                    });
-                },
-                onIntervalChange: (key, value) => {
-                    if (!siteSettings) return;
-
-                    void patch({
-                        namespace: "sites",
-                        entry: activeSite.name,
-                        data: {
-                            autoReload: {
-                                [key]: value,
-                            },
-                        },
-                    });
-                },
             }}
         />
         <DebugSettings
             model={{
+                queueMutation,
                 activeSite,
                 settingsState,
-                onToggle: () => {
-                    void patch({
-                        namespace: "globals",
-                        data: {
-                            enableDebug: !settingsState.globals.enableDebug,
-                        },
-                    });
-                },
             }}
         />
     {/if}

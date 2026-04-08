@@ -8,6 +8,30 @@
     import type { AutoReloadSettingsModel } from "../../types";
 
     let { model }: { model: AutoReloadSettingsModel } = $props();
+
+    function handleToggle() {
+        void model.queueMutation("store-patch", {
+            namespace: "sites",
+            entry: model.siteName,
+            data: {
+                autoReload: {
+                    enabled: !model.autoReload.enabled,
+                },
+            },
+        });
+    }
+
+    function handleIntervalChange(key: "minInterval" | "maxInterval", value: number) {
+        void model.queueMutation("store-patch", {
+            namespace: "sites",
+            entry: model.siteName,
+            data: {
+                autoReload: {
+                    [key]: value,
+                },
+            },
+        });
+    }
 </script>
 
 <Section title="Auto Reload" icon={RefreshCw}>
@@ -15,7 +39,7 @@
         title="Auto reload"
         description="Refresh the page in the background to look for new studies."
         value={model.autoReload.enabled}
-        onClick={model.onToggle}
+        onClick={handleToggle}
     >
         {#snippet children()}
             <Field label="Min interval (minutes)" id="min-interval">
@@ -29,7 +53,7 @@
                     onchange={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);
                         if (minutes === null) return;
-                        model.onIntervalChange("minInterval", minutes);
+                        handleIntervalChange("minInterval", minutes);
                     }}
                 />
             </Field>
@@ -44,7 +68,7 @@
                     onchange={(e) => {
                         const minutes = parsePositiveInt(e.currentTarget.value);
                         if (minutes === null) return;
-                        model.onIntervalChange("maxInterval", minutes);
+                        handleIntervalChange("maxInterval", minutes);
                     }}
                 />
             </Field>

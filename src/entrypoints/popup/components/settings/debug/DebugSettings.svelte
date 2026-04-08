@@ -8,6 +8,15 @@
     import type { DebugSettingsModel } from "@/entrypoints/popup/types";
 
     let { model }: { model: DebugSettingsModel } = $props();
+
+    function handleToggle() {
+        void model.queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                enableDebug: !model.settingsState.globals.enableDebug,
+            },
+        });
+    }
 </script>
 
 <Section title="Developer" icon={Bug} tone="muted">
@@ -15,12 +24,13 @@
         title="Developer mode"
         description="Show extension activity in the browser console."
         value={model.settingsState.globals.enableDebug}
-        onClick={model.onToggle}
+        onClick={handleToggle}
     >
         {#snippet children()}
             <ResetSettingsControls
                 activeSite={model.activeSite}
                 settingsState={model.settingsState}
+                queueMutation={model.queueMutation}
             />
             <NotificationTestControls activeSite={model.activeSite} />
         {/snippet}

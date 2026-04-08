@@ -12,6 +12,41 @@
 
     const providerSetupUrl =
         "https://github.com/theChantu/survey-enhancer#provider-setup";
+
+    function handleIdleThresholdChange(minutes: number) {
+        void model.queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                idleThreshold: minutes * 60,
+            },
+        });
+    }
+
+    function handleTelegramToggle() {
+        void model.queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                providers: {
+                    telegram: {
+                        enabled: !model.providers.telegram?.enabled,
+                    },
+                },
+            },
+        });
+    }
+
+    function handleBotTokenChange(token: string) {
+        void model.queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                providers: {
+                    telegram: {
+                        botToken: token,
+                    },
+                },
+            },
+        });
+    }
 </script>
 
 <Section title="Delivery" icon={Send}>
@@ -36,7 +71,7 @@
             onchange={(e) => {
                 const minutes = parsePositiveInt(e.currentTarget.value);
                 if (minutes === null) return;
-                model.onIdleThresholdChange(minutes);
+                handleIdleThresholdChange(minutes);
             }}
         />
     </Field>
@@ -45,7 +80,7 @@
             title="Telegram alerts"
             description="Send alerts through Telegram when you are idle."
             value={model.providers.telegram?.enabled ?? false}
-            onClick={model.onTelegramToggle}
+            onClick={handleTelegramToggle}
         >
             {#snippet children()}
                 <Field label="Bot token" id="telegram-bot-token">
@@ -55,7 +90,7 @@
                         class="popup-control box-border"
                         value={model.providers.telegram?.botToken ?? ""}
                         onchange={(e) => {
-                            model.onBotTokenChange(
+                            handleBotTokenChange(
                                 (e.target as HTMLInputElement).value,
                             );
                         }}

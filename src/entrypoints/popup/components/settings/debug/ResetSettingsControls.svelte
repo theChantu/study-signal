@@ -2,13 +2,19 @@
     import Subsection from "@/components/Subsection.svelte";
     import { defaultGlobalSettings } from "@/store/defaultGlobalSettings";
     import { defaultSiteSettings } from "@/store/defaultSiteSettings";
-    import { set } from "@/entrypoints/popup/popupMutations";
     import { showActionToast } from "@/entrypoints/popup/toastStore";
 
-    import type { SettingComponentProps } from "@/entrypoints/popup/types";
+    import type {
+        QueueMutation,
+        SettingComponentProps,
+    } from "@/entrypoints/popup/types";
     import type { GlobalSettings, SiteSettings } from "@/store/types";
 
-    let { activeSite, settingsState }: SettingComponentProps = $props();
+    let {
+        activeSite,
+        settingsState,
+        queueMutation,
+    }: SettingComponentProps & { queueMutation: QueueMutation } = $props();
 
     type GlobalResetKey = Exclude<keyof GlobalSettings, "enableDebug">;
     type SiteResetKey = keyof SiteSettings;
@@ -29,7 +35,7 @@
         const previous = structuredClone(snapshot.globals?.[key]);
         const next = structuredClone(defaultGlobalSettings[key]);
 
-        void set({
+        void queueMutation("store-set", {
             namespace: "globals",
             data: { [key]: next },
         });
@@ -39,7 +45,7 @@
             actionLabel: "Undo",
             onAction: () =>
                 previous !== undefined
-                    ? set({
+                    ? queueMutation("store-set", {
                           namespace: "globals",
                           data: { [key]: previous },
                       })
@@ -54,7 +60,7 @@
         const previous = structuredClone(snapshot.sites[activeSite.url]?.[key]);
         const next = structuredClone(defaultSiteSettings[key]);
 
-        void set({
+        void queueMutation("store-set", {
             namespace: "sites",
             entry: activeSite.name,
             data: { [key]: next },
@@ -64,7 +70,7 @@
             message: `Reset ${formatKey(key)}.`,
             actionLabel: "Undo",
             onAction: () =>
-                set({
+                queueMutation("store-set", {
                     namespace: "sites",
                     entry: activeSite.name,
                     data: { [key]: previous },

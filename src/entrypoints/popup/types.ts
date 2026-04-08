@@ -1,5 +1,6 @@
-import type { Currency, GlobalSettings, SiteSettings } from "@/store/types";
+import type { GlobalSettings, SiteSettings } from "@/store/types";
 import type { SiteName, SupportedHosts } from "@/adapters/siteConfigs";
+import type { MessageMap, StoreMutationMessageType } from "@/messages/types";
 
 export type SettingsState = {
     globals: GlobalSettings;
@@ -17,33 +18,35 @@ export type SettingComponentProps = {
     settingsState: SettingsState;
 };
 
-export type ToggleControlComponentProps = {
-    onToggle: () => void;
+export type QueueMutation = <T extends StoreMutationMessageType>(
+    type: T,
+    values: MessageMap[T],
+) => Promise<void>;
+
+type SiteMutationModel = {
+    queueMutation: QueueMutation;
+    siteName: SiteName;
 };
 
-export type HighlightSettingsModel = ToggleControlComponentProps & {
+type GlobalMutationModel = {
+    queueMutation: QueueMutation;
+};
+
+export type HighlightSettingsModel = SiteMutationModel & {
     highlightRates: SiteSettings["highlightRates"];
 };
 
-export type CurrencySettingsModel = ToggleControlComponentProps & {
+export type CurrencySettingsModel = SiteMutationModel & {
     currencyConversion: SiteSettings["currencyConversion"];
-    onCurrencyChange: (currency: Currency) => void;
 };
 
-export type NotificationSettingsModel = ToggleControlComponentProps & {
+export type NotificationSettingsModel = SiteMutationModel & {
     newSurveyNotifications: SiteSettings["newSurveyNotifications"];
-    onAddIncluded: (name: string) => void;
-    onRemoveIncluded: (name: string) => void;
-    onAddExcluded: (name: string) => void;
-    onRemoveExcluded: (name: string) => void;
 };
 
-export type ProviderSettingsModel = {
+export type ProviderSettingsModel = GlobalMutationModel & {
     idleThreshold: GlobalSettings["idleThreshold"];
     providers: GlobalSettings["providers"];
-    onIdleThresholdChange: (minutes: number) => void;
-    onBotTokenChange: (token: string) => void;
-    onTelegramToggle: () => void;
 };
 
 export type AutoReloadIntervalSetting = Exclude<
@@ -51,12 +54,10 @@ export type AutoReloadIntervalSetting = Exclude<
     "enabled"
 >;
 
-export type AutoReloadSettingsModel = ToggleControlComponentProps & {
+export type AutoReloadSettingsModel = SiteMutationModel & {
     autoReload: SiteSettings["autoReload"];
-    onIntervalChange: (key: AutoReloadIntervalSetting, value: number) => void;
 };
 
-export type DebugSettingsModel = ToggleControlComponentProps &
-    SettingComponentProps;
+export type DebugSettingsModel = GlobalMutationModel & SettingComponentProps;
 
 export type AnalyticsModel = SiteSettings["analytics"];
