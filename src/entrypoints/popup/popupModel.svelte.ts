@@ -1,4 +1,11 @@
-import { sites, type SupportedHosts } from "@/adapters/siteConfigs";
+import {
+    sites,
+    supportedHosts,
+    type SiteName,
+    type SupportedHosts,
+} from "@/adapters/siteConfigs";
+import deepMerge from "@/lib/deepMerge";
+import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import {
     defaultGlobalSettings,
@@ -13,11 +20,20 @@ import { settingsState, uiState } from "./state.svelte";
 import type {
     Message,
     MessageMap,
+    StoreChangedMessage,
     StoreMutationMessageType,
 } from "@/messages/types";
 
 let globalsPromise: Promise<void> | null = null;
 export let pendingMutation: Promise<void> = Promise.resolve();
+
+const siteNameToHost = supportedHosts.reduce(
+    (map, host) => {
+        map[sites[host].name] = host;
+        return map;
+    },
+    {} as Record<SiteName, SupportedHosts>,
+);
 
 function loadGlobals() {
     if (globalsPromise) return globalsPromise;
@@ -82,9 +98,7 @@ export function queueMutation<T extends StoreMutationMessageType>(
                 return;
             }
 
-            const siteUrl = Object.keys(sites).find(
-                (url) => sites[url as SupportedHosts].name === result.entry,
-            ) as SupportedHosts | undefined;
+            const siteUrl = siteNameToHost[result.entry];
             if (!siteUrl) return;
 
             const current = settingsState.sites[siteUrl];
@@ -107,7 +121,22 @@ export async function selectHost(host: SupportedHosts) {
     await loadSite(host);
 }
 
-export async function initPopup() {
+function applyStoreChange(payload: StoreChangedMessage) {
+    if (payload.namespace !== "sites") return;
+
+    const surveys = payload.data.newSurveyNotifications?.surveys;
+    if (!surveys) return;
+
+    const host = siteNameToHost[payload.entry];
+    const current = settingsState.sites[host];
+    if (!current) return;
+
+    settingsState.sites[host] = deepMerge(current, {
+        newSurveyNotifications: { surveys },
+    });
+}
+
+async function initializePopup() {
     const [tab] = await browser.tabs.query({
         active: true,
         currentWindow: true,
@@ -125,4 +154,14 @@ export async function initPopup() {
     }
 
     await Promise.all([loadGlobals(), loadSite(uiState.selectedHost)]);
+}
+
+export function initPopup() {
+    const unsubscribe = onExtensionMessage("store-changed", (payload) => {
+        applyStoreChange(payload);
+    });
+
+    void initializePopup();
+
+    return unsubscribe;
 }

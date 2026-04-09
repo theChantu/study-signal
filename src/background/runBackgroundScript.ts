@@ -10,6 +10,7 @@ import { handleStorePatch } from "./handlers/handleStorePatch";
 
 import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
 import { handleStoreFetch } from "./handlers/handleStoreFetch";
+import type { Message } from "@/messages/types";
 
 function runBackgroundScript() {
     const store = new SettingsStore();
@@ -38,6 +39,41 @@ function runBackgroundScript() {
     );
 
     const notificationActions = new Map<string, () => void | Promise<void>>();
+
+    function isMissingReceiverError(error: unknown): boolean {
+        return (
+            error instanceof Error &&
+            error.message.includes("Receiving end does not exist")
+        );
+    }
+
+    async function sendExtensionPageMessage(
+        message: Message<"store-changed">,
+    ): Promise<void> {
+        try {
+            await browser.runtime.sendMessage(message);
+        } catch (error) {
+            if (!isMissingReceiverError(error)) {
+                console.error("Error sending popup store change:", error);
+            }
+        }
+    }
+
+    async function broadcastStoreChanged(
+        message: Message<"store-changed">,
+        shouldSendToTab: (tab: Browser.tabs.Tab) => boolean,
+    ): Promise<void> {
+        await sendExtensionPageMessage(message);
+
+        const tabs = await browser.tabs.query({});
+
+        for (const tab of tabs) {
+            if (!tab.id || !tab.url) continue;
+            if (!shouldSendToTab(tab)) continue;
+
+            await sendTabMessage(tab.id, message);
+        }
+    }
 
     browser.notifications.onClicked.addListener(async (id) => {
         const action = notificationActions.get(id);
@@ -171,37 +207,28 @@ function runBackgroundScript() {
     });
 
     store.globals.subscribe(async (changed) => {
-        const tabs = await browser.tabs.query({});
-
-        for (const tab of tabs) {
-            if (!tab.id || !tab.url) continue;
-            if (!supportedSites.some((site) => tab.url!.includes(site)))
-                continue;
-
-            await sendTabMessage(tab.id, {
+        await broadcastStoreChanged(
+            {
                 type: "store-changed",
                 data: { namespace: "globals", data: changed },
-            });
-        }
+            },
+            (tab) => supportedSites.some((site) => tab.url!.includes(site)),
+        );
     });
 
     for (const siteName of supportedSites) {
         store.sites.entry(siteName).subscribe(async (changed) => {
-            const tabs = await browser.tabs.query({});
-
-            for (const tab of tabs) {
-                if (!tab.id || !tab.url) continue;
-                if (!tab.url.includes(siteName)) continue;
-
-                await sendTabMessage(tab.id, {
+            await broadcastStoreChanged(
+                {
                     type: "store-changed",
                     data: {
                         namespace: "sites",
                         entry: siteName,
                         data: changed,
                     },
-                });
-            }
+                },
+                (tab) => tab.url!.includes(siteName),
+            );
         });
     }
 
