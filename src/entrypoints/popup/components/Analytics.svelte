@@ -13,6 +13,7 @@
     const matchingBestDay = $derived(
         todayCount > 0 && todayCount === bestCount,
     );
+    const analyticsBadge = $derived(matchingBestDay ? "Best day" : undefined);
 
     function pluralize(count: number, noun: string) {
         return `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -47,7 +48,9 @@
     <Collapsible
         title="Today's progress"
         description={analyticsSummary}
-        defaultOpen={matchingBestDay}
+        accent={matchingBestDay}
+        badge={analyticsBadge}
+        defaultOpen={false}
     >
         {#snippet children()}
             <div class="divide-y divide-white/6">

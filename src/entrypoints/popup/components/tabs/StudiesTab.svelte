@@ -3,7 +3,7 @@
     import Analytics from "../Analytics.svelte";
     import StudyCard from "../StudyCard.svelte";
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
-    import { runtimeState, settingsState } from "../../state.svelte";
+    import { runtimeState, settingsState, uiState } from "../../state.svelte";
     import { queueMutation } from "../../popupModel.svelte";
     import { capitalize, getCurrency, rateToColor } from "@/lib/utils";
 
@@ -134,7 +134,7 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
-    {#if model.activeSite.settings?.analytics}
+    {#if uiState.detectedHost === model.activeSite.url && model.activeSite.settings?.analytics}
         <div class="px-4">
             <Analytics model={model.activeSite.settings?.analytics} />
         </div>

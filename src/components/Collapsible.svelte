@@ -8,6 +8,8 @@
         title: string;
         description?: string;
         defaultOpen?: boolean;
+        accent?: boolean;
+        badge?: string;
         children: Snippet;
     };
 
@@ -15,6 +17,8 @@
         title,
         description,
         defaultOpen = false,
+        accent = false,
+        badge,
         children,
     }: CollapsibleProps = $props();
 
@@ -33,7 +37,7 @@
     }
 </script>
 
-<div class="popup-collapsible overflow-hidden">
+<div class={`popup-collapsible overflow-hidden ${accent ? "popup-collapsible-accent" : ""}`}>
     <button
         class="flex w-full cursor-pointer items-start justify-between gap-3 border-none bg-transparent px-3 py-2.5 text-left font-[inherit] transition-colors duration-150 hover:bg-white/4"
         type="button"
@@ -41,17 +45,26 @@
         aria-expanded={open}
     >
         <div class="min-w-0">
-            <div class="text-sm font-medium leading-tight text-gray-100">
-                {title}
+            <div class="flex flex-wrap items-center gap-2">
+                <div
+                    class={`text-sm font-medium leading-tight ${accent ? "text-indigo-100" : "text-gray-100"}`}
+                >
+                    {title}
+                </div>
+                {#if badge}
+                    <span class="popup-badge">{badge}</span>
+                {/if}
             </div>
             {#if description}
-                <div class="mt-0.5 text-xs leading-snug text-gray-400">
+                <div
+                    class={`mt-0.5 text-xs leading-snug ${accent ? "text-indigo-200/75" : "text-gray-400"}`}
+                >
                     {description}
                 </div>
             {/if}
         </div>
         <div
-            class={`popup-chip-chevron mt-0.5 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            class={`popup-chip-chevron mt-0.5 shrink-0 transition-transform duration-200 ${accent ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-200" : ""} ${open ? "rotate-180" : ""}`}
         >
             <ChevronDown size={12} strokeWidth={2.4} />
         </div>

@@ -15,6 +15,10 @@
         @apply rounded-md border border-white/8 bg-white/4 transition-colors duration-150 hover:border-white/12 focus-within:border-indigo-500/30 focus-within:hover:border-indigo-500/30;
     }
 
+    .popup-collapsible-accent {
+        @apply border-indigo-500/20 bg-indigo-500/4;
+    }
+
     .popup-surface-inner {
         @apply rounded-md border border-white/8 bg-white/3;
     }
@@ -33,6 +37,10 @@
 
     .popup-chip-chevron {
         @apply rounded-full border border-white/8 bg-white/4 p-1 text-gray-500;
+    }
+
+    .popup-badge {
+        @apply inline-flex items-center rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-indigo-200;
     }
 
     .popup-section-heading {

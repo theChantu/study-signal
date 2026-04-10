@@ -6,6 +6,7 @@
 /* Prolific */
 [data-testid="study-tag-reward-per-hour"].se-rate-highlight {
     padding: 3px 4px;
+    color: black;
 }
 .se-custom-btn {
     padding: 8px 24px;

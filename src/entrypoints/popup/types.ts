@@ -17,6 +17,7 @@ export type PopupTab = "studies" | "settings";
 export type UiState = {
     selectedHost: SupportedHosts;
     selectedTab: PopupTab;
+    detectedHost: SupportedHosts | null;
 };
 
 export type RuntimeState = {

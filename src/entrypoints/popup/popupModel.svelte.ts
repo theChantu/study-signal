@@ -112,28 +112,10 @@ export function queueMutation<T extends StoreMutationMessageType>(
 ): Promise<void> {
     pendingMutation = pendingMutation
         .then(async () => {
-            const result = await sendExtensionMessage({
+            await sendExtensionMessage({
                 type,
                 data: values,
             } as Message<T>);
-            if (result.namespace === "globals") {
-                settingsState.globals = {
-                    ...settingsState.globals,
-                    ...result.data,
-                };
-                return;
-            }
-
-            const siteUrl = siteNameToHost[result.entry];
-            if (!siteUrl) return;
-
-            const current = settingsState.sites[siteUrl];
-            if (!current) return;
-
-            settingsState.sites[siteUrl] = {
-                ...current,
-                ...result.data,
-            };
         })
         .catch((error) => {
             console.error(error);
@@ -179,11 +161,14 @@ async function initializePopup() {
         currentWindow: true,
     });
 
+    uiState.detectedHost = null;
+
     if (tab?.url) {
         try {
             const host = new URL(tab.url).hostname as SupportedHosts;
             if (host in sites) {
                 uiState.selectedHost = host;
+                uiState.detectedHost = host;
             }
         } catch (error) {
             console.error(error);
