@@ -90,8 +90,11 @@ type RuntimeTarget<K extends RuntimeChannel = RuntimeChannel> = {
 export type RuntimeSyncMessage<K extends RuntimeChannel = RuntimeChannel> =
     RuntimeTarget<K>;
 
-export type RuntimeChangedMessage<K extends RuntimeChannel = RuntimeChannel> =
-    RuntimeTarget<K>;
+export type RuntimeChangedMessage<K extends RuntimeChannel = RuntimeChannel> = {
+    channel: K;
+    siteName: SiteName;
+    data: RuntimeDataMap[K] | null;
+};
 
 export type RuntimeFetchMessage<K extends RuntimeChannel = RuntimeChannel> = {
     channel: K;

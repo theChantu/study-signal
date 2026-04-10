@@ -5,7 +5,6 @@ import {
     supportedSites,
     supportedHosts,
     sites,
-    type SiteName,
 } from "@/adapters/siteConfigs";
 import { handleStoreFetch } from "./handlers/handleStoreFetch";
 import { handleStoreMutate } from "./handlers/handleStoreMutate";
@@ -14,18 +13,14 @@ import {
     handleNotificationClosed,
     handleStudyAlert,
 } from "./handlers/handleNotifications";
+import { registerRuntimeSync } from "./runtime/runtimeSync";
 import { safeSendPageMessage } from "./utils/safeSendPageMessage";
 import { safeSendTabMessage } from "./utils/safeSendTabMessage";
 
-import type { Message, RuntimeChannel, RuntimeDataMap } from "@/messages/types";
+import type { Message } from "@/messages/types";
 
 function runBackgroundScript() {
     const store = new SettingsStore();
-    const runtimeCache: {
-        [K in RuntimeChannel]: Partial<Record<SiteName, RuntimeDataMap[K]>>;
-    } = {
-        studies: {},
-    };
 
     const filteredUrls = supportedHosts.flatMap((host) =>
         sites[host].watchedRequestTargets.map(
@@ -72,6 +67,8 @@ function runBackgroundScript() {
     browser.notifications.onClosed.addListener(async (id) =>
         handleNotificationClosed(id),
     );
+
+    registerRuntimeSync();
 
     onExtensionMessage("study-alert", (payload) =>
         handleStudyAlert(store, payload),
@@ -123,44 +120,6 @@ function runBackgroundScript() {
     onExtensionMessage("store-set", (payload) =>
         handleStoreMutate(store, "store-set", payload),
     );
-
-    function runtimeEquals<K extends RuntimeChannel>(
-        current: RuntimeDataMap[K] | undefined,
-        next: RuntimeDataMap[K],
-    ): boolean {
-        return JSON.stringify(current ?? null) === JSON.stringify(next);
-    }
-
-    onExtensionMessage("runtime-sync", async (payload) => {
-        const current = runtimeCache[payload.channel][payload.siteName];
-
-        const unchanged = runtimeEquals(current, payload.data);
-        if (unchanged) return;
-
-        runtimeCache[payload.channel][payload.siteName] = structuredClone(
-            payload.data,
-        );
-
-        await safeSendPageMessage({
-            type: "runtime-changed",
-            data: {
-                channel: payload.channel,
-                siteName: payload.siteName,
-                data: structuredClone(payload.data),
-            },
-        });
-    });
-
-    onExtensionMessage("runtime-fetch", (payload) => {
-        const data = runtimeCache[payload.channel][payload.siteName];
-        if (data === undefined) return null;
-
-        return {
-            channel: payload.channel,
-            siteName: payload.siteName,
-            data: structuredClone(data),
-        };
-    });
 
     onExtensionMessage("study-completion", async (payload) => {
         const { siteName } = payload;
