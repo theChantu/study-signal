@@ -9,8 +9,7 @@
 
     function handleToggle() {
         void model.queueMutation("store-patch", {
-            namespace: "sites",
-            entry: model.siteName,
+            namespace: "globals",
             data: {
                 highlightRates: {
                     enabled: !model.highlightRates.enabled,
@@ -23,7 +22,7 @@
 <Section title="Highlights" icon={Highlighter}>
     <ToggleControl
         title="Rate highlights"
-        description="Make stronger survey rates easier to spot."
+        description="Make stronger study rates easier to spot."
         value={model.highlightRates.enabled}
         onClick={handleToggle}
     ></ToggleControl>

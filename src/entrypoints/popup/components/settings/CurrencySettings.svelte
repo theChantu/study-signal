@@ -12,11 +12,10 @@
 
     function handleToggle() {
         void model.queueMutation("store-patch", {
-            namespace: "sites",
-            entry: model.siteName,
+            namespace: "globals",
             data: {
-                currencyConversion: {
-                    enabled: !model.currencyConversion.enabled,
+                currency: {
+                    enabled: !model.currency.enabled,
                 },
             },
         });
@@ -24,11 +23,10 @@
 
     function handleCurrencyChange(currency: Currency) {
         void model.queueMutation("store-patch", {
-            namespace: "sites",
-            entry: model.siteName,
+            namespace: "globals",
             data: {
-                currencyConversion: {
-                    selectedCurrency: currency,
+                currency: {
+                    target: currency,
                 },
             },
         });
@@ -39,7 +37,7 @@
     <ToggleControl
         title="Currency conversion"
         description="Show rewards in your preferred currency."
-        value={model.currencyConversion.enabled}
+        value={model.currency.enabled}
         onClick={handleToggle}
     >
         {#snippet children()}
@@ -48,7 +46,7 @@
                     <select
                         id="currency"
                         class="popup-select-control [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
-                        bind:value={model.currencyConversion.selectedCurrency}
+                        bind:value={model.currency.target}
                         onchange={(e) =>
                             handleCurrencyChange(
                                 (e.target as HTMLSelectElement)

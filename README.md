@@ -1,18 +1,20 @@
-# Survey Enhancer
+# Study Signal
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/github/package-json/v/theChantu/survey-enhancer?color=gre)
+![Version](https://img.shields.io/github/package-json/v/theChantu/study-signal?color=gre)
 
-A browser extension that enhances the survey experience on [Prolific](https://app.prolific.com/) and [CloudResearch](https://connect.cloudresearch.com/).
+A browser extension that enhances the study experience on [Prolific](https://app.prolific.com/) and [CloudResearch](https://connect.cloudresearch.com/).
 
 ## Features
 
-- **Highlight Rates:** Applies color scaling to hourly rates to highlight high vs low paying studies.
-- **Currency Conversion:** Converts rewards into USD or GBP.
-- **Direct Survey Links:** Adds direct links to each survey.
-- **Notifications:** Desktop alerts when new studies appear, with researcher include/exclude filters.
+- **Live Studies Inbox:** View cached studies from supported sites in one popup tab, with sorting by reward and hourly rate.
+- **Highlight Rates:** Applies color scaling to hourly rates to highlight higher and lower paying studies.
+- **Currency Conversion:** Converts rewards into your selected target currency.
+- **Direct Study Links:** Open study detail pages directly from the popup or supported listings pages.
+- **Notifications:** Browser alerts with optional sound, provider delivery, and researcher include/exclude filters.
 - **Auto Reload:** Automatically refreshes the page at random intervals to check for new studies.
-- **Per-Site Settings:** Configure each supported site independently from the popup.
+- **Analytics:** Tracks completed studies and daily progress per supported site.
+- **Mixed Scope Settings:** Configure site-specific study behavior alongside global delivery and display preferences.
 
 ## Supported Sites
 
@@ -38,13 +40,15 @@ A browser extension that enhances the survey experience on [Prolific](https://ap
 ## Usage
 
 1. Navigate to a supported site.
-2. Click the Survey Enhancer icon in the toolbar to open the popup.
-3. Toggle features and adjust settings per site.
-4. The popup auto-detects which site you're on.
+2. Click the Study Signal icon in the toolbar to open the popup.
+3. Use the `Studies` tab to view live study snapshots combined from supported open tabs.
+4. Use the `Settings` tab to configure the currently selected site.
+5. Keep a supported study listings tab open if you want live studies and alerts to keep updating.
 
 ## Provider Setup
 
 The extension supports Telegram notifications when your device is idle/locked and the provider is enabled.
+Browser notifications are available directly in the extension, and sound alerts are supported in Chromium-based browsers.
 
 ### Telegram setup
 
@@ -70,8 +74,8 @@ Provider credentials are stored in extension storage on your local browser profi
 ### Setup
 
 ```bash
-git clone https://github.com/theChantu/survey-enhancer.git
-cd survey-enhancer
+git clone https://github.com/theChantu/study-signal.git
+cd study-signal
 bun install
 ```
 

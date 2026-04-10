@@ -21,10 +21,31 @@ const conversionRates: GlobalSettings["conversionRates"] = {
 
 const defaultGlobalSettings = Object.freeze({
     conversionRates,
-    enableDebug: false,
+    currency: {
+        target: "USD",
+        enabled: false,
+    },
+    debug: {
+        enabled: false,
+    },
+    highlightRates: {
+        enabled: true,
+    },
     idleThreshold: 15 * 60,
     providers: {},
-}) satisfies GlobalSettings;
+    notifications: {
+        enabled: true,
+        delivery: {
+            browser: true,
+            sound: {
+                enabled: false,
+                type: "chime",
+                volume: 0.5,
+            },
+        },
+    },
+    studySort: "page-order",
+} as const) satisfies GlobalSettings;
 
 const defaultGlobalSettingsKeys = Object.keys(
     defaultGlobalSettings,

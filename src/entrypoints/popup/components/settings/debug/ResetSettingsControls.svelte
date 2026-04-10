@@ -7,6 +7,7 @@
     import type {
         QueueMutation,
         SettingComponentProps,
+        SettingsState,
     } from "@/entrypoints/popup/types";
     import type { GlobalSettings, SiteSettings } from "@/store/types";
 
@@ -14,13 +15,16 @@
         activeSite,
         settingsState,
         queueMutation,
-    }: SettingComponentProps & { queueMutation: QueueMutation } = $props();
+    }: SettingComponentProps & {
+        queueMutation: QueueMutation;
+        settingsState: SettingsState;
+    } = $props();
 
-    type GlobalResetKey = Exclude<keyof GlobalSettings, "enableDebug">;
+    type GlobalResetKey = Exclude<keyof GlobalSettings, "debug">;
     type SiteResetKey = keyof SiteSettings;
 
     const resettableGlobalKeys = Object.keys(defaultGlobalSettings).filter(
-        (k) => k in defaultGlobalSettings && k !== "enableDebug",
+        (k) => k in defaultGlobalSettings && k !== "debug",
     ) as GlobalResetKey[];
     const resettableSiteKeys = Object.keys(
         defaultSiteSettings,
@@ -80,9 +84,7 @@
 </script>
 
 <Subsection className="flex flex-col gap-2" borderClass="border-white/4">
-    <span class="text-[0.78rem] font-medium text-gray-400"
-        >Reset to default</span
-    >
+    <span class="text-xs font-medium text-gray-400">Reset to default</span>
     <div class="flex flex-wrap gap-1">
         {#each resettableGlobalKeys as key}
             <button

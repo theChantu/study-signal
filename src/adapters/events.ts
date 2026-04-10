@@ -1,5 +1,5 @@
 export interface AdapterEventMap {
-    surveyCompletion: {
+    studyCompletion: {
         url: string;
     };
 }

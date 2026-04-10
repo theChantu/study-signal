@@ -9,25 +9,25 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
         super({ ...sites[HOST], host: HOST });
     }
 
-    getSurveyElements() {
+    getStudyElements() {
         return document.querySelectorAll<HTMLElement>(
             'li[data-testid^="study-"]',
         );
     }
 
-    getSurveyId(el: HTMLElement) {
+    getStudyId(el: HTMLElement) {
         return el.getAttribute("data-testid")?.replace("study-", "") ?? null;
     }
 
-    getSurveyContainer(el: HTMLElement) {
+    getStudyContainer(el: HTMLElement) {
         return el.querySelector<HTMLElement>("div.study-content");
     }
 
-    getSurveyTitle(el: HTMLElement) {
+    getStudyTitle(el: HTMLElement) {
         return this.queryText(el, "h2");
     }
 
-    getSurveyResearcher(el: HTMLElement): string | null {
+    getStudyResearcher(el: HTMLElement): string | null {
         return this.queryText(el, '[aria-labelledby*="host-name-"]');
     }
 

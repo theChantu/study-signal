@@ -40,12 +40,12 @@
 </script>
 
 <Subsection className="flex flex-col gap-1.5" borderClass="border-white/4">
-    <span class="text-[0.78rem] font-medium text-gray-500">{title}</span>
+    <span class="text-xs font-medium text-gray-500">{title}</span>
     {#if values.length > 0}
         <div class="flex flex-wrap gap-1">
             {#each values as value}
                 <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/8 text-gray-300 text-[0.74rem]"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/8 text-gray-300 text-xs"
                 >
                     {value}
                     <button
@@ -63,7 +63,7 @@
         <input
             type="text"
             {placeholder}
-            class="w-full py-1.5 px-2.5 rounded-md border border-white/8 bg-white/4 text-gray-300 text-[0.78rem] font-[inherit] outline-none box-border placeholder:text-gray-600 focus:border-white/20"
+            class="popup-control box-border placeholder:text-gray-600"
             bind:value={input}
             on:keydown={handleKeydown}
         />
@@ -74,7 +74,7 @@
                 {#each filtered.slice(0, 5) as suggestion}
                     <li>
                         <button
-                            class="block w-full py-1.5 px-2.5 bg-transparent border-none text-gray-300 text-[0.78rem] font-[inherit] text-left cursor-pointer hover:bg-white/6"
+                            class="block w-full py-1.5 px-2.5 bg-transparent border-none text-gray-300 text-xs font-[inherit] text-left cursor-pointer hover:bg-white/6"
                             on:mousedown|preventDefault={() => add(suggestion)}
                         >
                             {suggestion}

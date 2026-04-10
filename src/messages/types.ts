@@ -1,4 +1,8 @@
-import type { GlobalSettings, SiteSettings } from "@/store/types";
+import type {
+    GlobalSettings,
+    NotificationSound,
+    SiteSettings,
+} from "@/store/types";
 import type {
     SiteSettingsSet,
     GlobalSettingsSet,
@@ -8,8 +12,8 @@ import type {
     GlobalSettingsChange,
 } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
-import type { SurveyInfo } from "@/adapters/BaseAdapter";
-import type { NotificationData } from "@/enhancements/NewSurveyNotificationsEnhancement";
+import type { StudyInfo } from "@/adapters/BaseAdapter";
+import type { NotificationData } from "@/enhancements/NotificationsEnhancement";
 import type { NetworkRequestEvent } from "@/events/network";
 
 type GlobalsTarget<TData> = {
@@ -66,8 +70,13 @@ export type NotificationMessage = {
     delivery?: "auto" | "provider" | "browser";
 };
 
+type PlaySoundMessage = {
+    sound: NotificationSound;
+    volume: number;
+};
+
 export type RuntimeDataMap = {
-    studies: SurveyInfo[];
+    studies: StudyInfo[];
 };
 
 export type RuntimeChannel = keyof RuntimeDataMap;
@@ -92,8 +101,7 @@ export type RuntimeFetchMessage<K extends RuntimeChannel = RuntimeChannel> = {
 export type RuntimeFetchResponse<K extends RuntimeChannel = RuntimeChannel> =
     RuntimeTarget<K> | null;
 
-interface MessageMap extends StoreMutationMessage {
-    notification: NotificationMessage;
+export interface MessageMap extends StoreMutationMessage {
     "store-fetch": StoreFetchMessage;
     "store-changed": StoreChangedMessage;
     "runtime-sync": RuntimeSyncMessage;
@@ -101,12 +109,13 @@ interface MessageMap extends StoreMutationMessage {
     "runtime-changed": RuntimeChangedMessage;
     fetch: { url: string };
     network: NetworkRequestEvent;
-    "survey-completion": { siteName: SiteName; url: string };
+    "play-sound": PlaySoundMessage;
+    "study-alert": NotificationMessage;
+    "study-completion": { siteName: SiteName; url: string };
 }
 
-interface ResponseMap {
+export interface ResponseMap {
     "store-fetch": StoreFetchResponse;
-    notification: boolean;
     "store-set": StoreSetResponse;
     "store-patch": StorePatchResponse;
     "store-changed": void;
@@ -115,21 +124,20 @@ interface ResponseMap {
     "runtime-changed": void;
     fetch: unknown;
     network: void;
-    "survey-completion": void;
+    "play-sound": void;
+    "study-alert": boolean;
+    "study-completion": void;
 }
 
-type MessageResponse<K extends keyof MessageMap> = K extends keyof ResponseMap
-    ? ResponseMap[K]
-    : void;
+export type MessageResponse<K extends keyof MessageMap> =
+    K extends keyof ResponseMap ? ResponseMap[K] : void;
 
-type HandlerPayload<K extends keyof MessageMap> =
+export type HandlerPayload<K extends keyof MessageMap> =
     MessageMap[K] extends undefined ? undefined : MessageMap[K];
 
-type Message<K extends keyof MessageMap = keyof MessageMap> =
+export type Message<K extends keyof MessageMap = keyof MessageMap> =
     K extends keyof MessageMap
         ? MessageMap[K] extends undefined
             ? { type: K }
             : { type: K; data: MessageMap[K] }
         : never;
-
-export { MessageMap, MessageResponse, HandlerPayload, Message };

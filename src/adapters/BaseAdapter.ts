@@ -1,5 +1,6 @@
 import { joinURL } from "ufo";
 import debounce from "@/lib/debounce";
+import extractNumericValue from "@/lib/extractNumericValue";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 
 import type { SiteInfo, SupportedHosts, sites } from "./siteConfigs";
@@ -19,15 +20,14 @@ export type AdapterConfig<H extends SupportedHosts = SupportedHosts> =
 
 export interface CurrencyInfo {}
 
-export interface SurveyInfo {
+export interface StudyInfo {
     id: string;
     title: string | null;
     researcher: string | null;
-    reward: string | null;
-    rate: string | null;
+    reward: number | null;
+    rate: number | null;
     link: string | null;
-    displaySymbol: string | null;
-    originalSymbol: string | null;
+    symbol: string | null;
 }
 
 interface RewardState {
@@ -69,6 +69,10 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
 
     get iconUrl(): string {
         return this.buildUrl([this.config.iconPath]);
+    }
+
+    isListingsPage(): boolean {
+        return window.location.pathname === this.config.studyPath;
     }
 
     protected queryText(el: HTMLElement, selector: string): string | null {
@@ -136,11 +140,11 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         el.textContent = originalText.replace(/[$£€]?\s*\d+(?:\.\d+)?/, text);
     }
 
-    abstract getSurveyElements(): NodeListOf<HTMLElement>;
-    abstract getSurveyContainer(el: HTMLElement): HTMLElement | null;
-    abstract getSurveyTitle(el: HTMLElement): string | null;
-    abstract getSurveyId(el: HTMLElement): string | null;
-    abstract getSurveyResearcher(el: HTMLElement): string | null;
+    abstract getStudyElements(): NodeListOf<HTMLElement>;
+    abstract getStudyContainer(el: HTMLElement): HTMLElement | null;
+    abstract getStudyTitle(el: HTMLElement): string | null;
+    abstract getStudyId(el: HTMLElement): string | null;
+    abstract getStudyResearcher(el: HTMLElement): string | null;
 
     abstract getRewardElements(): HTMLElement[];
     abstract getRewardElement(el: HTMLElement): HTMLElement | null;
@@ -149,64 +153,76 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
 
     abstract getSourceSymbol(el: HTMLElement): string | null;
 
-    protected getSurveyLink(el: HTMLElement): string | null {
-        const surveyId = this.getSurveyId(el);
-        if (!surveyId) return null;
+    protected getStudyLink(el: HTMLElement): string | null {
+        const studyId = this.getStudyId(el);
+        if (!studyId) return null;
 
-        const { surveyPath, suffix } = this.config;
-        return this.buildUrl([
-            surveyPath,
-            surveyId,
-            ...(suffix ? [suffix] : []),
-        ]);
+        const { studyPath, suffix } = this.config;
+        return this.buildUrl([studyPath, studyId, ...(suffix ? [suffix] : [])]);
     }
 
-    protected getSurveyReward(el: HTMLElement): string | null {
+    private getDisplayValue(el: HTMLElement): number | null {
+        if (!el) return null;
+
+        const { originalText, displaySymbol, originalSymbol } =
+            this.getRewardState(el);
+        const converted = displaySymbol !== originalSymbol;
+        const text = converted
+            ? el.textContent
+            : (originalText ?? el.textContent);
+
+        if (!text) return null;
+
+        const value = extractNumericValue(text);
+
+        return Number.isFinite(value) ? value : null;
+    }
+
+    protected getStudyReward(el: HTMLElement): number | null {
         const rewardEl = this.getRewardElement(el);
         if (!rewardEl) return null;
-        const { originalText } = this.getRewardState(rewardEl);
-        return originalText ?? rewardEl.textContent ?? null;
+
+        return this.getDisplayValue(rewardEl);
     }
 
-    protected getSurveyHourlyRate(el: HTMLElement): string | null {
+    protected getStudyHourlyRate(el: HTMLElement): number | null {
         const rateEl = this.getHourlyRateElement(el);
         if (!rateEl) return null;
-        const { originalText } = this.getRewardState(rateEl);
-        return originalText ?? rateEl.textContent ?? null;
+
+        return this.getDisplayValue(rateEl);
     }
 
-    extractSurvey(el: HTMLElement): SurveyInfo | null {
-        const id = this.getSurveyId(el);
+    extractStudy(el: HTMLElement): StudyInfo | null {
+        const id = this.getStudyId(el);
         if (!id) return null;
 
-        const { displaySymbol, originalSymbol } = this.getRewardState(
+        const { displaySymbol } = this.getRewardState(
             this.getRewardElement(el) ?? this.getHourlyRateElement(el) ?? el,
         );
 
         return {
             id,
-            title: this.getSurveyTitle(el),
-            researcher: this.getSurveyResearcher(el),
-            reward: this.getSurveyReward(el),
-            rate: this.getSurveyHourlyRate(el),
-            link: this.getSurveyLink(el),
-            displaySymbol,
-            originalSymbol,
+            title: this.getStudyTitle(el),
+            researcher: this.getStudyResearcher(el),
+            reward: this.getStudyReward(el),
+            rate: this.getStudyHourlyRate(el),
+            link: this.getStudyLink(el),
+            symbol: displaySymbol,
         };
     }
 
-    extractSurveys(): SurveyInfo[] {
-        const elements = this.getSurveyElements();
-        const surveys: SurveyInfo[] = [];
+    extractStudies(): StudyInfo[] {
+        const elements = this.getStudyElements();
+        const studies: StudyInfo[] = [];
 
         for (const el of elements) {
-            const surveyInfo = this.extractSurvey(el);
-            if (!surveyInfo) continue;
+            const studyInfo = this.extractStudy(el);
+            if (!studyInfo) continue;
 
-            surveys.push(surveyInfo);
+            studies.push(studyInfo);
         }
 
-        return surveys;
+        return studies;
     }
 
     protected handleDomMutation(mutations: MutationRecord[]) {}
@@ -236,7 +252,7 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         event: NetworkRequestEvent,
     ): AdapterEventMap[E] {
         switch (eventType) {
-            case "surveyCompletion":
+            case "studyCompletion":
                 return {
                     url: event.url,
                 } as AdapterEventMap[E];

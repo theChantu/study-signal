@@ -5,9 +5,8 @@ import {
 } from "@/enhancements/enhancementConfigs";
 import log from "@/lib/log";
 
-import type { Settings } from "@/store/types";
+import type { DeepPartial, Settings } from "@/store/types";
 import type { BaseAdapter } from "@/adapters";
-import type { StoreChangedMessage } from "@/messages/types";
 
 const enhancementConfigArray = Object.entries(enhancementConfigs).map(
     ([key, config]) => ({
@@ -33,20 +32,8 @@ export class EnhancementHandler {
 
     async initialize() {}
 
-    async update(changed: StoreChangedMessage["data"]) {
+    async update(changed: DeepPartial<Settings>) {
         this.settings = deepMerge(this.settings, changed);
-
-        for (const config of this.enhancementConfigs) {
-            if (!(config.key in changed)) continue;
-
-            const enhancement = new config.enhancement(
-                this.adapter,
-                this.settings,
-            );
-            const enabled = this.settings[config.key].enabled;
-
-            enabled ? await enhancement.run() : await enhancement.revert();
-        }
     }
 
     async run() {

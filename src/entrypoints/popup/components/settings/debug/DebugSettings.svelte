@@ -13,7 +13,9 @@
         void model.queueMutation("store-patch", {
             namespace: "globals",
             data: {
-                enableDebug: !model.settingsState.globals.enableDebug,
+                debug: {
+                    enabled: !model.settingsState.globals.debug.enabled,
+                },
             },
         });
     }
@@ -23,7 +25,7 @@
     <ToggleControl
         title="Developer mode"
         description="Show extension activity in the browser console."
-        value={model.settingsState.globals.enableDebug}
+        value={model.settingsState.globals.debug.enabled}
         onClick={handleToggle}
     >
         {#snippet children()}

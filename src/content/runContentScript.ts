@@ -10,7 +10,7 @@ import { loadSettings } from "../lib/loadSettings";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
 import type { ContentScriptContext } from "#imports";
-import type { StoreChangedMessage } from "@/messages/types";
+import type { DeepPartial, Settings } from "@/store/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
@@ -27,17 +27,19 @@ async function runContentScript(ctx: ContentScriptContext) {
     });
 
     async function syncRuntime() {
-        await sendExtensionMessage({
-            type: "runtime-sync",
-            data: {
-                channel: "studies",
-                siteName: adapter.config.name,
-                data: adapter.extractSurveys(),
-            },
-        });
+        if (adapter.isListingsPage()) {
+            await sendExtensionMessage({
+                type: "runtime-sync",
+                data: {
+                    channel: "studies",
+                    siteName: adapter.config.name,
+                    data: adapter.extractStudies(),
+                },
+            });
+        }
     }
 
-    async function runEnhancements(changed?: StoreChangedMessage["data"]) {
+    async function runEnhancements(changed?: DeepPartial<Settings>) {
         observer.disconnect();
         try {
             if (changed) {
@@ -50,12 +52,9 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    const debounced = debounce(
-        async (changed?: StoreChangedMessage["data"]) => {
-            await runEnhancements(changed);
-        },
-        300,
-    );
+    const debounced = debounce(async (changed?: DeepPartial<Settings>) => {
+        await runEnhancements(changed);
+    }, 300);
 
     // Observe the DOM for changes and re-run the enhancements if necessary
     observer = new MutationObserver((mutations) => {
@@ -130,10 +129,9 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     const unsubscribe = adapter.observeNetwork();
 
-    adapter.on("surveyCompletion", (data) => {
-        const dailySurveyCompletions = site.analytics.dailySurveyCompletions;
+    adapter.on("studyCompletion", (data) => {
         sendExtensionMessage({
-            type: "survey-completion",
+            type: "study-completion",
             data: {
                 siteName: adapter.config.name,
                 url: data.url,

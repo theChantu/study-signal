@@ -2,10 +2,9 @@ import { capitalize, cleanResearcherName } from "../lib/utils";
 import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "../constants";
 import BaseEnhancement from "./BaseEnhancement";
 import getSiteResources from "../lib/getSiteResources";
-import { playNotificationSound } from "@/lib/playNotificationSound";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 
-import type { SurveyInfo } from "../adapters/BaseAdapter";
+import type { StudyInfo } from "../adapters/BaseAdapter";
 
 export interface NotificationData {
     title: string;
@@ -14,39 +13,58 @@ export interface NotificationData {
     link?: string;
 }
 
-class NewSurveyNotificationsEnhancement extends BaseEnhancement {
+export class NotificationsEnhancement extends BaseEnhancement {
     async apply() {
-        const surveys = this.adapter.extractSurveys();
+        const surveys = this.adapter.extractStudies();
         if (surveys.length === 0) return;
 
-        const { newSurveyNotifications } = this.settings;
+        const { studyAlerts } = this.settings;
         const {
-            surveys: previousSurveys,
-            cachedResearchers: previousCachedResearchers,
-            includedResearchers,
-            excludedResearchers,
-            delivery,
-        } = newSurveyNotifications;
+            cache: {
+                researchers: previousCachedResearchers,
+                studies: previousStudies,
+            },
+            included,
+            excluded,
+        } = studyAlerts;
 
-        const newSurveys = this.extractNewSurveys(previousSurveys, surveys);
+        const newSurveys = this.extractNewSurveys(previousStudies, surveys);
         if (newSurveys.length === 0) return;
 
+        const now = Date.now();
         const assets = await getSiteResources();
-
-        await this.saveNewSurveys(previousSurveys, newSurveys);
 
         const newResearchers = this.extractNewSurveyResearchers(
             previousCachedResearchers,
             newSurveys,
         );
-        if (newResearchers.size > 0)
-            await this.saveResearcherNames(
-                previousCachedResearchers,
-                newResearchers,
-            );
 
-        const includedResearchersSet = new Set(includedResearchers);
-        const excludedResearchersSet = new Set(excludedResearchers);
+        await sendExtensionMessage({
+            type: "store-patch",
+            data: {
+                namespace: "sites",
+                entry: this.adapter.config.name,
+                data: {
+                    studyAlerts: {
+                        cache: {
+                            studies: this.buildSurveyCache(
+                                previousStudies,
+                                newSurveys,
+                                now,
+                            ),
+                            researchers: this.buildResearcherCache(
+                                previousCachedResearchers,
+                                newResearchers,
+                                now,
+                            ),
+                        },
+                    },
+                },
+            },
+        });
+
+        const includedSet = new Set(included);
+        const excludedSet = new Set(excluded);
 
         const notifications: NotificationData[] = [];
         for (const survey of newSurveys) {
@@ -54,16 +72,10 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             if (!researcher) continue;
             const cleanedResearcherName = cleanResearcherName(researcher);
 
-            if (
-                excludedResearchersSet.has(cleanedResearcherName) ||
-                !document.hidden
-            )
+            if (excludedSet.has(cleanedResearcherName) || !document.hidden)
                 continue;
 
-            if (
-                includedResearchersSet.size > 0 &&
-                !includedResearchersSet.has(cleanedResearcherName)
-            )
+            if (includedSet.size > 0 && !includedSet.has(cleanedResearcherName))
                 continue;
 
             notifications.push(this.buildNotification(survey, assets));
@@ -71,18 +83,8 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
 
         if (notifications.length === 0) return;
 
-        if (delivery.sound.enabled) {
-            try {
-                await playNotificationSound(delivery.sound);
-            } catch (error) {
-                console.error("Error playing notification sound:", error);
-            }
-        }
-
-        if (!delivery.browser) return;
-
         await sendExtensionMessage({
-            type: "notification",
+            type: "study-alert",
             data: {
                 siteName: this.adapter.config.name,
                 notifications,
@@ -90,12 +92,11 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         });
     }
 
-    private async saveResearcherNames(
+    private buildResearcherCache(
         previous: Record<string, ReturnType<typeof Date.now>>,
         names: Set<string>,
+        now: ReturnType<typeof Date.now>,
     ) {
-        const now = Date.now();
-
         const cachedResearchers = structuredClone(previous);
 
         for (const [name, timestamp] of Object.entries(cachedResearchers)) {
@@ -108,23 +109,12 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             cachedResearchers[name] = now;
         }
 
-        await sendExtensionMessage({
-            type: "store-patch",
-            data: {
-                namespace: "sites",
-                entry: this.adapter.config.name,
-                data: {
-                    newSurveyNotifications: {
-                        cachedResearchers,
-                    },
-                },
-            },
-        });
+        return cachedResearchers;
     }
 
     private extractNewSurveyResearchers(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        surveys: SurveyInfo[],
+        surveys: StudyInfo[],
     ) {
         const researchers = new Set<string>();
         for (const survey of surveys) {
@@ -137,12 +127,11 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         return researchers;
     }
 
-    private async saveNewSurveys(
+    private buildSurveyCache(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        surveys: SurveyInfo[],
+        surveys: StudyInfo[],
+        now: ReturnType<typeof Date.now>,
     ) {
-        const now = Date.now();
-
         const previousClone = structuredClone(previous);
 
         // Survey fingerprint cleanup
@@ -156,47 +145,36 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
             previousClone[survey.id] = now;
         }
 
-        await sendExtensionMessage({
-            type: "store-patch",
-            data: {
-                namespace: "sites",
-                entry: this.adapter.config.name,
-                data: {
-                    newSurveyNotifications: {
-                        surveys: previousClone,
-                    },
-                },
-            },
-        });
+        return previousClone;
     }
 
     private extractNewSurveys(
         previous: Record<string, ReturnType<typeof Date.now>>,
-        current: SurveyInfo[],
+        current: StudyInfo[],
     ) {
-        return Array.from(current).filter((survey) => !(survey.id in previous));
-    }
-
-    private extractNumber(rate: string) {
-        return rate?.match(/\d+(\.\d+)?/)?.[0];
+        return Array.from(current).filter((study) => !(study.id in previous));
     }
 
     private buildNotification(
-        survey: SurveyInfo,
+        study: StudyInfo,
         assets: Awaited<ReturnType<typeof getSiteResources>>,
     ) {
-        const { title, reward, rate, displaySymbol, link } = survey;
+        const { title, reward, rate, symbol, link } = study;
 
         const rewardText =
-            (reward && this.extractNumber(reward)) || "Unknown reward";
-        const hourlyRateText =
-            (rate && this.extractNumber(rate)) || "Unknown rate";
+            reward !== null
+                ? `${symbol ?? ""}${reward.toFixed(2)}`
+                : "Unknown reward";
+        const rateText =
+            rate !== null
+                ? `${symbol ?? ""}${rate.toFixed(2)}/hr`
+                : "Unknown rate";
 
         const siteLabel = capitalize(this.adapter.config.name);
 
         const notificationData = {
             title: title ?? siteLabel,
-            message: `${siteLabel} • ${displaySymbol}${rewardText} • ${displaySymbol}${hourlyRateText}/hr`,
+            message: `${siteLabel} • ${rewardText} • ${rateText}`,
             iconUrl: assets[this.adapter.iconUrl],
             link: link ?? undefined,
         };
@@ -207,5 +185,3 @@ class NewSurveyNotificationsEnhancement extends BaseEnhancement {
         // No cleanup necessary for notifications
     }
 }
-
-export { NewSurveyNotificationsEnhancement };

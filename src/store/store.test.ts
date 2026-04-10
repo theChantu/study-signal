@@ -14,18 +14,18 @@ beforeEach(() => {
 describe("globals", () => {
     it("returns defaults when nothing is stored", async () => {
         const store = new SettingsStore();
-        const { enableDebug } = await store.globals.get(["enableDebug"]);
+        const { debug } = await store.globals.get(["debug"]);
 
-        expect(enableDebug).toBe(defaultGlobalSettings.enableDebug);
+        expect(debug.enabled).toBe(defaultGlobalSettings.debug.enabled);
     });
 
     it("persists and reads global values", async () => {
         const store = new SettingsStore();
 
-        await store.globals.set({ enableDebug: true });
-        const { enableDebug } = await store.globals.get(["enableDebug"]);
+        await store.globals.set({ debug: { enabled: true } });
+        const { debug } = await store.globals.get(["debug"]);
 
-        expect(enableDebug).toBe(true);
+        expect(debug.enabled).toBe(true);
     });
 
     it("deep merges global patches", async () => {
@@ -78,10 +78,12 @@ describe("globals", () => {
         const listener = vi.fn();
         store.globals.subscribe(listener);
 
-        await store.globals.set({ enableDebug: true });
+        await store.globals.set({ debug: { enabled: true } });
         await store.globals.patch({ idleThreshold: 120 });
 
-        expect(listener).toHaveBeenNthCalledWith(1, { enableDebug: true });
+        expect(listener).toHaveBeenNthCalledWith(1, {
+            debug: { enabled: true },
+        });
         expect(listener).toHaveBeenNthCalledWith(2, { idleThreshold: 120 });
     });
 
@@ -100,15 +102,13 @@ describe("globals", () => {
 describe("site", () => {
     it("returns defaults when nothing is stored", async () => {
         const store = new SettingsStore();
-        const { currencyConversion } = await store.sites
+        const { autoReload } = await store.sites
             .entry(siteName)
-            .get(["currencyConversion"]);
+            .get(["autoReload"]);
 
-        expect(currencyConversion.enabled).toBe(
-            defaultSiteSettings.currencyConversion.enabled,
-        );
-        expect(currencyConversion.selectedCurrency).toBe(
-            defaultSiteSettings.currencyConversion.selectedCurrency,
+        expect(autoReload.enabled).toBe(defaultSiteSettings.autoReload.enabled);
+        expect(autoReload.minInterval).toBe(
+            defaultSiteSettings.autoReload.minInterval,
         );
     });
 
@@ -116,13 +116,14 @@ describe("site", () => {
         const store = new SettingsStore();
 
         await store.sites.entry(siteName).set({
-            currencyConversion: { selectedCurrency: "GBP" } as any,
+            autoReload: { enabled: true, minInterval: 3, maxInterval: 5 },
         });
 
-        const { currencyConversion } = await store.sites
+        const { autoReload } = await store.sites
             .entry(siteName)
-            .get(["currencyConversion"]);
-        expect(currencyConversion.selectedCurrency).toBe("GBP");
+            .get(["autoReload"]);
+        expect(autoReload.enabled).toBe(true);
+        expect(autoReload.minInterval).toBe(3);
     });
 
     it("replaces only the targeted top-level site keys on set", async () => {
@@ -130,38 +131,38 @@ describe("site", () => {
 
         await store.sites.entry(siteName).patch({
             autoReload: { enabled: true },
-            newSurveyNotifications: {
-                surveys: {
-                    surveyA: 100,
+            studyAlerts: {
+                cache: {
+                    studies: {
+                        studyA: 100,
+                    },
                 },
             },
         });
 
         await store.sites.entry(siteName).set({
-            newSurveyNotifications: defaultSiteSettings.newSurveyNotifications,
+            studyAlerts: defaultSiteSettings.studyAlerts,
         });
 
-        const { autoReload, newSurveyNotifications } = await store.sites
+        const { autoReload, studyAlerts } = await store.sites
             .entry(siteName)
-            .get(["autoReload", "newSurveyNotifications"]);
+            .get(["autoReload", "studyAlerts"]);
 
         expect(autoReload.enabled).toBe(true);
-        expect(newSurveyNotifications).toEqual(
-            defaultSiteSettings.newSurveyNotifications,
-        );
+        expect(studyAlerts).toEqual(defaultSiteSettings.studyAlerts);
     });
 
     it("isolates sites from each other", async () => {
         const store = new SettingsStore();
 
         await store.sites.entry(siteName).set({
-            currencyConversion: { selectedCurrency: "GBP" } as any,
+            autoReload: { enabled: true, minInterval: 3, maxInterval: 5 },
         });
 
-        const { currencyConversion } = await store.sites
+        const { autoReload } = await store.sites
             .entry("cloudresearch")
-            .get(["currencyConversion"]);
-        expect(currencyConversion.selectedCurrency).toBe("USD");
+            .get(["autoReload"]);
+        expect(autoReload.enabled).toBe(false);
     });
 
     it("persists site entries under separate keys in settings:sites", async () => {
@@ -171,7 +172,7 @@ describe("site", () => {
             autoReload: { enabled: true },
         });
         await store.sites.entry("cloudresearch").patch({
-            highlightRates: { enabled: false },
+            autoReload: { enabled: false },
         });
 
         const stored = await mockStorage.getItem<any>("local:settings:sites");
@@ -180,7 +181,7 @@ describe("site", () => {
             autoReload: { enabled: true },
         });
         expect(stored.cloudresearch).toEqual({
-            highlightRates: { enabled: false },
+            autoReload: { enabled: false },
         });
     });
 
@@ -206,35 +207,39 @@ describe("site", () => {
         const store = new SettingsStore();
 
         await store.sites.entry(siteName).patch({
-            newSurveyNotifications: {
-                surveys: {
-                    surveyA: 100,
-                },
-                cachedResearchers: {
-                    researcherA: 100,
+            studyAlerts: {
+                cache: {
+                    studies: {
+                        studyA: 100,
+                    },
+                    researchers: {
+                        researcherA: 100,
+                    },
                 },
             },
         });
 
         await store.sites.entry(siteName).patch({
-            newSurveyNotifications: {
-                surveys: {
-                    surveyB: 200,
-                },
-                cachedResearchers: {
-                    researcherB: 200,
+            studyAlerts: {
+                cache: {
+                    studies: {
+                        studyB: 200,
+                    },
+                    researchers: {
+                        researcherB: 200,
+                    },
                 },
             },
         });
 
-        const { newSurveyNotifications } = await store.sites
+        const { studyAlerts } = await store.sites
             .entry(siteName)
-            .get(["newSurveyNotifications"]);
+            .get(["studyAlerts"]);
 
-        expect(newSurveyNotifications.surveys.surveyA).toBe(100);
-        expect(newSurveyNotifications.surveys.surveyB).toBe(200);
-        expect(newSurveyNotifications.cachedResearchers.researcherA).toBe(100);
-        expect(newSurveyNotifications.cachedResearchers.researcherB).toBe(200);
+        expect(studyAlerts.cache.studies.studyA).toBe(100);
+        expect(studyAlerts.cache.studies.studyB).toBe(200);
+        expect(studyAlerts.cache.researchers.researcherA).toBe(100);
+        expect(studyAlerts.cache.researchers.researcherB).toBe(200);
     });
 
     it("notifies subscribers on site set and patch", async () => {
@@ -243,17 +248,17 @@ describe("site", () => {
         store.sites.entry(siteName).subscribe(listener);
 
         await store.sites.entry(siteName).set({
-            currencyConversion: { selectedCurrency: "GBP" } as any,
+            autoReload: { enabled: true, minInterval: 3, maxInterval: 5 },
         });
         await store.sites.entry(siteName).patch({
-            autoReload: { enabled: true },
+            autoReload: { enabled: false },
         });
 
         expect(listener).toHaveBeenNthCalledWith(1, {
-            currencyConversion: { selectedCurrency: "GBP" },
+            autoReload: { enabled: true, minInterval: 3, maxInterval: 5 },
         });
         expect(listener).toHaveBeenNthCalledWith(2, {
-            autoReload: { enabled: true },
+            autoReload: { enabled: false },
         });
     });
 
@@ -277,24 +282,24 @@ describe("site", () => {
             Array.from({ length: 5 }, () =>
                 store.sites.entry(siteName).update((current) => ({
                     analytics: {
-                        totalSurveyCompletions:
-                            current.analytics.totalSurveyCompletions + 1,
-                        dailySurveyCompletions: {
+                        totalStudyCompletions:
+                            current.analytics.totalStudyCompletions + 1,
+                        dailyStudyCompletions: {
                             count:
-                                current.analytics.dailySurveyCompletions
-                                    .count + 1,
+                                current.analytics.dailyStudyCompletions.count +
+                                1,
                         },
                     },
                 })),
             ),
         );
 
-        const { analytics } = await store.sites.entry(siteName).get([
-            "analytics",
-        ]);
+        const { analytics } = await store.sites
+            .entry(siteName)
+            .get(["analytics"]);
 
-        expect(analytics.totalSurveyCompletions).toBe(5);
-        expect(analytics.dailySurveyCompletions.count).toBe(5);
+        expect(analytics.totalStudyCompletions).toBe(5);
+        expect(analytics.dailyStudyCompletions.count).toBe(5);
     });
 });
 
@@ -304,8 +309,8 @@ describe("normalization", () => {
         await mockStorage.setItem("local:settings:sites", {
             [siteName]: {
                 analytics: {
-                    totalSurveyCompletions: 5,
-                    dailySurveyCompletions: {
+                    totalStudyCompletions: 5,
+                    dailyStudyCompletions: {
                         timestamp: staleTimestamp,
                         count: 1,
                     },
@@ -318,16 +323,16 @@ describe("normalization", () => {
             .entry(siteName)
             .get(["analytics"]);
 
-        expect(analytics.totalSurveyCompletions).toBe(5);
-        expect(analytics.dailySurveyCompletions.count).toEqual(0);
-        expect(analytics.dailySurveyCompletions.timestamp).not.toBe(
+        expect(analytics.totalStudyCompletions).toBe(5);
+        expect(analytics.dailyStudyCompletions.count).toEqual(0);
+        expect(analytics.dailyStudyCompletions.timestamp).not.toBe(
             staleTimestamp,
         );
 
         const stored = await mockStorage.getItem<any>("local:settings:sites");
-        expect(stored[siteName].analytics.dailySurveyCompletions.count).toEqual(
+        expect(stored[siteName].analytics.dailyStudyCompletions.count).toEqual(
             0,
         );
-        expect(stored[siteName].analytics.totalSurveyCompletions).toBe(5);
+        expect(stored[siteName].analytics.totalStudyCompletions).toBe(5);
     });
 });

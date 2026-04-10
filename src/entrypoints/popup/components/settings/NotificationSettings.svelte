@@ -7,10 +7,11 @@
     import TagInput from "@/components/TagInput.svelte";
     import type {
         DeepPartial,
-        NewSurveyNotificationsSettings,
+        GlobalSettings,
         NotificationSound,
         SiteSettings,
     } from "@/store/types";
+    import { playNotificationSound } from "@/lib/playNotificationSound";
 
     import type { NotificationSettingsModel } from "../../types";
 
@@ -23,85 +24,122 @@
     ] as const satisfies NotificationSound[];
 
     type ResearcherKey = Exclude<
-        keyof NewSurveyNotificationsSettings,
-        "surveys" | "cachedResearchers" | "delivery"
+        keyof SiteSettings["studyAlerts"],
+        "cache" | "enabled"
     >;
 
-    function patchNotifications(
-        data: DeepPartial<SiteSettings["newSurveyNotifications"]>,
+    function patchGlobalNotifications(
+        data: DeepPartial<GlobalSettings["notifications"]>,
+    ) {
+        void model.queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                notifications: data,
+            },
+        });
+    }
+
+    function patchSiteNotifications(
+        data: DeepPartial<SiteSettings["studyAlerts"]>,
     ) {
         void model.queueMutation("store-patch", {
             namespace: "sites",
             entry: model.siteName,
             data: {
-                newSurveyNotifications: data,
+                studyAlerts: data,
             },
         });
     }
 
-    function handleAddResearcher(key: ResearcherKey, name: string) {
-        if (model.newSurveyNotifications[key].includes(name)) return;
+    function updateResearcherList(
+        key: ResearcherKey,
+        name: string,
+        method: "add" | "remove",
+    ) {
+        if (method === "add") {
+            if (model.studyAlerts[key].includes(name)) return;
 
-        void model.queueMutation("store-patch", {
-            namespace: "sites",
-            entry: model.siteName,
-            data: {
-                newSurveyNotifications: {
-                    [key]: [...model.newSurveyNotifications[key], name],
+            patchSiteNotifications({
+                [key]: [...model.studyAlerts[key], name],
+            });
+        } else {
+            patchSiteNotifications({
+                [key]: model.studyAlerts[key].filter(
+                    (candidate) => candidate !== name,
+                ),
+            });
+        }
+    }
+
+    function onVolumeChange(e: Event) {
+        const input = e.target as HTMLInputElement;
+        const value = Number(input.value) / 100;
+
+        patchGlobalNotifications({
+            delivery: {
+                sound: {
+                    volume: value,
                 },
             },
         });
+
+        void playNotificationSound({
+            type: model.notifications.delivery.sound.type,
+            volume: value,
+        });
     }
 
-    function handleRemoveResearcher(key: ResearcherKey, name: string) {
-        void model.queueMutation("store-patch", {
-            namespace: "sites",
-            entry: model.siteName,
-            data: {
-                newSurveyNotifications: {
-                    [key]: model.newSurveyNotifications[key].filter(
-                        (candidate) => candidate !== name,
-                    ),
+    function onSoundChange(e: Event) {
+        const select = e.target as HTMLSelectElement;
+        const value = select.value as NotificationSound;
+
+        patchGlobalNotifications({
+            delivery: {
+                sound: {
+                    type: value,
                 },
             },
+        });
+
+        void playNotificationSound({
+            type: value,
+            volume: model.notifications.delivery.sound.volume,
         });
     }
 </script>
 
 <Section title="Alerts" icon={Bell}>
     <ToggleControl
-        title="New survey alerts"
-        description="Get notified when a new survey shows up."
-        value={model.newSurveyNotifications.enabled}
+        title="New study alerts"
+        description={`Get notified when a new study shows up. Applies to  ${capitalize(model.siteName)} only.`}
+        value={model.studyAlerts.enabled}
         onClick={() =>
-            patchNotifications({
-                enabled: !model.newSurveyNotifications.enabled,
+            patchSiteNotifications({
+                enabled: !model.studyAlerts.enabled,
             })}
     >
         {#snippet children()}
             <ToggleControl
                 title="Browser notifications"
-                description="Show a browser notification when a matching survey appears."
-                value={model.newSurveyNotifications.delivery.browser}
+                description="Show a browser notification for alerts across all supported sites."
+                value={model.notifications.delivery.browser}
                 onClick={() =>
-                    patchNotifications({
+                    patchGlobalNotifications({
                         delivery: {
-                            browser:
-                                !model.newSurveyNotifications.delivery.browser,
+                            browser: !model.notifications.delivery.browser,
                         },
                     })}
             />
             <ToggleControl
                 title="Sound alerts"
-                description="Play a sound when a matching survey appears."
-                value={model.newSurveyNotifications.delivery.sound.enabled}
+                description="Play a sound for alerts across all supported sites."
+                value={model.notifications.delivery.sound.enabled}
                 onClick={() =>
-                    patchNotifications({
+                    patchGlobalNotifications({
                         delivery: {
                             sound: {
                                 enabled:
-                                    !model.newSurveyNotifications.delivery.sound
-                                        .enabled,
+                                    !model.notifications.delivery.sound.enabled,
                             },
                         },
                     })}
@@ -113,19 +151,9 @@
                                 id="notification-sound"
                                 class="popup-select-control [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
                                 bind:value={
-                                    model.newSurveyNotifications.delivery.sound
-                                        .type
+                                    model.notifications.delivery.sound.type
                                 }
-                                onchange={(e) =>
-                                    patchNotifications({
-                                        delivery: {
-                                            sound: {
-                                                type: (
-                                                    e.target as HTMLSelectElement
-                                                ).value as NotificationSound,
-                                            },
-                                        },
-                                    })}
+                                onchange={onSoundChange}
                             >
                                 {#each notificationSounds as sound}
                                     <option value={sound}>
@@ -139,7 +167,7 @@
                         </div>
                     </Field>
                     <Field
-                        label={`Volume (${Math.round(model.newSurveyNotifications.delivery.sound.volume * 100)}%)`}
+                        label={`Volume (${Math.round(model.notifications.delivery.sound.volume * 100)}%)`}
                         id="notification-volume"
                     >
                         <input
@@ -150,51 +178,32 @@
                             step="5"
                             class="w-full accent-indigo-400"
                             value={Math.round(
-                                model.newSurveyNotifications.delivery.sound
-                                    .volume * 100,
+                                model.notifications.delivery.sound.volume * 100,
                             )}
-                            onchange={(e) =>
-                                patchNotifications({
-                                    delivery: {
-                                        sound: {
-                                            volume:
-                                                Number(
-                                                    (
-                                                        e.target as HTMLInputElement
-                                                    ).value,
-                                                ) / 100,
-                                        },
-                                    },
-                                })}
+                            onchange={onVolumeChange}
                         />
                     </Field>
                 {/snippet}
             </ToggleControl>
             <TagInput
                 title="Included researchers"
-                values={model.newSurveyNotifications.includedResearchers}
-                suggestions={Object.keys(
-                    model.newSurveyNotifications.cachedResearchers,
-                )}
-                placeholder="Add researcher..."
+                values={model.studyAlerts.included}
+                suggestions={Object.keys(model.studyAlerts.cache.researchers)}
+                placeholder="Add researcher"
                 clean={cleanResearcherName}
-                onAdd={(name) =>
-                    handleAddResearcher("includedResearchers", name)}
+                onAdd={(name) => updateResearcherList("included", name, "add")}
                 onRemove={(name) =>
-                    handleRemoveResearcher("includedResearchers", name)}
+                    updateResearcherList("included", name, "remove")}
             />
             <TagInput
                 title="Excluded researchers"
-                values={model.newSurveyNotifications.excludedResearchers}
-                suggestions={Object.keys(
-                    model.newSurveyNotifications.cachedResearchers,
-                )}
-                placeholder="Add researcher..."
+                values={model.studyAlerts.excluded}
+                suggestions={Object.keys(model.studyAlerts.cache.researchers)}
+                placeholder="Add researcher"
                 clean={cleanResearcherName}
-                onAdd={(name) =>
-                    handleAddResearcher("excludedResearchers", name)}
+                onAdd={(name) => updateResearcherList("excluded", name, "add")}
                 onRemove={(name) =>
-                    handleRemoveResearcher("excludedResearchers", name)}
+                    updateResearcherList("excluded", name, "remove")}
             />
         {/snippet}
     </ToggleControl>

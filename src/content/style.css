@@ -1,7 +1,6 @@
 /* Shared */
 .se-rate-highlight {
     border-radius: 4px;
-    color: black;
 }
 
 /* Prolific */
@@ -26,5 +25,7 @@
 }
 
 /* CloudResearch */
-[class*="project-pay-per-hour-"] .se-rate-highlight {
+.se-rate-highlight .cr-text-highlight-primary,
+.se-rate-highlight .cr-text-secondary {
+    color: white !important;
 }

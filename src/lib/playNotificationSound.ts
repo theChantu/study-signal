@@ -27,14 +27,34 @@ function getAudio(type: NotificationSound): HTMLAudioElement {
     return audio;
 }
 
-export async function playNotificationSound({
-    type,
-    volume,
-}: SoundSettings): Promise<void> {
+function whenReady(audio: HTMLAudioElement): Promise<HTMLAudioElement> {
+    if (audio.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA)
+        return Promise.resolve(audio);
+
+    return new Promise((resolve, reject) => {
+        const onReady = () => {
+            audio.removeEventListener("error", onError);
+            resolve(audio);
+        };
+        const onError = () => {
+            audio.removeEventListener("canplaythrough", onReady);
+            reject(audio.error);
+        };
+        audio.addEventListener("canplaythrough", onReady, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+    });
+}
+
+export async function playNotificationSound(
+    settings: SoundSettings,
+): Promise<void> {
+    const { type, volume } = settings;
+
     const normalizedVolume = clampVolume(volume);
     if (normalizedVolume === 0) return;
 
-    const audio = getAudio(type).cloneNode() as HTMLAudioElement;
+    const source = await whenReady(getAudio(type));
+    const audio = source.cloneNode() as HTMLAudioElement;
     audio.volume = normalizedVolume;
     audio.currentTime = 0;
     await audio.play();

@@ -11,7 +11,7 @@
     let { model }: { model: ProviderSettingsModel } = $props();
 
     const providerSetupUrl =
-        "https://github.com/theChantu/survey-enhancer#provider-setup";
+        "https://github.com/theChantu/study-signal#provider-setup";
 
     function handleIdleThresholdChange(minutes: number) {
         void model.queueMutation("store-patch", {
@@ -50,14 +50,13 @@
 </script>
 
 <Section title="Delivery" icon={Send}>
-    <div class="mb-2 text-[0.74rem] text-gray-400">
+    <div class="mb-2 text-xs text-gray-400">
         Need help getting Telegram set up?
         <a
             href={providerSetupUrl}
             target="_blank"
             rel="noopener noreferrer"
-            class="popup-inline-link ml-1"
-            >Open the setup guide</a
+            class="popup-inline-link ml-1">Open the setup guide</a
         >
     </div>
     <Field label="Idle threshold (minutes)" id="idle-threshold">

@@ -3,7 +3,7 @@ import type { AdapterEventType, NetworkEventMatcher } from "./events";
 
 export interface SiteInfo {
     name: string;
-    surveyPath: string;
+    studyPath: string;
     iconPath: string;
     suffix?: string;
     query?: Record<string, string | number | boolean>;
@@ -15,16 +15,12 @@ export interface SiteInfo {
 export const sites = {
     "app.prolific.com": {
         name: "prolific",
-        surveyPath: "/studies",
+        studyPath: "/studies",
         iconPath: "/apple-touch-icon.png",
-        enhancements: [
-            "currencyConversion",
-            "highlightRates",
-            "newSurveyNotifications",
-        ],
+        enhancements: ["currency", "highlightRates", "studyAlerts"],
         watchedRequestTargets: ["internal-api.prolific.com/api/v1"],
         networkPatterns: {
-            surveyCompletion: [
+            studyCompletion: [
                 {
                     path: "/submissions/complete",
                     method: "POST",
@@ -34,21 +30,17 @@ export const sites = {
     },
     "connect.cloudresearch.com": {
         name: "cloudresearch",
-        surveyPath: "/participant/dashboard",
+        studyPath: "/participant/dashboard",
         iconPath: "/participant/favicon.ico",
         suffix: "details",
         query: {
             page: 1,
             size: 100,
         },
-        enhancements: [
-            "currencyConversion",
-            "highlightRates",
-            "newSurveyNotifications",
-        ],
+        enhancements: ["currency", "highlightRates", "studyAlerts"],
         watchedRequestTargets: ["connect.cloudresearch.com/participant-api"],
         networkPatterns: {
-            surveyCompletion: [
+            studyCompletion: [
                 {
                     path: "/submit",
                     method: "POST",

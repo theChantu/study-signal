@@ -1,23 +1,7 @@
 import BaseEnhancement from "./BaseEnhancement";
 import { MIN_AMOUNT_PER_HOUR, MAX_AMOUNT_PER_HOUR } from "@/constants";
 import extractNumericValue from "@/lib/extractNumericValue";
-import { getCurrency } from "@/lib/utils";
-
-function rateToColor(rate: number, min = 7, max = 15) {
-    const clamped = Math.min(Math.max(rate, min), max);
-
-    const logMin = Math.log(min);
-    const logMax = Math.log(max);
-    const logRate = Math.log(clamped);
-
-    const ratio = (logRate - logMin) / (logMax - logMin);
-    const bias = Math.pow(ratio, 0.6); // Adjust bias for better color distribution
-
-    const r = Math.round(255 * (1 - bias));
-    const g = Math.round(255 * bias);
-
-    return `rgba(${r}, ${g}, 0, 0.63)`;
-}
+import { getCurrency, rateToColor } from "@/lib/utils";
 
 class HighlightRatesEnhancement extends BaseEnhancement {
     async apply() {

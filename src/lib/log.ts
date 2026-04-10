@@ -4,20 +4,18 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 let enabled = false;
 
 async function initDebug() {
-    const { enableDebug } = await store.globals.get(["enableDebug"]);
-    enabled = enableDebug;
+    const { debug } = await store.globals.get(["debug"]);
+    enabled = debug.enabled;
 }
 
 const log: typeof console.log = (...args) => {
-    if (enabled) console.log("[Survey Enhancer]", ...args);
+    if (enabled) console.log("[Study Signal]", ...args);
 };
 
 onExtensionMessage("store-changed", (changed) => {
-    if (
-        changed.namespace === "globals" &&
-        changed.data.enableDebug !== undefined
-    ) {
-        enabled = changed.data.enableDebug;
+    if (changed.namespace === "globals" && "debug" in changed.data) {
+        if (changed.data.debug?.enabled === undefined) return;
+        enabled = changed.data.debug.enabled;
     }
 });
 

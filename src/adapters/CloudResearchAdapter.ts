@@ -8,27 +8,27 @@ export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
         super({ ...sites[HOST], host: HOST });
     }
 
-    getSurveyElements() {
+    getStudyElements() {
         return document.querySelectorAll<HTMLElement>("div.project-card");
     }
 
-    getSurveyId(el: Element) {
-        const surveyId = Array.from(el.classList).find((className) =>
+    getStudyId(el: Element) {
+        const studyId = Array.from(el.classList).find((className) =>
             className.includes("project-card-"),
         );
-        if (surveyId) return surveyId.replace("project-card-", "");
+        if (studyId) return studyId.replace("project-card-", "");
         return null;
     }
 
-    getSurveyContainer(el: HTMLElement) {
+    getStudyContainer(el: HTMLElement) {
         return el.querySelector<HTMLElement>("div.project-card");
     }
 
-    getSurveyTitle(el: HTMLElement) {
+    getStudyTitle(el: HTMLElement) {
         return this.queryText(el, "p");
     }
 
-    getSurveyResearcher(el: HTMLElement): string | null {
+    getStudyResearcher(el: HTMLElement): string | null {
         return this.queryText(el, "label div div:last-child");
     }
 

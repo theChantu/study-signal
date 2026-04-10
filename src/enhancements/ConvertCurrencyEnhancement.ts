@@ -73,11 +73,10 @@ function getSymbol(currency: Currency) {
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
-        const { currencyConversion, conversionRates } = this.settings;
-        const { selectedCurrency } = currencyConversion;
+        const { currency, conversionRates } = this.settings;
 
         const rewardElements = this.adapter.getRewardElements();
-        const selectedSymbol = getSymbol(selectedCurrency);
+        const selectedSymbol = getSymbol(currency.target);
 
         // Update conversion rates for all source currencies found in the elements
         const sourceCurrencies = new Set<Currency>();
@@ -90,7 +89,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
         }
 
         const updatedConversionRates = await this.updateRates(conversionRates, [
-            selectedCurrency,
+            currency.target,
             ...sourceCurrencies,
         ]);
 
@@ -107,7 +106,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             const sourceCurrency = getCurrency(originalSymbol);
             if (!sourceCurrency) continue;
 
-            if (sourceCurrency === selectedCurrency) {
+            if (sourceCurrency === currency.target) {
                 // Selected currency matches source, so revert element text
                 if (rewardEl.innerHTML !== originalHtml) {
                     this.adapter.restoreRewardState(rewardEl);
@@ -124,7 +123,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             });
 
             const rate =
-                updatedConversionRates[sourceCurrency].rates[selectedCurrency];
+                updatedConversionRates[sourceCurrency].rates[currency.target];
             const elementRate = extractNumericValue(originalText);
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
 

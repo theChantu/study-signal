@@ -1,7 +1,7 @@
 import {
     ConvertCurrencyEnhancement,
     HighlightRatesEnhancement,
-    NewSurveyNotificationsEnhancement,
+    NotificationsEnhancement,
 } from "../enhancements";
 import BaseEnhancement from "./BaseEnhancement";
 
@@ -12,16 +12,12 @@ type EnhancementConfig = {
     priority: boolean;
 };
 
-const enhancementKeys = [
-    "currencyConversion",
-    "highlightRates",
-    "newSurveyNotifications",
-] as const;
+const enhancementKeys = ["currency", "highlightRates", "studyAlerts"] as const;
 
 export type EnhancementKey = (typeof enhancementKeys)[number];
 
 export const enhancementConfigs = {
-    currencyConversion: {
+    currency: {
         enhancement: ConvertCurrencyEnhancement,
         priority: true,
     },
@@ -30,8 +26,8 @@ export const enhancementConfigs = {
         priority: false,
     },
 
-    newSurveyNotifications: {
-        enhancement: NewSurveyNotificationsEnhancement,
+    studyAlerts: {
+        enhancement: NotificationsEnhancement,
         priority: false,
     },
 } as const satisfies Record<EnhancementKey, EnhancementConfig>;

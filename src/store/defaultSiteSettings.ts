@@ -1,27 +1,14 @@
 import type { SiteSettings } from "./types";
 
 const defaultSiteSettings = Object.freeze({
-    currencyConversion: {
-        enabled: true,
-        selectedCurrency: "USD",
-    },
-    highlightRates: {
-        enabled: true,
-    },
-    newSurveyNotifications: {
-        enabled: true,
-        surveys: {},
-        cachedResearchers: {},
-        excludedResearchers: [],
-        includedResearchers: [],
-        delivery: {
-            browser: true,
-            sound: {
-                enabled: false,
-                type: "chime",
-                volume: 0.6,
-            },
+    studyAlerts: {
+        cache: {
+            studies: {},
+            researchers: {},
         },
+        enabled: true,
+        included: [],
+        excluded: [],
     },
     autoReload: {
         enabled: false,
@@ -29,10 +16,10 @@ const defaultSiteSettings = Object.freeze({
         maxInterval: 7,
     },
     analytics: {
-        totalSurveyCompletions: 0,
-        bestDailySurveyCompletions: 0,
-        previousDailySurveyCompletions: 0,
-        dailySurveyCompletions: {
+        totalStudyCompletions: 0,
+        bestDailyStudyCompletions: 0,
+        previousDailyStudyCompletions: 0,
+        dailyStudyCompletions: {
             timestamp: Date.now(),
             count: 0,
         },

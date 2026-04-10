@@ -20,12 +20,12 @@ function mergePersistedPatch<T extends object>(
     return current ? (deepMerge(current, next) as DeepPartial<T>) : next;
 }
 
-function normalizeDailySurveyCompletions(
+function normalizeDailyStudyCompletions(
     current: SiteSettings,
 ): SiteNormalizationResult {
     const analytics = current.analytics;
     const stale =
-        Date.now() - analytics.dailySurveyCompletions.timestamp >
+        Date.now() - analytics.dailyStudyCompletions.timestamp >
         24 * 60 * 60 * 1000;
     if (!stale) return { current };
 
@@ -34,31 +34,31 @@ function normalizeDailySurveyCompletions(
         timestamp: Date.now(),
     };
 
-    const previousDailySurveyCompletions =
-        analytics.dailySurveyCompletions.count > 0
-            ? analytics.dailySurveyCompletions.count
-            : analytics.previousDailySurveyCompletions;
+    const previousDailyStudyCompletions =
+        analytics.dailyStudyCompletions.count > 0
+            ? analytics.dailyStudyCompletions.count
+            : analytics.previousDailyStudyCompletions;
 
     return {
         current: {
             ...current,
             analytics: {
                 ...current.analytics,
-                dailySurveyCompletions: resetDaily,
-                previousDailySurveyCompletions,
+                dailyStudyCompletions: resetDaily,
+                previousDailyStudyCompletions,
             },
         },
         persistedPatch: {
             analytics: {
-                dailySurveyCompletions: resetDaily,
-                previousDailySurveyCompletions,
+                dailyStudyCompletions: resetDaily,
+                previousDailyStudyCompletions,
             },
         },
     };
 }
 
 const siteNormalizationRules: SiteNormalizationRule[] = [
-    normalizeDailySurveyCompletions,
+    normalizeDailyStudyCompletions,
 ];
 
 function normalizeSiteState(current: SiteSettings): SiteNormalizationResult {

@@ -22,7 +22,7 @@
     ): Promise<boolean> {
         try {
             return await sendExtensionMessage({
-                type: "notification",
+                type: "study-alert",
                 data: {
                     siteName: activeSite.name,
                     notifications: [
@@ -56,10 +56,9 @@
 
 <Subsection className="flex flex-col gap-2" borderClass="border-white/4">
     <div class="flex flex-col gap-0.5">
-        <span class="text-[0.78rem] font-medium text-gray-400"
-            >Test notifications</span
+        <span class="text-xs font-medium text-gray-400">Test notifications</span
         >
-        <span class="text-[0.72rem] text-gray-500">
+        <span class="text-xs text-gray-500">
             Send a sample alert to check delivery and provider setup.
         </span>
     </div>

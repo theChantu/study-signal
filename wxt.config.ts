@@ -26,12 +26,19 @@ export default defineConfig({
         plugins: [tailwindcss()],
     }),
     manifest: {
-        name: "Survey Enhancer",
-        short_name: "Survey Enhancer",
+        name: "Study Signal",
+        short_name: "Study Signal",
         description:
-            "Get alerts, highlight better-paying studies, convert rewards, and track activity across supported survey sites.",
+            "Get alerts, highlight better-paying studies, convert rewards, and track activity across supported study sites.",
         host_permissions: hostPermissions,
-        permissions: ["storage", "notifications", "tabs", "webRequest", "idle"],
+        permissions: [
+            "storage",
+            "notifications",
+            "tabs",
+            "webRequest",
+            "idle",
+            "offscreen",
+        ],
 
         browser_specific_settings: {
             gecko: {

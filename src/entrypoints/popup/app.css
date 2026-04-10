@@ -11,12 +11,20 @@
         @apply rounded-md border border-white/8 bg-white/4;
     }
 
+    .popup-collapsible {
+        @apply rounded-md border border-white/8 bg-white/4 transition-colors duration-150 hover:border-white/12 focus-within:border-indigo-500/30 focus-within:hover:border-indigo-500/30;
+    }
+
+    .popup-surface-inner {
+        @apply rounded-md border border-white/8 bg-white/3;
+    }
+
     .popup-control {
-        @apply w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-[0.82rem] font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-white/18;
+        @apply w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-sm font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-indigo-500/30;
     }
 
     .popup-select-control {
-        @apply w-full appearance-none cursor-pointer rounded-md border border-white/8 bg-white/4 px-3 py-2.5 pr-11 text-[0.82rem] font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-white/18;
+        @apply w-full appearance-none cursor-pointer rounded-md border border-white/8 bg-white/4 px-3 py-2.5 pr-11 text-sm font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-indigo-500/30;
     }
 
     .popup-control-chevron {
@@ -28,15 +36,15 @@
     }
 
     .popup-section-heading {
-        @apply mb-2 flex items-center gap-1.5 text-[0.76rem] font-medium tracking-[0.04em] text-gray-300;
+        @apply mb-2 flex items-center gap-1.5 text-xs font-medium tracking-[0.04em] text-gray-300 [&_svg]:text-indigo-400/70;
     }
 
     .popup-section-heading-muted {
-        @apply text-gray-500;
+        @apply text-gray-500 [&_svg]:text-gray-500;
     }
 
     .popup-compact-button {
-        @apply cursor-pointer rounded-md border border-white/10 bg-white/4 px-2.5 py-1.5 text-[0.72rem] font-medium font-[inherit] text-gray-200 transition-colors duration-150 hover:bg-white/7 hover:border-white/18;
+        @apply cursor-pointer rounded-md border border-white/10 bg-white/4 px-2.5 py-1.5 text-xs font-medium font-[inherit] text-gray-200 transition-colors duration-150 hover:bg-white/7 hover:border-white/18;
     }
 
     .popup-compact-button-danger {
@@ -52,16 +60,26 @@
     }
 }
 
+html,
+body {
+    height: 600px;
+}
+
 body {
     margin: 0;
-    min-width: 340px;
-    background: #121417;
+    min-width: 400px;
+    overflow: hidden;
+    background: linear-gradient(165deg, #14161c 0%, #121417 40%, #131518 100%);
     color: #d1d5db;
     font-family:
         system-ui,
         -apple-system,
         sans-serif;
     -webkit-font-smoothing: antialiased;
+}
+
+#app {
+    height: 100%;
 }
 
 select {

@@ -1,7 +1,12 @@
 import { defaultGlobalSettings } from "@/store/defaultGlobalSettings";
-import { supportedHosts } from "@/adapters/siteConfigs";
+import { sites, supportedHosts } from "@/adapters/siteConfigs";
 
-import type { RuntimeState, SettingsState } from "./types";
+import type {
+    ActiveSiteState,
+    RuntimeState,
+    SettingsState,
+    UiState,
+} from "./types";
 
 export const settingsState: SettingsState = $state({
     globals: defaultGlobalSettings,
@@ -12,6 +17,7 @@ export const runtimeState: RuntimeState = $state({
     studies: {},
 });
 
-export const uiState = $state({
+export const uiState: UiState = $state({
     selectedHost: supportedHosts[0],
+    selectedTab: "studies",
 });

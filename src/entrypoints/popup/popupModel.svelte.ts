@@ -20,11 +20,11 @@ import type {
     Message,
     MessageMap,
     RuntimeChangedMessage,
-    RuntimeDataMap,
     StoreChangedMessage,
     StoreMutationMessageType,
 } from "@/messages/types";
-import { RuntimeState } from "./types";
+import type { RuntimeState } from "./types";
+import deepMerge from "@/lib/deepMerge";
 
 let globalsPromise: Promise<void> | null = null;
 export let pendingMutation: Promise<void> = Promise.resolve();
@@ -102,6 +102,10 @@ async function loadRuntimeState(host: SupportedHosts) {
     }
 }
 
+async function loadAllRuntimeState() {
+    await Promise.all(supportedHosts.map((host) => loadRuntimeState(host)));
+}
+
 export function queueMutation<T extends StoreMutationMessageType>(
     type: T,
     values: MessageMap[T],
@@ -143,7 +147,22 @@ export async function selectHost(host: SupportedHosts) {
     await Promise.all([loadSite(host), loadRuntimeState(host)]);
 }
 
-function applyStoreChange(payload: StoreChangedMessage) {}
+function applyStoreChange(payload: StoreChangedMessage) {
+    if (!(payload.namespace in settingsState)) return;
+
+    if (payload.namespace === "globals") {
+        settingsState.globals = deepMerge(settingsState.globals, payload.data);
+        return;
+    }
+
+    const siteUrl = siteNameToHost[payload.entry];
+    if (!siteUrl) return;
+
+    const current = settingsState.sites[siteUrl];
+    if (!current) return;
+
+    settingsState.sites[siteUrl] = deepMerge(current, payload.data);
+}
 
 function applyRuntimeChange(payload: RuntimeChangedMessage) {
     if (!(payload.channel in runtimeState)) return;
@@ -174,7 +193,7 @@ async function initializePopup() {
     await Promise.all([
         loadGlobals(),
         loadSite(uiState.selectedHost),
-        loadRuntimeState(uiState.selectedHost),
+        loadAllRuntimeState(),
     ]);
 }
 
