@@ -28,9 +28,9 @@
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
     <div class="shrink-0 px-4">
-        <div class="relative text-gray-500">
+        <div class="relative text-popup-text-faint">
             <select
-                class="popup-select-control font-medium [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
+                class="popup-select-control font-medium"
                 value={model.activeSite.url}
                 onchange={(e) =>
                     selectHost(e.currentTarget.value as SupportedHosts)}
@@ -50,9 +50,12 @@
     <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
         {#if !model.activeSite.settings}
             <div
-                class="border-t border-white/6 pt-3 p-8 flex items-center justify-center gap-2 text-gray-500 text-sm"
+                class="flex items-center justify-center gap-2 border-t border-popup-border p-8 pt-3 text-sm text-popup-text-faint"
             >
-                <LoaderCircle size={18} class="animate-spin text-indigo-400/60" />
+                <LoaderCircle
+                    size={18}
+                    class="animate-spin text-popup-accent-indicator"
+                />
                 <span>Loading settings...</span>
             </div>
         {:else}

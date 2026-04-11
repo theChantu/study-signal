@@ -1,70 +1,96 @@
 @import "tailwindcss";
 
-:root {
-    --scrollbar-track: rgba(255, 255, 255, 0.05);
-    --scrollbar-thumb: rgba(148, 163, 184, 0.45);
-    --scrollbar-thumb-hover: rgba(148, 163, 184, 0.7);
+@theme {
+    --color-popup-canvas: #f8fafc;
+    --color-popup-surface: #ffffff;
+    --color-popup-surface-muted: #f9fafb;
+    --color-popup-surface-subtle: #f3f4f6;
+
+    --color-popup-border: #d1d5db;
+    --color-popup-border-subtle: #f3f4f6;
+
+    --color-popup-text: #374151;
+    --color-popup-text-strong: #1f2937;
+    --color-popup-text-soft: #4b5563;
+    --color-popup-text-muted: #6b7280;
+    --color-popup-text-faint: #9ca3af;
+    --color-popup-text-subtle: #d1d5db;
+
+    --color-popup-accent-surface: #eff6ff;
+    --color-popup-accent-surface-strong: #dbeafe;
+    --color-popup-accent-border: #bfdbfe;
+    --color-popup-accent-border-soft: #93c5fd;
+    --color-popup-accent-border-strong: #60a5fa;
+    --color-popup-accent-text: #2563eb;
+    --color-popup-accent-text-strong: #1d4ed8;
+    --color-popup-accent-text-soft: #3b82f6;
+    --color-popup-accent-text-muted: #2563ebbf;
+    --color-popup-accent-indicator: #3b82f699;
+
+    --color-popup-danger-surface: #fef2f2;
+    --color-popup-danger-border: #fca5a5;
+    --color-popup-danger-text: #dc2626;
 }
 
 @layer components {
     .popup-surface {
-        @apply rounded-md border border-white/8 bg-white/4;
+        @apply rounded-md border border-popup-border bg-popup-surface;
     }
 
     .popup-collapsible {
-        @apply rounded-md border border-white/8 bg-white/4 transition-colors duration-150 hover:border-white/12 focus-within:border-indigo-500/30 focus-within:hover:border-indigo-500/30;
+        @apply rounded-md border border-popup-border bg-popup-surface transition-colors duration-150 hover:border-popup-border focus-within:border-popup-accent-border-strong focus-within:hover:border-popup-accent-border-strong;
     }
 
     .popup-collapsible-accent {
-        @apply border-indigo-500/20 bg-indigo-500/4;
+        @apply border-popup-accent-border-soft bg-popup-accent-surface;
     }
 
     .popup-surface-inner {
-        @apply rounded-md border border-white/8 bg-white/3;
+        @apply rounded-md border border-popup-border bg-popup-surface-muted;
     }
 
     .popup-control {
-        @apply w-full rounded-md border border-white/8 bg-white/4 px-3 py-2.5 text-sm font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-indigo-500/30;
+        @apply w-full rounded-md border border-popup-border bg-popup-surface px-3 py-2.5 text-sm font-[inherit] text-popup-text outline-none transition-colors duration-150 hover:bg-popup-surface-muted focus:border-popup-accent-border-strong;
     }
 
     .popup-select-control {
-        @apply w-full appearance-none cursor-pointer rounded-md border border-white/8 bg-white/4 px-3 py-2.5 pr-11 text-sm font-[inherit] text-gray-200 outline-none transition-colors duration-150 hover:bg-white/5 focus:border-indigo-500/30;
+        @apply w-full appearance-none cursor-pointer rounded-md border border-popup-border bg-popup-surface px-3 py-2.5 pr-11 text-sm font-[inherit] text-popup-text outline-none transition-colors duration-150 hover:bg-popup-surface-muted focus:border-popup-accent-border-strong;
     }
 
     .popup-control-chevron {
-        @apply absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rounded-full border border-white/8 bg-white/4 p-1 text-gray-500;
+        @apply pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full border border-popup-border bg-popup-surface-muted p-1 text-popup-text-faint;
     }
 
     .popup-chip-chevron {
-        @apply rounded-full border border-white/8 bg-white/4 p-1 text-gray-500;
+        @apply rounded-full border border-popup-border bg-popup-surface-muted p-1 text-popup-text-faint;
     }
 
     .popup-badge {
-        @apply inline-flex items-center rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-indigo-200;
+        @apply inline-flex items-center rounded-full border border-popup-accent-border bg-popup-accent-surface px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-popup-accent-text;
     }
 
     .popup-section-heading {
-        @apply mb-2 flex items-center gap-1.5 text-xs font-medium tracking-[0.04em] text-gray-300 [&_svg]:text-indigo-400/70;
+        @apply mb-2 flex items-center gap-1.5 text-xs font-medium tracking-[0.04em] text-popup-text-muted [&_svg]:text-popup-accent-text-soft;
     }
 
     .popup-section-heading-muted {
-        @apply text-gray-500 [&_svg]:text-gray-500;
+        @apply text-popup-text-faint [&_svg]:text-popup-text-faint;
     }
 
     .popup-compact-button {
-        @apply cursor-pointer rounded-md border border-white/10 bg-white/4 px-2.5 py-1.5 text-xs font-medium font-[inherit] text-gray-200 transition-colors duration-150 hover:bg-white/7 hover:border-white/18;
+        @apply cursor-pointer rounded-md border border-popup-border bg-popup-surface px-2.5 py-1.5 text-xs font-medium font-[inherit] text-popup-text-soft transition-colors duration-150 hover:border-popup-border hover:bg-popup-surface-muted;
     }
 
     .popup-compact-button-danger {
-        @apply text-gray-300 hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300;
+        @apply text-popup-text-muted hover:border-popup-danger-border hover:bg-popup-danger-surface hover:text-popup-danger-text;
     }
 
     .popup-inline-link {
-        @apply text-indigo-300 transition-colors duration-150 hover:text-indigo-200;
+        @apply text-popup-accent-text transition-colors duration-150 hover:text-popup-accent-text-strong;
     }
 
     .popup-analytics-accent {
-        @apply text-indigo-200;
+        @apply text-popup-accent-text;
     }
 }
 
@@ -75,10 +101,10 @@ body {
 
 body {
     margin: 0;
-    min-width: 400px;
+    width: 400px;
     overflow: hidden;
-    background: linear-gradient(165deg, #14161c 0%, #121417 40%, #131518 100%);
-    color: #d1d5db;
+    background: var(--color-popup-canvas);
+    color: var(--color-popup-text);
     font-family:
         system-ui,
         -apple-system,
@@ -90,36 +116,8 @@ body {
     height: 100%;
 }
 
-select {
-    color-scheme: dark;
-}
-
-select option {
-    background: #1a1d21;
-    color: #d1d5db;
-}
-
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-
-*::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-*::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
-}
-
-*::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover);
+@supports (-moz-appearance: none) {
+    .popup-studies-list {
+        padding-right: 1rem;
+    }
 }

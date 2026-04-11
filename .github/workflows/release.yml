@@ -23,6 +23,7 @@ jobs:
 
             - run: bun run zip
             - run: bun run zip:firefox
+            - run: rm -f .output/*-sources.zip
 
             - uses: softprops/action-gh-release@v2
               with:

@@ -42,10 +42,10 @@
     >
         {#snippet children()}
             <Field label="Selected currency" id="currency">
-                <div class="relative text-gray-500">
+                <div class="relative text-popup-text-faint">
                     <select
                         id="currency"
-                        class="popup-select-control [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
+                        class="popup-select-control"
                         bind:value={model.currency.target}
                         onchange={(e) =>
                             handleCurrencyChange(

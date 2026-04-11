@@ -53,36 +53,40 @@
         defaultOpen={false}
     >
         {#snippet children()}
-            <div class="divide-y divide-white/6">
+            <div class="divide-y divide-popup-border-subtle">
                 <div class="flex items-center justify-between py-2">
                     <span
-                        class={`text-xs ${matchingBestDay ? "popup-analytics-accent" : "text-gray-400"}`}
+                        class={`text-xs ${matchingBestDay ? "popup-analytics-accent" : "text-popup-text-muted"}`}
                         >Completed today</span
                     >
                     <span
-                        class={`text-lg font-semibold ${matchingBestDay ? "popup-analytics-accent" : "text-gray-100"}`}
+                        class={`text-lg font-semibold ${matchingBestDay ? "popup-analytics-accent" : "text-popup-text-strong"}`}
                     >
                         {todayCount}
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between py-2">
-                    <span class="text-xs text-gray-400">Best day</span>
-                    <span class="text-lg font-semibold text-gray-200">
+                    <span class="text-xs text-popup-text-muted">Best day</span>
+                    <span class="text-lg font-semibold text-popup-text">
                         {bestCount}
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between py-2">
-                    <span class="text-xs text-gray-400">Last active day</span>
-                    <span class="text-lg font-semibold text-gray-300">
+                    <span class="text-xs text-popup-text-muted">
+                        Last active day
+                    </span>
+                    <span class="text-lg font-semibold text-popup-text-soft">
                         {previousCount}
                     </span>
                 </div>
 
                 <div class="flex items-center justify-between py-2">
-                    <span class="text-xs text-gray-400">Total completed</span>
-                    <span class="text-lg font-semibold text-gray-300">
+                    <span class="text-xs text-popup-text-muted">
+                        Total completed
+                    </span>
+                    <span class="text-lg font-semibold text-popup-text-soft">
                         {model.totalStudyCompletions}
                     </span>
                 </div>

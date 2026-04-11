@@ -83,8 +83,13 @@
     }
 </script>
 
-<Subsection className="flex flex-col gap-2" borderClass="border-white/4">
-    <span class="text-xs font-medium text-gray-400">Reset to default</span>
+<Subsection
+    className="flex flex-col gap-2"
+    borderClass="border-popup-border-subtle"
+>
+    <span class="text-xs font-medium text-popup-text-muted">
+        Reset to default
+    </span>
     <div class="flex flex-wrap gap-1">
         {#each resettableGlobalKeys as key}
             <button

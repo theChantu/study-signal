@@ -146,10 +146,10 @@
             >
                 {#snippet children()}
                     <Field label="Alert sound" id="notification-sound">
-                        <div class="relative text-gray-500">
+                        <div class="relative text-popup-text-faint">
                             <select
                                 id="notification-sound"
-                                class="popup-select-control [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
+                                class="popup-select-control"
                                 bind:value={
                                     model.notifications.delivery.sound.type
                                 }
@@ -176,7 +176,7 @@
                             min="0"
                             max="100"
                             step="5"
-                            class="w-full accent-indigo-400"
+                            class="w-full accent-popup-accent-text"
                             value={Math.round(
                                 model.notifications.delivery.sound.volume * 100,
                             )}

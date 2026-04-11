@@ -13,7 +13,7 @@
 >
     {#each $toasts as toast (toast.id)}
         <div
-            class="pointer-events-auto flex items-center gap-2 rounded-md border border-white/10 bg-[#1c2127]/95 px-3 py-2 text-xs leading-snug text-gray-200 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur"
+            class="pointer-events-auto flex items-center gap-2 rounded-md border border-popup-border bg-popup-surface px-3 py-2 text-xs leading-snug text-popup-text shadow-lg"
             role="alert"
             on:mouseenter={() => pauseToast(toast.id)}
             on:mouseleave={() => resumeToast(toast.id)}
@@ -22,7 +22,7 @@
 
             {#if toast.actionLabel}
                 <button
-                    class="shrink-0 cursor-pointer rounded border-none bg-transparent p-0 text-xs font-semibold text-indigo-300 transition-colors hover:text-indigo-200"
+                    class="shrink-0 cursor-pointer rounded border-none bg-transparent p-0 text-xs font-semibold text-popup-accent-text transition-colors hover:text-popup-accent-text-strong"
                     on:click={() => runToastAction(toast.id)}
                 >
                     {toast.actionLabel}
@@ -30,7 +30,7 @@
             {/if}
 
             <button
-                class="shrink-0 cursor-pointer rounded border-none bg-transparent p-0 text-sm leading-none text-gray-500 transition-colors hover:text-gray-300"
+                class="shrink-0 cursor-pointer rounded border-none bg-transparent p-0 text-sm leading-none text-popup-text-faint transition-colors hover:text-popup-text-soft"
                 on:click={() => dismissToast(toast.id)}
                 aria-label="Dismiss notification"
             >

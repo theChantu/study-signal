@@ -68,10 +68,10 @@ function rateToColor(rate: number, min = 7, max = 15) {
     const ratio = (logRate - logMin) / (logMax - logMin);
     const t = Math.pow(ratio, 0.6);
 
-    // blue -> teal -> emerald.
-    const r = Math.round(130 * (1 - t) + 52 * t);
-    const g = Math.round(150 * (1 - t) + 211 * t);
-    const b = Math.round(220 * (1 - t) + 153 * t);
+    // gray -> green.
+    const r = Math.round(156 * (1 - t) + 22 * t);
+    const g = Math.round(163 * (1 - t) + 163 * t);
+    const b = Math.round(175 * (1 - t) + 74 * t);
 
     return `rgb(${r}, ${g}, ${b})`;
 }

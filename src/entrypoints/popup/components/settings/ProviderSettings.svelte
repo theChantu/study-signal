@@ -50,7 +50,7 @@
 </script>
 
 <Section title="Delivery" icon={Send}>
-    <div class="mb-2 text-xs text-gray-400">
+    <div class="mb-2 text-xs text-popup-text-muted">
         Need help getting Telegram set up?
         <a
             href={providerSetupUrl}

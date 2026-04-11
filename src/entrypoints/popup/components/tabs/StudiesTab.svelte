@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ChevronDown, LoaderCircle } from "@lucide/svelte";
+    import { ChevronDown, ExternalLink, LoaderCircle } from "@lucide/svelte";
     import Analytics from "../Analytics.svelte";
     import StudyCard from "../StudyCard.svelte";
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
@@ -294,7 +294,7 @@
         }
 
         if (!hasLiveSnapshot) {
-            return "Open a supported host on its study listings page in a tab to sync live studies here.";
+            return "Open a study listings page to start syncing.";
         }
 
         return "No studies are currently available in the synced tabs.";
@@ -312,7 +312,7 @@
         <div class="shrink-0 px-4">
             <div class="relative">
                 <select
-                    class="popup-select-control [&_option]:bg-[#1a1d21] [&_option]:text-gray-300"
+                    class="popup-select-control"
                     value={studySort}
                     onchange={(e) =>
                         patchStudySort(e.currentTarget.value as StudySort)}
@@ -332,17 +332,17 @@
         {#if sortedStudies.length > 0}
             {#if loading}
                 <div
-                    class="flex items-center gap-2 px-4 pt-3 text-xs text-gray-500"
+                    class="flex items-center gap-2 px-4 pt-3 text-xs text-popup-text-faint"
                 >
                     <LoaderCircle
                         size={14}
-                        class="animate-spin text-indigo-400/60"
+                        class="animate-spin text-popup-accent-indicator"
                     />
                     <span>Syncing remaining sites...</span>
                 </div>
             {/if}
 
-            <div class="flex flex-col gap-3 pl-4 pr-2">
+            <div class="popup-studies-list flex flex-col gap-3 pl-4">
                 {#each sortedStudies as study (study.siteName + ":" + study.id)}
                     <StudyCard item={study} />
                 {/each}
@@ -354,13 +354,32 @@
                 {#if loading}
                     <LoaderCircle
                         size={18}
-                        class="animate-spin text-indigo-400/60"
+                        class="animate-spin text-popup-accent-indicator"
                     />
                 {/if}
-                <p class="text-sm font-medium text-gray-200">No studies yet</p>
-                <p class="max-w-[18rem] text-xs leading-5 text-gray-500">
+                <p class="text-sm font-medium text-popup-text">
+                    No studies yet
+                </p>
+                <p
+                    class="max-w-[18rem] text-xs leading-5 text-popup-text-faint"
+                >
                     {emptyMessage}
                 </p>
+                {#if !loading && !hasLiveSnapshot}
+                    <div class="mt-2 flex flex-wrap justify-center gap-2">
+                        {#each supportedHosts as host}
+                            <a
+                                href={`https://${host}${sites[host].studyPath}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                class="popup-compact-button inline-flex items-center gap-1.5"
+                            >
+                                {capitalize(sites[host].name)}
+                                <ExternalLink size={11} strokeWidth={2.2} />
+                            </a>
+                        {/each}
+                    </div>
+                {/if}
             </div>
         {/if}
     </div>

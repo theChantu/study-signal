@@ -29,6 +29,10 @@ export const sites = {
                         in: ["COMPLETE"],
                     },
                 },
+                {
+                    path: "/submissions/complete",
+                    method: "POST",
+                },
             ],
         },
     },

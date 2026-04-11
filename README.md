@@ -3,7 +3,16 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Version](https://img.shields.io/github/package-json/v/theChantu/study-signal?color=gre)
 
-A browser extension that enhances the study experience on [Prolific](https://app.prolific.com/) and [CloudResearch](https://connect.cloudresearch.com/).
+A browser extension that monitors research study platforms and alerts you when new studies are available.
+
+<table>
+  <tr>
+    <td><img src=".github/screenshots/studies-tab.png" alt="Studies tab" width="360" /></td>
+    <td><img src=".github/screenshots/settings-tab.png" alt="Settings tab" width="360" /></td>
+  </tr>
+</table>
+
+<img src=".github/screenshots/rate-highlighting.png" alt="Rate highlighting on Prolific" width="720" />
 
 ## Features
 
@@ -89,6 +98,15 @@ bun run build:firefox    # Production build (Firefox)
 bun run zip              # Package for distribution (Chrome)
 bun run zip:firefox      # Package for distribution (Firefox)
 ```
+
+## Contributing
+
+Contributions are welcome! Feel free to open an issue or submit a pull request.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Open a pull request against `main`
 
 ## License
 

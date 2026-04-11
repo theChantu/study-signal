@@ -39,17 +39,20 @@
     }
 </script>
 
-<Subsection className="flex flex-col gap-1.5" borderClass="border-white/4">
-    <span class="text-xs font-medium text-gray-500">{title}</span>
+<Subsection
+    className="flex flex-col gap-1.5"
+    borderClass="border-popup-border-subtle"
+>
+    <span class="text-xs font-medium text-popup-text-muted">{title}</span>
     {#if values.length > 0}
         <div class="flex flex-wrap gap-1">
             {#each values as value}
                 <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/8 text-gray-300 text-xs"
+                    class="inline-flex items-center gap-1 rounded bg-popup-surface-subtle px-2 py-0.5 text-xs text-popup-text-soft"
                 >
                     {value}
                     <button
-                        class="inline-flex items-center bg-transparent border-none text-gray-500 cursor-pointer p-0 leading-none hover:text-red-500"
+                        class="inline-flex cursor-pointer items-center border-none bg-transparent p-0 leading-none text-popup-text-faint hover:text-popup-danger-text"
                         on:click={() => onRemove(value)}
                         aria-label="Remove {value}"
                     >
@@ -63,18 +66,18 @@
         <input
             type="text"
             {placeholder}
-            class="popup-control box-border placeholder:text-gray-600"
+            class="popup-control box-border placeholder:text-popup-text-faint"
             bind:value={input}
             on:keydown={handleKeydown}
         />
         {#if filtered.length > 0}
             <ul
-                class="absolute top-full left-0 right-0 mt-1 py-1 list-none bg-[#1a1d21] border border-white/10 rounded-md z-10 max-h-35 overflow-y-auto"
+                class="absolute top-full left-0 right-0 z-10 mt-1 max-h-35 list-none overflow-y-auto rounded-md border border-popup-border bg-popup-surface py-1 shadow-lg"
             >
                 {#each filtered.slice(0, 5) as suggestion}
                     <li>
                         <button
-                            class="block w-full py-1.5 px-2.5 bg-transparent border-none text-gray-300 text-xs font-[inherit] text-left cursor-pointer hover:bg-white/6"
+                            class="block w-full cursor-pointer border-none bg-transparent px-2.5 py-1.5 text-left text-xs font-[inherit] text-popup-text-soft hover:bg-popup-surface-muted"
                             on:mousedown|preventDefault={() => add(suggestion)}
                         >
                             {suggestion}

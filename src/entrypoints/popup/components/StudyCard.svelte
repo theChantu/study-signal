@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { ArrowUpRight } from "@lucide/svelte";
-
     import type { StudyItem } from "../types";
 
     let { item }: { item: StudyItem } = $props();
@@ -22,12 +20,12 @@
 {#snippet cardContent()}
     <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-            <p class="truncate text-sm font-medium text-gray-100">
+            <p class="truncate text-sm font-medium text-popup-text-strong">
                 {title}
             </p>
-            <p class="mt-1 text-xs text-gray-500">
+            <p class="mt-1 text-xs text-popup-text-faint">
                 {researcher}
-                <span class="text-white/15">&middot;</span>
+                <span class="text-popup-text-subtle">&middot;</span>
                 {item.siteLabel}
             </p>
         </div>
@@ -35,8 +33,8 @@
 
     <div class="mt-2 flex items-center gap-3 text-xs">
         <div>
-            <span class="text-gray-500">Reward</span>
-            <span class="ml-1.5 font-medium text-gray-200">{reward}</span>
+            <span class="text-popup-text-faint">Reward</span>
+            <span class="ml-1.5 font-medium text-popup-text">{reward}</span>
         </div>
         <span
             class="rounded-md px-2 py-0.5 font-semibold"
@@ -51,7 +49,7 @@
         href={item.link}
         target="_blank"
         rel="noreferrer"
-        class="popup-surface block border-l-5 p-3 transition-colors duration-150 hover:bg-white/6"
+        class="popup-surface block border-l-5 p-3 transition-colors duration-150 hover:bg-popup-surface-muted"
         style="{cardStyle} border-left-color: var(--accent);"
     >
         {@render cardContent()}

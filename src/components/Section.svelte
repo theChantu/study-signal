@@ -6,7 +6,7 @@
     export let tone: "default" | "muted" = "default";
 </script>
 
-<div class="border-t border-white/6 pt-3">
+<div class="border-t border-popup-border pt-3">
     <h2 class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""}`}>
         <svelte:component this={icon} size={14} strokeWidth={2.5} />
         {title}
