@@ -15,7 +15,7 @@ export interface NotificationData {
 
 export class NotificationsEnhancement extends BaseEnhancement {
     async apply() {
-        const studies = this.adapter.extractStudies();
+        const studies = this.adapter.extractStudies("display");
         if (studies.length === 0) return;
 
         const { studyAlerts } = this.settings;

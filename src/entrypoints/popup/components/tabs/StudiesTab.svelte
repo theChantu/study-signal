@@ -5,18 +5,14 @@
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
     import { runtimeState, settingsState, uiState } from "../../state.svelte";
     import { queueMutation } from "../../popupModel.svelte";
-    import {
-        capitalize,
-        getCurrency,
-        getCurrencySymbol,
-        rateToColor,
-    } from "@/lib/utils";
-    import { ensureConversionRates } from "@/lib/ensureConversionRates";
+    import { getCurrency, getCurrencySymbol } from "@/lib/currency/";
+    import { ensureConversionRates } from "@/lib/currency/rates";
+    import { capitalize, rateToColor } from "@/lib/utils";
     import {
         studySortOptions,
         type StudySort,
-        Currency,
-        GlobalSettings,
+        type Currency,
+        type GlobalSettings,
     } from "@/store/types";
     import { HIGHLIGHT_BASE_CURRENCY } from "@/constants";
 
@@ -185,7 +181,7 @@
     ): Promise<void> {
         if (currencies.length === 0) return;
 
-        const { conversionRates: newConversionRates, updated } =
+        const { patch: conversionRatesPatch, updated } =
             await ensureConversionRates(conversionRates, currencies);
 
         if (!updated) return;
@@ -193,7 +189,7 @@
         await queueMutation("store-patch", {
             namespace: "globals",
             data: {
-                conversionRates: newConversionRates,
+                conversionRates: conversionRatesPatch,
             },
         });
     }
@@ -207,16 +203,20 @@
         }
 
         const currencies = new Set<Currency>();
+        const targetCurrency = settingsState.globals.currency.target;
 
         if (currencyEnabled) {
-            currencies.add(settingsState.globals.currency.target);
+            currencies.add(targetCurrency);
         }
 
         for (const currency of runtimeCurrencies) {
-            if (highlightEnabled && currency === HIGHLIGHT_BASE_CURRENCY) {
-                continue;
+            if (currencyEnabled && currency !== targetCurrency) {
+                currencies.add(currency);
             }
-            currencies.add(currency);
+
+            if (highlightEnabled && currency !== HIGHLIGHT_BASE_CURRENCY) {
+                currencies.add(currency);
+            }
         }
 
         return [...currencies];
@@ -286,6 +286,7 @@
             Array.isArray(runtimeState.studies[host]),
         ),
     );
+
     const sortedStudies = $derived(sortStudies(studies, studySort));
     const emptyMessage = $derived.by(() => {
         if (loading) {

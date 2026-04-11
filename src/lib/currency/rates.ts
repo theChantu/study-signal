@@ -1,14 +1,20 @@
 import { CONVERSION_RATES_FETCH_INTERVAL_MS } from "@/constants";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
+import { currencyKeysSet } from "@/store/types";
 
 import type {
     Currency,
     ExchangeRatesResponse,
     GlobalSettings,
 } from "@/store/types";
-import { currencyKeysSet } from "@/store/types";
 
 type ConversionRates = GlobalSettings["conversionRates"];
+type ConversionRatesPatch = Partial<ConversionRates>;
+
+type FetchRatesResult = {
+    baseCode: Currency;
+    rates: Record<Currency, number>;
+};
 
 function isExchangeRatesResponse(
     value: unknown,
@@ -35,11 +41,8 @@ function isExchangeRatesResponse(
 }
 
 async function fetchRates(
-    conversionRates: ConversionRates,
     currency: Currency,
-): Promise<{ conversionRates: ConversionRates; success: boolean }> {
-    const clonedConversionRates = structuredClone(conversionRates);
-
+): Promise<FetchRatesResult | null> {
     try {
         const data = await sendExtensionMessage({
             type: "fetch",
@@ -49,43 +52,49 @@ async function fetchRates(
             throw new Error("Invalid exchange rates response");
         }
 
-        const { base_code, rates } = data;
-
-        for (const [key, value] of Object.entries(rates) as [Currency, number][]) {
-            clonedConversionRates[base_code].rates[key] = value;
-        }
-
-        return { conversionRates: clonedConversionRates, success: true };
+        return {
+            baseCode: data.base_code,
+            rates: data.rates as Record<Currency, number>,
+        };
     } catch (error) {
         console.error(error);
-        return { conversionRates, success: false };
+        return null;
     }
 }
 
 export async function ensureConversionRates(
     conversionRates: ConversionRates,
     currencies: Currency[],
-): Promise<{ conversionRates: ConversionRates; updated: boolean }> {
+): Promise<{
+    conversionRates: ConversionRates;
+    patch: ConversionRatesPatch;
+    updated: boolean;
+}> {
     const now = Date.now();
     let updated = false;
-    let rates = conversionRates;
+    const rates = structuredClone(conversionRates);
+    const patch: ConversionRatesPatch = {};
 
     for (const currency of new Set(currencies)) {
         if (
-            now - rates[currency].timestamp < CONVERSION_RATES_FETCH_INTERVAL_MS
+            now - rates[currency].timestamp <
+            CONVERSION_RATES_FETCH_INTERVAL_MS
         ) {
             continue;
         }
 
-        const result = await fetchRates(rates, currency);
-        if (!result.success) {
+        const result = await fetchRates(currency);
+        if (!result) {
             continue;
         }
 
-        rates = result.conversionRates;
-        rates[currency].timestamp = now;
+        rates[result.baseCode] = {
+            timestamp: now,
+            rates: result.rates,
+        };
+        patch[result.baseCode] = rates[result.baseCode];
         updated = true;
     }
 
-    return { conversionRates: rates, updated };
+    return { conversionRates: rates, patch, updated };
 }

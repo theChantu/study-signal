@@ -1,10 +1,10 @@
-import { ensureConversionRates } from "@/lib/ensureConversionRates";
-import { getCurrencySymbol, getCurrency } from "@/lib/utils";
+import { getCurrency, getCurrencySymbol } from "@/lib/currency";
+import { ensureConversionRates } from "@/lib/currency/rates";
 import BaseEnhancement from "./BaseEnhancement";
 import extractNumericValue from "@/lib/extractNumericValue";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 
-import type { Currency, GlobalSettings } from "../store/types";
+import type { Currency } from "../store/types";
 
 class ConvertCurrencyEnhancement extends BaseEnhancement {
     async apply() {
@@ -23,11 +23,14 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
             if (currency) sourceCurrencies.add(currency);
         }
 
-        const { conversionRates: updatedConversionRates, updated } =
-            await ensureConversionRates(conversionRates, [
-                currency.target,
-                ...sourceCurrencies,
-            ]);
+        const {
+            conversionRates: updatedConversionRates,
+            patch: conversionRatesPatch,
+            updated,
+        } = await ensureConversionRates(conversionRates, [
+            currency.target,
+            ...sourceCurrencies,
+        ]);
 
         if (updated) {
             await sendExtensionMessage({
@@ -35,7 +38,7 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
                 data: {
                     namespace: "globals",
                     data: {
-                        conversionRates: updatedConversionRates,
+                        conversionRates: conversionRatesPatch,
                     },
                 },
             });

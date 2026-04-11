@@ -1,8 +1,9 @@
 import BaseEnhancement from "./BaseEnhancement";
 import { MIN_AMOUNT_PER_HOUR, MAX_AMOUNT_PER_HOUR } from "@/constants";
 import extractNumericValue from "@/lib/extractNumericValue";
-import { getCurrency, rateToColor } from "@/lib/utils";
-import { ensureConversionRates } from "@/lib/ensureConversionRates";
+import { getCurrency } from "@/lib/currency";
+import { ensureConversionRates } from "@/lib/currency/rates";
+import { rateToColor } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { HIGHLIGHT_BASE_CURRENCY } from "@/constants";
 
@@ -25,8 +26,11 @@ class HighlightRatesEnhancement extends BaseEnhancement {
             }
         }
 
-        const { conversionRates: updatedConversionRates, updated } =
-            await ensureConversionRates(conversionRates, [...sourceCurrencies]);
+        const {
+            conversionRates: updatedConversionRates,
+            patch: conversionRatesPatch,
+            updated,
+        } = await ensureConversionRates(conversionRates, [...sourceCurrencies]);
 
         if (updated) {
             await sendExtensionMessage({
@@ -34,7 +38,7 @@ class HighlightRatesEnhancement extends BaseEnhancement {
                 data: {
                     namespace: "globals",
                     data: {
-                        conversionRates: updatedConversionRates,
+                        conversionRates: conversionRatesPatch,
                     },
                 },
             });

@@ -1,5 +1,3 @@
-import { currencyKeysSet, type Currency } from "@/store/types";
-
 function capitalize(text: string) {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -60,29 +58,6 @@ function cleanResearcherName(name: string): string {
     return name.trim().toLowerCase();
 }
 
-const symbolToCurrency: Record<string, Currency> = {
-    "£": "GBP",
-    $: "USD",
-    "€": "EUR",
-};
-function getCurrency(symbolOrCode: string): Currency | undefined {
-    return (
-        symbolToCurrency[symbolOrCode] ??
-        (currencyKeysSet.has(symbolOrCode as Currency)
-            ? (symbolOrCode as Currency)
-            : undefined)
-    );
-}
-
-function getCurrencySymbol(currency: Currency) {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency,
-    })
-        .formatToParts(0)
-        .find((part) => part.type === "currency")?.value;
-}
-
 function rateToColor(rate: number, min = 7, max = 15) {
     const clamped = Math.min(Math.max(rate, min), max);
 
@@ -108,7 +83,5 @@ export {
     getRandomTimeoutMs,
     scheduleTimeout,
     capitalize,
-    getCurrency,
-    getCurrencySymbol,
     rateToColor,
 };

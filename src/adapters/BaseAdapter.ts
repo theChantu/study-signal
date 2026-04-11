@@ -45,6 +45,8 @@ export const DataAttr = {
     ORIGINAL_SYMBOL: "data-original-symbol",
 } as const;
 
+type Source = "original" | "display";
+
 export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
     readonly config: Readonly<AdapterConfig<H>>;
 
@@ -161,60 +163,71 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return this.buildUrl([studyPath, studyId, ...(suffix ? [suffix] : [])]);
     }
 
-    private getValue(el: HTMLElement): number | null {
+    private getText(el: HTMLElement, source: Source): string | null {
         const { originalText } = this.getRewardState(el);
-        const text = originalText ?? el.textContent;
 
+        return source === "original" ? originalText : el.textContent;
+    }
+
+    private getSymbol(el: HTMLElement, source: Source): string | null {
+        const { originalSymbol, displaySymbol } = this.getRewardState(el);
+
+        return source === "original" ? originalSymbol : displaySymbol;
+    }
+
+    private getValue(el: HTMLElement, source: Source): number | null {
+        const text = this.getText(el, source);
         if (!text) return null;
 
         const value = extractNumericValue(text);
-
         return Number.isFinite(value) ? value : null;
     }
 
-    private getSymbol(el: HTMLElement): string | null {
-        const { originalSymbol } = this.getRewardState(el);
-        return originalSymbol;
-    }
-
-    protected getStudyReward(el: HTMLElement): number | null {
+    protected getStudyReward(el: HTMLElement, source: Source): number | null {
         const rewardEl = this.getRewardElement(el);
         if (!rewardEl) return null;
 
-        return this.getValue(rewardEl);
+        return this.getValue(rewardEl, source);
     }
 
-    protected getStudyHourlyRate(el: HTMLElement): number | null {
+    protected getStudyHourlyRate(
+        el: HTMLElement,
+        source: Source,
+    ): number | null {
         const rateEl = this.getHourlyRateElement(el);
         if (!rateEl) return null;
 
-        return this.getValue(rateEl);
+        return this.getValue(rateEl, source);
     }
 
-    extractStudy(el: HTMLElement): StudyInfo | null {
+    extractStudy(
+        el: HTMLElement,
+        source: Source = "original",
+    ): StudyInfo | null {
         const id = this.getStudyId(el);
         if (!id) return null;
 
-        const rewardElement =
-            this.getRewardElement(el) ?? this.getHourlyRateElement(el) ?? el;
+        const rewardEl = this.getRewardElement(el);
+        const rateEl = this.getHourlyRateElement(el);
+        const symbolEl = rewardEl ?? rateEl ?? el;
 
         return {
             id,
             title: this.getStudyTitle(el),
             researcher: this.getStudyResearcher(el),
-            reward: this.getStudyReward(el),
-            rate: this.getStudyHourlyRate(el),
+            reward: rewardEl ? this.getValue(rewardEl, source) : null,
+            rate: rateEl ? this.getValue(rateEl, source) : null,
             link: this.getStudyLink(el),
-            symbol: this.getSymbol(rewardElement),
+            symbol: this.getSymbol(symbolEl, source),
         };
     }
 
-    extractStudies(): StudyInfo[] {
+    extractStudies(source: Source = "original"): StudyInfo[] {
         const elements = this.getStudyElements();
         const studies: StudyInfo[] = [];
 
         for (const el of elements) {
-            const studyInfo = this.extractStudy(el);
+            const studyInfo = this.extractStudy(el, source);
             if (!studyInfo) continue;
 
             studies.push(studyInfo);

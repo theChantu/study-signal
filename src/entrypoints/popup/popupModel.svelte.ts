@@ -6,10 +6,7 @@ import {
 } from "@/adapters/siteConfigs";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
-import {
-    defaultGlobalSettings,
-    defaultGlobalSettingsKeys,
-} from "@/store/defaultGlobalSettings";
+import { defaultGlobalSettingsKeys } from "@/store/defaultGlobalSettings";
 import {
     defaultSiteSettings,
     defaultSiteSettingsKeys,
@@ -23,8 +20,9 @@ import type {
     StoreChangedMessage,
     StoreMutationMessageType,
 } from "@/messages/types";
-import type { RuntimeState } from "./types";
 import deepMerge from "@/lib/deepMerge";
+
+import type { RuntimeState } from "./types";
 
 let globalsPromise: Promise<void> | null = null;
 export let pendingMutation: Promise<void> = Promise.resolve();
@@ -49,10 +47,7 @@ function loadGlobals() {
             },
         });
 
-        settingsState.globals = {
-            ...defaultGlobalSettings,
-            ...response.data,
-        };
+        settingsState.globals = deepMerge(settingsState.globals, response.data);
     })();
 
     return globalsPromise;
