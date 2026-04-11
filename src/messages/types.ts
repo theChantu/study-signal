@@ -102,6 +102,10 @@ type RuntimeTarget<
 export type RuntimeSyncMessage<K extends RuntimeChannel = RuntimeChannel> =
     RuntimeTarget<RuntimeInputDataMap, K>;
 
+export type RuntimeSyncRequestMessage = {
+    channels?: RuntimeChannel[];
+};
+
 export type RuntimeChangedMessage<K extends RuntimeChannel = RuntimeChannel> = {
     channel: K;
     siteName: SiteName;
@@ -120,6 +124,7 @@ export interface MessageMap extends StoreMutationMessage {
     "store-fetch": StoreFetchMessage;
     "store-changed": StoreChangedMessage;
     "runtime-sync": RuntimeSyncMessage;
+    "runtime-sync-request": RuntimeSyncRequestMessage;
     "runtime-fetch": RuntimeFetchMessage;
     "runtime-changed": RuntimeChangedMessage;
     fetch: { url: string };
@@ -135,6 +140,7 @@ export interface ResponseMap {
     "store-patch": StorePatchResponse;
     "store-changed": void;
     "runtime-sync": void;
+    "runtime-sync-request": void;
     "runtime-fetch": RuntimeFetchResponse;
     "runtime-changed": void;
     fetch: unknown;

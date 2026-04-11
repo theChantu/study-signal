@@ -7,10 +7,12 @@ import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import debounce from "@/lib/debounce";
 import deepMerge from "@/lib/deepMerge";
 import { loadSettings } from "../lib/loadSettings";
+import { getRuntimeSyncChannels } from "@/background/runtime/runtimeHelpers";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
 import type { ContentScriptContext } from "#imports";
 import type { DeepPartial, Settings, SiteSettings } from "@/store/types";
+import type { RuntimeChannel } from "@/messages/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
@@ -26,16 +28,22 @@ async function runContentScript(ctx: ContentScriptContext) {
         ...site,
     });
 
-    async function syncRuntime() {
-        if (adapter.isListingsPage()) {
-            await sendExtensionMessage({
-                type: "runtime-sync",
-                data: {
-                    channel: "studies",
-                    siteName: adapter.config.name,
-                    data: adapter.extractStudies(),
-                },
-            });
+    async function syncRuntime(channels?: RuntimeChannel[]) {
+        for (const channel of getRuntimeSyncChannels(channels)) {
+            switch (channel) {
+                case "studies":
+                    if (!adapter.isListingsPage()) continue;
+
+                    await sendExtensionMessage({
+                        type: "runtime-sync",
+                        data: {
+                            channel,
+                            siteName: adapter.config.name,
+                            data: adapter.extractStudies(),
+                        },
+                    });
+                    break;
+            }
         }
     }
 
@@ -145,6 +153,10 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
 
         debounced(payload.data);
+    });
+
+    onExtensionMessage("runtime-sync-request", async (payload) => {
+        await syncRuntime(payload?.channels);
     });
 
     const unsubscribe = adapter.observeNetwork();

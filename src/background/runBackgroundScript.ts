@@ -1,11 +1,7 @@
 import { browser } from "#imports";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { SettingsStore } from "@/store/SettingsStore";
-import {
-    supportedSites,
-    supportedHosts,
-    sites,
-} from "@/adapters/siteConfigs";
+import { supportedSites, supportedHosts, sites } from "@/adapters/siteConfigs";
 import { handleStoreFetch } from "./handlers/handleStoreFetch";
 import { handleStoreMutate } from "./handlers/handleStoreMutate";
 import {
@@ -13,6 +9,11 @@ import {
     handleNotificationClosed,
     handleStudyAlert,
 } from "./handlers/handleNotifications";
+import {
+    isSupportedHostTabUrl,
+    getRuntimeSyncChannels,
+} from "./runtime/runtimeHelpers";
+import { parseJsonRequestBody } from "./network/requestBody";
 import { registerRuntimeSync } from "./runtime/runtimeSync";
 import { safeSendPageMessage } from "./utils/safeSendPageMessage";
 import { safeSendTabMessage } from "./utils/safeSendTabMessage";
@@ -21,6 +22,7 @@ import type { Message } from "@/messages/types";
 
 function runBackgroundScript() {
     const store = new SettingsStore();
+    const requestBodies = new Map<string, unknown>();
 
     const filteredUrls = supportedHosts.flatMap((host) =>
         sites[host].watchedRequestTargets.map(
@@ -28,9 +30,28 @@ function runBackgroundScript() {
         ),
     );
 
+    browser.webRequest.onBeforeRequest.addListener(
+        (details) => {
+            const requestBody = parseJsonRequestBody(details.requestBody);
+
+            if (requestBody === undefined) {
+                requestBodies.delete(details.requestId);
+                return undefined;
+            }
+
+            requestBodies.set(details.requestId, requestBody);
+            return undefined;
+        },
+        { urls: filteredUrls },
+        ["requestBody"],
+    );
+
     browser.webRequest.onCompleted.addListener(
         (details) => {
             if (details.tabId < 0) return;
+
+            const requestBody = requestBodies.get(details.requestId);
+            requestBodies.delete(details.requestId);
 
             safeSendTabMessage(details.tabId, {
                 type: "network",
@@ -38,8 +59,16 @@ function runBackgroundScript() {
                     url: details.url,
                     method: details.method,
                     statusCode: details.statusCode,
+                    ...(requestBody === undefined ? {} : { requestBody }),
                 },
             });
+        },
+        { urls: filteredUrls },
+    );
+
+    browser.webRequest.onErrorOccurred.addListener(
+        (details) => {
+            requestBodies.delete(details.requestId);
         },
         { urls: filteredUrls },
     );
@@ -69,6 +98,23 @@ function runBackgroundScript() {
     );
 
     registerRuntimeSync();
+
+    async function requestRunTimeSync() {
+        const tabs = await browser.tabs.query({});
+
+        for (const tab of tabs) {
+            if (!tab.id || !isSupportedHostTabUrl(tab.url)) continue;
+
+            await safeSendTabMessage(tab.id, {
+                type: "runtime-sync-request",
+                data: {
+                    channels: getRuntimeSyncChannels(),
+                },
+            });
+        }
+    }
+
+    void requestRunTimeSync();
 
     onExtensionMessage("study-alert", (payload) =>
         handleStudyAlert(store, payload),

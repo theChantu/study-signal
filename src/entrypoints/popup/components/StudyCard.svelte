@@ -31,13 +31,6 @@
                 {item.siteLabel}
             </p>
         </div>
-        {#if item.link}
-            <ArrowUpRight
-                size={14}
-                strokeWidth={2.2}
-                class="mt-0.5 shrink-0 text-gray-600"
-            />
-        {/if}
     </div>
 
     <div class="mt-2 flex items-center gap-3 text-xs">

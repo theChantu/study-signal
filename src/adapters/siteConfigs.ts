@@ -24,6 +24,10 @@ export const sites = {
                 {
                     path: "/transition",
                     method: "POST",
+                    requestBody: {
+                        field: "action",
+                        in: ["COMPLETE"],
+                    },
                 },
             ],
         },

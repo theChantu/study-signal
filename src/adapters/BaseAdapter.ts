@@ -10,6 +10,7 @@ import type {
     AdapterEventMap,
     AdapterEventType,
     NetworkEventMatcher,
+    NetworkRequestBodyMatcher,
 } from "./events";
 
 export type AdapterConfig<H extends SupportedHosts = SupportedHosts> =
@@ -46,6 +47,30 @@ export const DataAttr = {
 } as const;
 
 type Source = "original" | "display";
+
+function matchesRequestBody(
+    matcher: NetworkRequestBodyMatcher | undefined,
+    requestBody: unknown,
+): boolean {
+    if (!matcher) return true;
+    if (
+        typeof requestBody !== "object" ||
+        requestBody === null ||
+        Array.isArray(requestBody)
+    ) {
+        return false;
+    }
+
+    const actual = requestBody as Record<string, unknown>;
+
+    if ("equals" in matcher) {
+        return Object.entries(matcher.equals).every(([key, value]) =>
+            Object.is(actual[key], value),
+        );
+    }
+
+    return matcher.in.some((value) => Object.is(actual[matcher.field], value));
+}
 
 export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
     readonly config: Readonly<AdapterConfig<H>>;
@@ -247,7 +272,8 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
             const matched = matchers.some(
                 (matcher) =>
                     event.url.includes(matcher.path) &&
-                    (!matcher.method || event.method === matcher.method),
+                    (!matcher.method || event.method === matcher.method) &&
+                    matchesRequestBody(matcher.requestBody, event.requestBody),
             );
 
             if (matched) {
