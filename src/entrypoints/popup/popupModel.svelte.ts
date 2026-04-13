@@ -12,7 +12,10 @@ import {
     defaultSiteSettingsKeys,
 } from "@/store/defaultSiteSettings";
 import { runtimeState, settingsState, uiState } from "./state.svelte";
-import { captureAndUpdateLastOpened } from "./popupSession.svelte";
+import {
+    acknowledgeRuntimeChange,
+    beginPopupSession,
+} from "./popupSession.svelte";
 
 import type {
     Message,
@@ -177,7 +180,7 @@ async function initializePopup() {
         loadAllRuntimeState(),
     ]);
 
-    captureAndUpdateLastOpened();
+    beginPopupSession();
 }
 
 export function initPopup() {
@@ -186,7 +189,10 @@ export function initPopup() {
     });
     const unsubscribeRuntime = onExtensionMessage(
         "runtime-changed",
-        (payload) => applyRuntimeChange(payload),
+        (payload) => {
+            applyRuntimeChange(payload);
+            acknowledgeRuntimeChange(payload);
+        },
     );
 
     void initializePopup();
