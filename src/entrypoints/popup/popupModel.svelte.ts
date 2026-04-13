@@ -12,6 +12,7 @@ import {
     defaultSiteSettingsKeys,
 } from "@/store/defaultSiteSettings";
 import { runtimeState, settingsState, uiState } from "./state.svelte";
+import { nowState, startNowTicker } from "./now.svelte";
 
 import type {
     Message,
@@ -188,8 +189,11 @@ export function initPopup() {
 
     void initializePopup();
 
+    const stopNowTicker = startNowTicker();
+
     return () => {
         unsubscribeStore();
         unsubscribeRuntime();
+        stopNowTicker();
     };
 }

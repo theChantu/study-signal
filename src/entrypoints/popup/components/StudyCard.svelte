@@ -1,10 +1,17 @@
 <script lang="ts">
     import { DEVICE_META, PERIPHERAL_META } from "../lib/capabilitiesMeta";
     import { formatDuration, formatValue } from "../lib/formatters";
+    import { nowState } from "../now.svelte";
+    import { NEW_STUDY_THRESHOLD_MS } from "@/constants";
 
     import type { StudyItem } from "../types";
 
     let { item }: { item: StudyItem } = $props();
+
+    const isNew = $derived(
+        item.firstSeenAt > 0 &&
+            nowState.value - item.firstSeenAt < NEW_STUDY_THRESHOLD_MS,
+    );
 
     const title = $derived(item.title ?? "Untitled study");
     const researcher = $derived(item.researcher ?? "Researcher unavailable");
@@ -34,22 +41,41 @@
 
 {#snippet cardContent()}
     <div class="flex items-start justify-between gap-2">
-        <p
-            class="min-w-0 flex-1 truncate text-sm font-medium leading-snug text-popup-text-strong"
-        >
-            {title}
-        </p>
+        <div class="flex min-w-0 flex-1 items-center gap-1.5">
+            {#if isNew}
+                <span
+                    class="relative inline-flex h-2 w-2 shrink-0"
+                    title="New study"
+                    aria-label="New study"
+                >
+                    <span
+                        class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                        style="background: var(--accent);"
+                    ></span>
+                    <span
+                        class="relative inline-flex h-2 w-2 rounded-full"
+                        style="background: var(--accent);"
+                    ></span>
+                </span>
+            {/if}
+            <p
+                class="min-w-0 flex-1 truncate text-sm font-medium leading-snug text-popup-text-strong"
+            >
+                {title}
+            </p>
+        </div>
         {#if averageCompletion || slots !== null}
             <p class="shrink-0 text-xs text-popup-text-faint tabular-nums">
-                {#if averageCompletion}<span
-                        class="font-medium text-popup-text">{averageCompletion}</span
+                {#if averageCompletion}<span class="font-medium text-popup-text"
+                        >{averageCompletion}</span
                     >{/if}
                 {#if averageCompletion && slots !== null}
                     <span class="text-popup-text-faint">&middot;</span>
                 {/if}
-                {#if slots !== null}<span
-                        class="font-medium text-popup-text">{slots}</span
-                    > {slots === 1 ? "slot" : "slots"}{/if}
+                {#if slots !== null}<span class="font-medium text-popup-text"
+                        >{slots}</span
+                    >
+                    {slots === 1 ? "slot" : "slots"}{/if}
             </p>
         {/if}
     </div>
