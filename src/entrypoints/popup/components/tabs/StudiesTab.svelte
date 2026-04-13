@@ -342,7 +342,7 @@
                 </div>
             {/if}
 
-            <div class="popup-studies-list flex flex-col gap-3 pl-4">
+            <div class="popup-studies-list flex flex-col gap-3 pl-4 pb-4">
                 {#each sortedStudies as study (study.siteName + ":" + study.id)}
                     <StudyCard item={study} />
                 {/each}

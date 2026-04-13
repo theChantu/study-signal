@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { DEVICE_META, PERIPHERAL_META } from "../lib/capabilitiesMeta";
+    import { formatDuration, formatValue } from "../lib/formatters";
+
     import type { StudyItem } from "../types";
 
     let { item }: { item: StudyItem } = $props();
@@ -6,15 +9,27 @@
     const title = $derived(item.title ?? "Untitled study");
     const researcher = $derived(item.researcher ?? "Researcher unavailable");
 
-    function formatValue(value: number | null): string {
-        if (value === null) return "N/A";
-        return `${item.symbol ?? ""}${value.toFixed(2)}`;
-    }
-
-    const reward = $derived(formatValue(item.reward));
-    const rate = $derived(formatValue(item.rate));
+    const reward = $derived(formatValue(item.reward, item.symbol));
+    const rate = $derived(formatValue(item.rate, item.symbol));
+    const averageCompletion = $derived(
+        formatDuration(item.averageCompletionSeconds),
+    );
+    const slots = $derived(item.slots);
     const accent = $derived(item.color ?? "rgb(100, 116, 139)");
     const cardStyle = $derived(`--accent: ${accent};`);
+
+    const deviceCapabilities = $derived(
+        item.devices.map((device) => ({
+            key: device,
+            ...DEVICE_META[device],
+        })),
+    );
+    const peripheralCapabilities = $derived(
+        item.peripherals.map((peripheral) => ({
+            key: peripheral,
+            ...PERIPHERAL_META[peripheral],
+        })),
+    );
 </script>
 
 {#snippet cardContent()}
@@ -31,16 +46,78 @@
         </div>
     </div>
 
-    <div class="mt-2 flex items-center gap-3 text-xs">
-        <div>
-            <span class="text-popup-text-faint">Reward</span>
-            <span class="ml-1.5 font-medium text-popup-text">{reward}</span>
+    {#if deviceCapabilities.length > 0 || peripheralCapabilities.length > 0}
+        <div class="mt-2 flex flex-wrap gap-1.5">
+            {#if deviceCapabilities.length > 0}
+                <div class="flex flex-wrap gap-1.5">
+                    {#each deviceCapabilities as capability (capability.key)}
+                        {@const Icon = capability.icon}
+                        <span
+                            class="inline-flex items-center rounded bg-popup-surface-subtle p-1 text-popup-text-soft"
+                            title={capability.label}
+                            aria-label={capability.label}
+                        >
+                            <Icon
+                                class="h-3.5 w-3.5 shrink-0"
+                                strokeWidth={2}
+                            />
+                        </span>
+                    {/each}
+                </div>
+            {/if}
+
+            {#if deviceCapabilities.length > 0 && peripheralCapabilities.length > 0}
+                <span class="px-0.5 text-xs text-popup-text-subtle"
+                    >&middot;</span
+                >
+            {/if}
+
+            {#if peripheralCapabilities.length > 0}
+                <div class="flex flex-wrap gap-1.5">
+                    {#each peripheralCapabilities as capability (capability.key)}
+                        {@const Icon = capability.icon}
+                        <span
+                            class="inline-flex items-center rounded bg-popup-surface-subtle p-1 text-popup-text-soft"
+                            title={capability.label}
+                            aria-label={capability.label}
+                        >
+                            <Icon
+                                class="h-3.5 w-3.5 shrink-0"
+                                strokeWidth={2}
+                            />
+                        </span>
+                    {/each}
+                </div>
+            {/if}
         </div>
-        <span
-            class="rounded-md px-2 py-0.5 font-semibold"
-            style="color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);"
-            >{rate}/hr</span
-        >
+    {/if}
+
+    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+        <div class="flex items-center gap-2">
+            <div>
+                <span class="text-popup-text-faint">Reward</span>
+                <span class="ml-1.5 font-medium text-popup-text">{reward}</span>
+            </div>
+            <span
+                class="rounded-md px-2 py-0.5 font-semibold"
+                style="color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);"
+                >{rate}/hr</span
+            >
+        </div>
+        {#if averageCompletion}
+            <div>
+                <span class="text-popup-text-faint">Avg time</span>
+                <span class="ml-1.5 font-medium text-popup-text"
+                    >{averageCompletion}</span
+                >
+            </div>
+        {/if}
+        {#if slots !== null}
+            <div>
+                <span class="text-popup-text-faint">Slots</span>
+                <span class="ml-1.5 font-medium text-popup-text">{slots}</span>
+            </div>
+        {/if}
     </div>
 {/snippet}
 

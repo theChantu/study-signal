@@ -4,7 +4,7 @@ import {
     loadRuntimeMetaStore,
     pruneRuntimeMeta,
     saveRuntimeMetaStore,
-} from "./runtimeMetaStore";
+} from "../runtimeMetaStore";
 
 const mockStorage = storage as typeof storage & { _clear(): void };
 

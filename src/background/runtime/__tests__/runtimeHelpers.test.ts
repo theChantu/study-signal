@@ -3,7 +3,7 @@ import {
     getRuntimeSyncChannels,
     isSupportedHostTabUrl,
     runtimeChannels,
-} from "./runtimeHelpers";
+} from "../runtimeHelpers";
 
 describe("runtimeSync helpers", () => {
     it("defaults requested channels to all supported runtime channels", () => {

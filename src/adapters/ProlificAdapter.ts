@@ -24,11 +24,11 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getStudyTitle(el: HTMLElement) {
-        return this.queryText(el, "h2");
+        return this.getText(el, "h2");
     }
 
     getStudyResearcher(el: HTMLElement): string | null {
-        return this.queryText(el, '[aria-labelledby*="host-name-"]');
+        return this.getText(el, '[aria-labelledby*="host-name-"]');
     }
 
     getSourceSymbol(el: HTMLElement) {
@@ -61,5 +61,23 @@ export class ProlificAdapter extends BaseAdapter<typeof HOST> {
         return el.querySelector<HTMLElement>(
             "[data-testid='study-tag-reward-per-hour']",
         );
+    }
+
+    getCapabilityHints(el: HTMLElement) {
+        const capabilityElements = el.querySelectorAll(
+            "span.device-icon[data-testid]",
+        );
+
+        return this.collectHints(capabilityElements, (el) => [
+            el.getAttribute("data-testid") ?? "",
+        ]);
+    }
+
+    protected getStudyAverageCompletionText(el: HTMLElement): string | null {
+        return this.getText(el, '[data-testid="study-tag-completion-time"]');
+    }
+
+    protected getStudySlotsText(el: HTMLElement): string | null {
+        return this.getText(el, '[data-testid="study-tag-places"]');
     }
 }

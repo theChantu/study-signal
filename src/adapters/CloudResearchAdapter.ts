@@ -25,11 +25,11 @@ export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
     }
 
     getStudyTitle(el: HTMLElement) {
-        return this.queryText(el, "p");
+        return this.getText(el, "p");
     }
 
     getStudyResearcher(el: HTMLElement): string | null {
-        return this.queryText(el, "label div div:last-child");
+        return this.getText(el, "label div div:last-child");
     }
 
     getSourceSymbol(el: HTMLElement): string | null {
@@ -63,5 +63,33 @@ export class CloudResearchAdapter extends BaseAdapter<typeof HOST> {
         return el.querySelector<HTMLElement>(
             '[class*="project-pay-per-hour-"] > *:last-child',
         );
+    }
+
+    getCapabilityHints(el: HTMLElement) {
+        const deviceElements = Array.from(
+            el.querySelectorAll('[class*="fa-"]'),
+        ).filter((el) => el.classList.contains("text-green-600"));
+
+        const peripheralElements = el.querySelectorAll(
+            '[class*="fas"].cr-text-secondary',
+        );
+
+        return this.collectHints(
+            [...deviceElements, ...peripheralElements],
+            (el) =>
+                Array.from(el.classList).filter((cls) => cls.startsWith("fa-")),
+        );
+    }
+
+    protected getStudyAverageCompletionText(el: HTMLElement): string | null {
+        const parent = el
+            .querySelector<HTMLElement>(".fa-clock")
+            ?.closest("div");
+        return parent ? this.getText(parent) : null;
+    }
+
+    protected getStudySlotsText(el: HTMLElement): string | null {
+        const parent = el.querySelector(".fa-dot-circle")?.closest("div");
+        return parent ? this.getText(parent) : null;
     }
 }

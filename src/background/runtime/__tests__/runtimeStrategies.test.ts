@@ -5,7 +5,8 @@ import {
     enrichRuntimeData,
     hasRuntimeStrategy,
     updateRuntimeMeta,
-} from "./runtimeStrategies";
+} from "../runtimeStrategies";
+import { createStudy } from "./utils";
 
 describe("runtimeStrategies", () => {
     it("reports which channels have runtime strategies", () => {
@@ -20,15 +21,10 @@ describe("runtimeStrategies", () => {
             "studies",
             "prolific",
             [
-                {
-                    id: "study-a",
+                createStudy("study-a", {
                     title: "Study A",
                     researcher: "Researcher A",
-                    reward: 1,
-                    rate: 12,
-                    link: "https://app.prolific.com/studies/a",
-                    symbol: "$",
-                },
+                }),
             ],
             100,
         );
@@ -45,24 +41,18 @@ describe("runtimeStrategies", () => {
             "studies",
             "prolific",
             [
-                {
-                    id: "study-a",
+                createStudy("study-a", {
                     title: "Study A",
                     researcher: "Researcher A",
-                    reward: 1,
-                    rate: 12,
                     link: "https://app.prolific.com/studies/a",
-                    symbol: "$",
-                },
-                {
-                    id: "study-b",
+                }),
+                createStudy("study-b", {
                     title: "Study B",
                     researcher: "Researcher B",
                     reward: 2,
                     rate: 14,
                     link: "https://app.prolific.com/studies/b",
-                    symbol: "$",
-                },
+                }),
             ],
             250,
         );
@@ -87,45 +77,27 @@ describe("runtimeStrategies", () => {
             "studies",
             "prolific",
             [
-                {
-                    id: "study-a",
+                createStudy("study-a", {
                     title: "Study A",
                     researcher: "Researcher A",
-                    reward: 1,
-                    rate: 12,
-                    link: "https://app.prolific.com/studies/a",
-                    symbol: "$",
-                },
+                }),
             ],
             100,
         );
 
-        const enriched = enrichRuntimeData(
-            runtimeMeta,
-            "studies",
-            "prolific",
-            [
-                {
-                    id: "study-a",
-                    title: "Study A",
-                    researcher: "Researcher A",
-                    reward: 1,
-                    rate: 12,
-                    link: "https://app.prolific.com/studies/a",
-                    symbol: "$",
-                },
-            ],
-        );
+        const enriched = enrichRuntimeData(runtimeMeta, "studies", "prolific", [
+            createStudy("study-a", {
+                title: "Study A",
+                researcher: "Researcher A",
+            }),
+        ]);
 
         expect(enriched).toEqual([
             {
-                id: "study-a",
-                title: "Study A",
-                researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
-                link: "https://app.prolific.com/studies/a",
-                symbol: "$",
+                ...createStudy("study-a", {
+                    title: "Study A",
+                    researcher: "Researcher A",
+                }),
                 firstSeenAt: 100,
                 lastSeenAt: 100,
             },
@@ -149,15 +121,10 @@ describe("runtimeStrategies", () => {
             "studies",
             "prolific",
             [
-                {
-                    id: "study-a",
+                createStudy("study-a", {
                     title: "Study A",
                     researcher: "Researcher A",
-                    reward: 1,
-                    rate: 12,
-                    link: "https://app.prolific.com/studies/a",
-                    symbol: "$",
-                },
+                }),
             ],
         );
 
@@ -176,15 +143,10 @@ describe("runtimeStrategies", () => {
             "studies",
             "prolific",
             [
-                {
-                    id: "study-a",
+                createStudy("study-a", {
                     title: "Study A",
                     researcher: "Researcher A",
-                    reward: 1,
-                    rate: 12,
-                    link: "https://app.prolific.com/studies/a",
-                    symbol: "$",
-                },
+                }),
             ],
             100,
         );
@@ -193,15 +155,13 @@ describe("runtimeStrategies", () => {
             "studies",
             "cloudresearch",
             [
-                {
-                    id: "study-b",
+                createStudy("study-b", {
                     title: "Study B",
                     researcher: "Researcher B",
                     reward: 2,
                     rate: 14,
                     link: "https://connect.cloudresearch.com/participant/dashboard/b",
-                    symbol: "$",
-                },
+                }),
             ],
             200,
         );

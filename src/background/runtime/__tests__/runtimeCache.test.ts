@@ -6,22 +6,14 @@ import {
     getListingsSiteName,
     readRuntimeCache,
     updateRuntimeCache,
-} from "./runtimeCache";
+} from "../runtimeCache";
+
+import { createStudy } from "./utils";
 
 describe("runtimeCache", () => {
     it("does not report a change when the same tab syncs identical studies", () => {
         const cache = createRuntimeCache();
-        const studies = [
-            {
-                id: "a",
-                title: "Study A",
-                researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
-                link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
-        ];
+        const studies = [createStudy("a")];
 
         updateRuntimeCache(cache, "studies", "prolific", 1, studies);
         const result = updateRuntimeCache(
@@ -39,28 +31,13 @@ describe("runtimeCache", () => {
     it("aggregates studies across tabs for the same site", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [
-            {
-                id: "a",
-                title: "Study A",
-                researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
-                link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
-        ]);
+        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
 
         const result = updateRuntimeCache(cache, "studies", "prolific", 2, [
-            {
-                id: "b",
-                title: "Study B",
-                researcher: "Researcher B",
+            createStudy("b", {
                 reward: 2,
                 rate: 14,
-                link: "https://app.prolific.com/studies/b",
-                symbol: "$",
-            },
+            }),
         ]);
 
         expect(result.changed).toBe(true);
@@ -71,27 +48,21 @@ describe("runtimeCache", () => {
         const cache = createRuntimeCache();
 
         updateRuntimeCache(cache, "studies", "prolific", 1, [
-            {
-                id: "shared",
+            createStudy("shared", {
                 title: "Study A",
                 researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
                 link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
+            }),
         ]);
 
         const result = updateRuntimeCache(cache, "studies", "prolific", 2, [
-            {
-                id: "shared",
+            createStudy("shared", {
                 title: "Study A (updated)",
                 researcher: "Researcher A",
                 reward: 2,
                 rate: 13,
                 link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
+            }),
         ]);
 
         expect(result.data).toHaveLength(1);
@@ -101,17 +72,7 @@ describe("runtimeCache", () => {
     it("clears runtime data when a tab is removed", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [
-            {
-                id: "a",
-                title: "Study A",
-                researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
-                link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
-        ]);
+        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
 
         const changes = clearRuntimeTab(cache, 1);
 
@@ -128,27 +89,12 @@ describe("runtimeCache", () => {
     it("returns the remaining aggregated studies when one of multiple tabs is removed", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [
-            {
-                id: "a",
-                title: "Study A",
-                researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
-                link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
-        ]);
+        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
         updateRuntimeCache(cache, "studies", "prolific", 2, [
-            {
-                id: "b",
-                title: "Study B",
-                researcher: "Researcher B",
+            createStudy("b", {
                 reward: 2,
                 rate: 14,
-                link: "https://app.prolific.com/studies/b",
-                symbol: "$",
-            },
+            }),
         ]);
 
         const changes = clearRuntimeTab(cache, 1);
@@ -158,37 +104,24 @@ describe("runtimeCache", () => {
                 channel: "studies",
                 siteName: "prolific",
                 data: [
-                    {
-                        id: "b",
-                        title: "Study B",
-                        researcher: "Researcher B",
+                    createStudy("b", {
                         reward: 2,
                         rate: 14,
-                        link: "https://app.prolific.com/studies/b",
-                        symbol: "$",
-                    },
+                    }),
                 ],
             },
         ]);
-        expect(readRuntimeCache(cache, "studies", "prolific")?.map((study) => study.id)).toEqual([
-            "b",
-        ]);
+        expect(
+            readRuntimeCache(cache, "studies", "prolific")?.map(
+                (study) => study.id,
+            ),
+        ).toEqual(["b"]);
     });
 
     it("keeps current listing data during same-site listing navigation", () => {
         const cache = createRuntimeCache();
 
-        updateRuntimeCache(cache, "studies", "prolific", 1, [
-            {
-                id: "a",
-                title: "Study A",
-                researcher: "Researcher A",
-                reward: 1,
-                rate: 12,
-                link: "https://app.prolific.com/studies/a",
-                symbol: "$",
-            },
-        ]);
+        updateRuntimeCache(cache, "studies", "prolific", 1, [createStudy("a")]);
 
         const changes = clearRuntimeTab(
             cache,

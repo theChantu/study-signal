@@ -3,7 +3,7 @@
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
     import Subsection from "@/components/Subsection.svelte";
-    import { parsePositiveInt } from "@/lib/parsePositiveInt";
+    import { parsePositiveInt } from "@/lib/parse/parsePositiveInt";
     import Field from "@/components/Field.svelte";
 
     import type { ProviderSettingsModel } from "../../types";

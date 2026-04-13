@@ -1,7 +1,7 @@
 import { getCurrency, getCurrencySymbol } from "@/lib/currency";
 import { ensureConversionRates } from "@/lib/currency/rates";
 import BaseEnhancement from "./BaseEnhancement";
-import extractNumericValue from "@/lib/extractNumericValue";
+import { parseNumericValue } from "@/lib/parse/parseNumericValue";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 
 import type { Currency } from "../store/types";
@@ -75,7 +75,9 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
 
             const rate =
                 updatedConversionRates[sourceCurrency].rates[currency.target];
-            const elementRate = extractNumericValue(originalText);
+            const elementRate = parseNumericValue(originalText);
+            if (elementRate === null) continue;
+
             const converted = `${selectedSymbol}${(elementRate * rate).toFixed(2)}`;
 
             this.adapter.setRewardText(rewardEl, converted);

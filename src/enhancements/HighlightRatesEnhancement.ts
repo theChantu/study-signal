@@ -1,6 +1,6 @@
 import BaseEnhancement from "./BaseEnhancement";
 import { MIN_AMOUNT_PER_HOUR, MAX_AMOUNT_PER_HOUR } from "@/constants";
-import extractNumericValue from "@/lib/extractNumericValue";
+import { parseNumericValue } from "@/lib/parse/parseNumericValue";
 import { getCurrency } from "@/lib/currency";
 import { ensureConversionRates } from "@/lib/currency/rates";
 import { rateToColor } from "@/lib/utils";
@@ -53,8 +53,8 @@ class HighlightRatesEnhancement extends BaseEnhancement {
             const { originalText, originalSymbol } =
                 this.adapter.getRewardState(rateEl);
 
-            const rate = extractNumericValue(originalText);
-            if (isNaN(rate) || !originalSymbol) continue;
+            const rate = parseNumericValue(originalText);
+            if (rate === null || !originalSymbol) continue;
 
             const originalCurrency = getCurrency(originalSymbol);
             if (!originalCurrency) continue;

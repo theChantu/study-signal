@@ -2,7 +2,7 @@
     import { RefreshCw } from "@lucide/svelte";
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
-    import { parsePositiveInt } from "@/lib/parsePositiveInt";
+    import { parsePositiveInt } from "@/lib/parse/parsePositiveInt";
     import Field from "@/components/Field.svelte";
 
     import type { AutoReloadSettingsModel } from "../../types";

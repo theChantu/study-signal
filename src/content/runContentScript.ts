@@ -1,7 +1,7 @@
 import "./style.css";
 import log from "@/lib/log";
 import { getRandomTimeoutMs, scheduleTimeout } from "../lib/utils";
-import getSiteAdapter from "../lib/getSiteAdapter";
+import getSiteAdapter from "../lib/site/getSiteAdapter";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import debounce from "@/lib/debounce";

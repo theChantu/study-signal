@@ -1,10 +1,18 @@
 import { joinURL } from "ufo";
 import debounce from "@/lib/debounce";
-import extractNumericValue from "@/lib/extractNumericValue";
+import { parseNumericValue } from "@/lib/parse/parseNumericValue";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
+import { EnhancementKey } from "@/enhancements/enhancementConfigs";
+import {
+    type StudyDevice,
+    type StudyPeripheral,
+    DEVICE_PATTERNS,
+    PERIPHERAL_PATTERNS,
+    matchCapabilities,
+} from "./capabilities";
+import { parseDurationSeconds } from "@/lib/parse/parseDurationSeconds";
 
 import type { SiteInfo, SupportedHosts, sites } from "./siteConfigs";
-import { EnhancementKey } from "@/enhancements/enhancementConfigs";
 import type { NetworkRequestEvent } from "@/events/network";
 import type {
     AdapterEventMap,
@@ -29,6 +37,10 @@ export interface StudyInfo {
     rate: number | null;
     link: string | null;
     symbol: string | null;
+    devices: StudyDevice[];
+    peripherals: StudyPeripheral[];
+    averageCompletionSeconds: number | null;
+    slots: number | null;
 }
 
 interface RewardState {
@@ -102,8 +114,30 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return window.location.pathname === this.config.studyPath;
     }
 
-    protected queryText(el: HTMLElement, selector: string): string | null {
-        return el.querySelector<HTMLElement>(selector)?.textContent ?? null;
+    protected getText(el: HTMLElement, selector?: string): string | null {
+        const text = selector
+            ? el.querySelector<HTMLElement>(selector)?.textContent
+            : el.textContent;
+        return text?.trim() ?? null;
+    }
+
+    collectHints(
+        elements: Iterable<Element>,
+        read: (el: Element) => string[],
+    ): string[] {
+        const hints = new Set<string>();
+
+        for (const el of elements) {
+            for (const hint of read(el)) {
+                if (hint) hints.add(hint.trim());
+            }
+        }
+
+        return [...hints];
+    }
+
+    protected getCapabilityHints(el: HTMLElement): string[] {
+        return [];
     }
 
     prepareRewardElement(el: HTMLElement) {
@@ -188,24 +222,21 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return this.buildUrl([studyPath, studyId, ...(suffix ? [suffix] : [])]);
     }
 
-    private getText(el: HTMLElement, source: Source): string | null {
+    private getRewardText(el: HTMLElement, source: Source): string | null {
         const { originalText } = this.getRewardState(el);
 
         return source === "original" ? originalText : el.textContent;
     }
 
-    private getSymbol(el: HTMLElement, source: Source): string | null {
+    private getRewardSymbol(el: HTMLElement, source: Source): string | null {
         const { originalSymbol, displaySymbol } = this.getRewardState(el);
 
         return source === "original" ? originalSymbol : displaySymbol;
     }
 
     private getValue(el: HTMLElement, source: Source): number | null {
-        const text = this.getText(el, source);
-        if (!text) return null;
-
-        const value = extractNumericValue(text);
-        return Number.isFinite(value) ? value : null;
+        const text = this.getRewardText(el, source);
+        return text ? parseNumericValue(text) : null;
     }
 
     protected getStudyReward(el: HTMLElement, source: Source): number | null {
@@ -225,6 +256,25 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return this.getValue(rateEl, source);
     }
 
+    protected getStudyAverageCompletionText(el: HTMLElement): string | null {
+        return null;
+    }
+
+    protected getStudyAverageCompletionSeconds(el: HTMLElement): number | null {
+        return parseDurationSeconds(
+            this.getStudyAverageCompletionText(el) ?? "",
+        );
+    }
+
+    protected getStudySlotsText(el: HTMLElement): string | null {
+        return null;
+    }
+
+    protected getStudySlots(el: HTMLElement): number | null {
+        const text = this.getStudySlotsText(el);
+        return text ? parseNumericValue(text) : null;
+    }
+
     extractStudy(
         el: HTMLElement,
         source: Source = "original",
@@ -235,6 +285,7 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         const rewardEl = this.getRewardElement(el);
         const rateEl = this.getHourlyRateElement(el);
         const symbolEl = rewardEl ?? rateEl ?? el;
+        const capabilityHints = this.getCapabilityHints(el);
 
         return {
             id,
@@ -243,7 +294,14 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
             reward: rewardEl ? this.getValue(rewardEl, source) : null,
             rate: rateEl ? this.getValue(rateEl, source) : null,
             link: this.getStudyLink(el),
-            symbol: this.getSymbol(symbolEl, source),
+            symbol: this.getRewardSymbol(symbolEl, source),
+            devices: matchCapabilities(capabilityHints, DEVICE_PATTERNS),
+            peripherals: matchCapabilities(
+                capabilityHints,
+                PERIPHERAL_PATTERNS,
+            ),
+            averageCompletionSeconds: this.getStudyAverageCompletionSeconds(el),
+            slots: this.getStudySlots(el),
         };
     }
 
