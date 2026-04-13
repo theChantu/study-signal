@@ -33,90 +33,71 @@
 </script>
 
 {#snippet cardContent()}
-    <div class="flex items-start justify-between gap-3">
-        <div class="min-w-0">
-            <p class="truncate text-sm font-medium text-popup-text-strong">
-                {title}
+    <div class="flex items-start justify-between gap-2">
+        <p
+            class="min-w-0 flex-1 truncate text-sm font-medium leading-snug text-popup-text-strong"
+        >
+            {title}
+        </p>
+        {#if averageCompletion || slots !== null}
+            <p class="shrink-0 text-xs text-popup-text-faint tabular-nums">
+                {#if averageCompletion}<span
+                        class="font-medium text-popup-text">{averageCompletion}</span
+                    >{/if}
+                {#if averageCompletion && slots !== null}
+                    <span class="text-popup-text-faint">&middot;</span>
+                {/if}
+                {#if slots !== null}<span
+                        class="font-medium text-popup-text">{slots}</span
+                    > {slots === 1 ? "slot" : "slots"}{/if}
             </p>
-            <p class="mt-1 text-xs text-popup-text-faint">
-                {researcher}
-                <span class="text-popup-text-subtle">&middot;</span>
-                {item.siteLabel}
-            </p>
-        </div>
+        {/if}
     </div>
 
-    {#if deviceCapabilities.length > 0 || peripheralCapabilities.length > 0}
-        <div class="mt-2 flex flex-wrap gap-1.5">
-            {#if deviceCapabilities.length > 0}
-                <div class="flex flex-wrap gap-1.5">
-                    {#each deviceCapabilities as capability (capability.key)}
-                        {@const Icon = capability.icon}
-                        <span
-                            class="inline-flex items-center rounded bg-popup-surface-subtle p-1 text-popup-text-soft"
-                            title={capability.label}
-                            aria-label={capability.label}
-                        >
-                            <Icon
-                                class="h-3.5 w-3.5 shrink-0"
-                                strokeWidth={2}
-                            />
-                        </span>
-                    {/each}
-                </div>
-            {/if}
+    <p class="mt-0.5 truncate text-xs text-popup-text-faint">
+        {researcher}
+        <span class="text-popup-text-faint">&middot;</span>
+        {item.siteLabel}
+    </p>
 
-            {#if deviceCapabilities.length > 0 && peripheralCapabilities.length > 0}
-                <span class="px-0.5 text-xs text-popup-text-subtle"
-                    >&middot;</span
-                >
-            {/if}
+    <div
+        class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-popup-text"
+    >
+        <span
+            class="rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"
+            style="color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);"
+        >
+            {reward}
+            <span class="opacity-60">·</span>
+            {rate}<span class="font-normal opacity-70">/hr</span>
+        </span>
 
-            {#if peripheralCapabilities.length > 0}
-                <div class="flex flex-wrap gap-1.5">
-                    {#each peripheralCapabilities as capability (capability.key)}
-                        {@const Icon = capability.icon}
-                        <span
-                            class="inline-flex items-center rounded bg-popup-surface-subtle p-1 text-popup-text-soft"
-                            title={capability.label}
-                            aria-label={capability.label}
-                        >
-                            <Icon
-                                class="h-3.5 w-3.5 shrink-0"
-                                strokeWidth={2}
-                            />
-                        </span>
-                    {/each}
-                </div>
-            {/if}
-        </div>
-    {/if}
-
-    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-        <div class="flex items-center gap-2">
-            <div>
-                <span class="text-popup-text-faint">Reward</span>
-                <span class="ml-1.5 font-medium text-popup-text">{reward}</span>
-            </div>
+        {#if deviceCapabilities.length > 0 || peripheralCapabilities.length > 0}
             <span
-                class="rounded-md px-2 py-0.5 font-semibold"
-                style="color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);"
-                >{rate}/hr</span
+                class="ml-auto inline-flex items-center gap-1 text-popup-text-soft"
             >
-        </div>
-        {#if averageCompletion}
-            <div>
-                <span class="text-popup-text-faint">Avg time</span>
-                <span class="ml-1.5 font-medium text-popup-text"
-                    >{averageCompletion}</span
-                >
-            </div>
-        {/if}
-        {#if slots !== null}
-            <div>
-                <span class="text-popup-text-faint">Slots</span>
-                <span class="ml-1.5 font-medium text-popup-text">{slots}</span>
-            </div>
+                {#each deviceCapabilities as capability (capability.key)}
+                    {@const Icon = capability.icon}
+                    <Icon
+                        class="h-3.5 w-3.5 shrink-0"
+                        strokeWidth={2}
+                        title={capability.label}
+                        aria-label={capability.label}
+                    />
+                {/each}
+                {#if deviceCapabilities.length > 0 && peripheralCapabilities.length > 0}
+                    <span class="text-popup-text-faint">&middot;</span>
+                {/if}
+                {#each peripheralCapabilities as capability (capability.key)}
+                    {@const Icon = capability.icon}
+                    <Icon
+                        class="h-3.5 w-3.5 shrink-0"
+                        strokeWidth={2}
+                        title={capability.label}
+                        aria-label={capability.label}
+                    />
+                {/each}
+            </span>
         {/if}
     </div>
 {/snippet}
@@ -126,14 +107,14 @@
         href={item.link}
         target="_blank"
         rel="noreferrer"
-        class="popup-surface block border-l-5 p-3 transition-colors duration-150 hover:bg-popup-surface-muted"
+        class="popup-surface block border-l-4 p-3 transition-[background-color,box-shadow] duration-150 hover:bg-popup-surface-muted hover:shadow-[inset_4px_0_0_0_var(--accent)]"
         style="{cardStyle} border-left-color: var(--accent);"
     >
         {@render cardContent()}
     </a>
 {:else}
     <div
-        class="popup-surface border-l-5 p-3"
+        class="popup-surface border-l-4 p-3"
         style="{cardStyle} border-left-color: var(--accent);"
     >
         {@render cardContent()}

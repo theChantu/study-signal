@@ -47,7 +47,9 @@
         </div>
     </div>
 
-    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
+    <div
+        class="popup-settings-list flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pl-4 pb-4"
+    >
         {#if !model.activeSite.settings}
             <div
                 class="flex items-center justify-center gap-2 border-t border-popup-border p-8 pt-3 text-sm text-popup-text-faint"

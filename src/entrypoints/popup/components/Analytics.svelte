@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { ChartColumn } from "@lucide/svelte";
     import Collapsible from "@/components/Collapsible.svelte";
-    import Section from "@/components/Section.svelte";
 
     import type { AnalyticsModel } from "../types";
 
@@ -44,53 +42,51 @@
     });
 </script>
 
-<Section title="Stats" icon={ChartColumn}>
-    <Collapsible
-        title="Today's progress"
-        description={analyticsSummary}
-        accent={matchingBestDay}
-        badge={analyticsBadge}
-        defaultOpen={false}
-    >
-        {#snippet children()}
-            <div class="divide-y divide-popup-border-subtle">
-                <div class="flex items-center justify-between py-2">
-                    <span
-                        class={`text-xs ${matchingBestDay ? "popup-analytics-accent" : "text-popup-text-muted"}`}
-                        >Completed today</span
-                    >
-                    <span
-                        class={`text-lg font-semibold ${matchingBestDay ? "popup-analytics-accent" : "text-popup-text-strong"}`}
-                    >
-                        {todayCount}
-                    </span>
-                </div>
-
-                <div class="flex items-center justify-between py-2">
-                    <span class="text-xs text-popup-text-muted">Best day</span>
-                    <span class="text-lg font-semibold text-popup-text">
-                        {bestCount}
-                    </span>
-                </div>
-
-                <div class="flex items-center justify-between py-2">
-                    <span class="text-xs text-popup-text-muted">
-                        Last active day
-                    </span>
-                    <span class="text-lg font-semibold text-popup-text-soft">
-                        {previousCount}
-                    </span>
-                </div>
-
-                <div class="flex items-center justify-between py-2">
-                    <span class="text-xs text-popup-text-muted">
-                        Total completed
-                    </span>
-                    <span class="text-lg font-semibold text-popup-text-soft">
-                        {model.totalStudyCompletions}
-                    </span>
-                </div>
+<Collapsible
+    title="Today's progress"
+    description={analyticsSummary}
+    accent={matchingBestDay}
+    badge={analyticsBadge}
+    defaultOpen={false}
+>
+    {#snippet children()}
+        <div class="divide-y divide-popup-border-subtle">
+            <div class="flex items-center justify-between py-2">
+                <span
+                    class={`text-xs ${matchingBestDay ? "popup-analytics-accent" : "text-popup-text-muted"}`}
+                    >Completed today</span
+                >
+                <span
+                    class={`text-lg font-semibold ${matchingBestDay ? "popup-analytics-accent" : "text-popup-text-strong"}`}
+                >
+                    {todayCount}
+                </span>
             </div>
-        {/snippet}
-    </Collapsible>
-</Section>
+
+            <div class="flex items-center justify-between py-2">
+                <span class="text-xs text-popup-text-muted">Best day</span>
+                <span class="text-lg font-semibold text-popup-text">
+                    {bestCount}
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between py-2">
+                <span class="text-xs text-popup-text-muted">
+                    Last active day
+                </span>
+                <span class="text-lg font-semibold text-popup-text-soft">
+                    {previousCount}
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between py-2">
+                <span class="text-xs text-popup-text-muted">
+                    Total completed
+                </span>
+                <span class="text-lg font-semibold text-popup-text-soft">
+                    {model.totalStudyCompletions}
+                </span>
+            </div>
+        </div>
+    {/snippet}
+</Collapsible>

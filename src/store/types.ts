@@ -12,6 +12,8 @@ export const studySortOptions = [
     "lowest-reward",
     "highest-hourly-rate",
     "lowest-hourly-rate",
+    "quickest",
+    "longest",
     "page-order",
 ] as const;
 

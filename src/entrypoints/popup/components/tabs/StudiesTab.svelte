@@ -76,6 +76,18 @@
                     right.normalizedRate,
                     "asc",
                 ),
+            quickest: (left, right) =>
+                compareNullableNumbers(
+                    left.averageCompletionSeconds,
+                    right.averageCompletionSeconds,
+                    "asc",
+                ),
+            longest: (left, right) =>
+                compareNullableNumbers(
+                    left.averageCompletionSeconds,
+                    right.averageCompletionSeconds,
+                    "desc",
+                ),
             "page-order": (left, right) => left.order - right.order,
         };
 

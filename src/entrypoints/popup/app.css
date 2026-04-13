@@ -117,7 +117,8 @@ body {
 }
 
 @supports (-moz-appearance: none) {
-    .popup-studies-list {
+    .popup-studies-list,
+    .popup-settings-list {
         padding-right: 1rem;
     }
 }
