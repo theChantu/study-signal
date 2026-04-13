@@ -77,8 +77,12 @@ export function createBadgeSync(
     }
 
     async function recompute(): Promise<void> {
-        ensureBadgeSync();
-        await setBadgeCount(countNewStudies());
+        try {
+            await ensureBadgeSync();
+            await setBadgeCount(countNewStudies());
+        } catch (error) {
+            console.error("Error recomputing badge:", error);
+        }
     }
 
     return { recompute };

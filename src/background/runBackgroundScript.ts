@@ -94,9 +94,11 @@ function runBackgroundScript() {
         }
     }
 
-    browser.notifications.onClicked.addListener(async (id) =>
-        handleNotificationClicked(id),
-    );
+    browser.notifications.onClicked.addListener((id) => {
+        void handleNotificationClicked(id).catch((error) => {
+            console.error("Error handling notification click:", error);
+        });
+    });
 
     browser.notifications.onClosed.addListener(async (id) =>
         handleNotificationClosed(id),
@@ -129,7 +131,9 @@ function runBackgroundScript() {
         }
     }
 
-    void requestRuntimeSync();
+    void requestRuntimeSync().catch((error) => {
+        console.error("Error requesting initial runtime sync:", error);
+    });
 
     onExtensionMessage("studies-detected", (payload) =>
         handleStudiesDetected(store, payload),
@@ -139,19 +143,21 @@ function runBackgroundScript() {
         handleStudyAlert(store, payload),
     );
 
-    store.globals.subscribe(async (changed) => {
-        await broadcastStoreChanged(
+    store.globals.subscribe((changed) => {
+        void broadcastStoreChanged(
             {
                 type: "store-changed",
                 data: { namespace: "globals", data: changed },
             },
             (tab) => supportedSites.some((site) => tab.url!.includes(site)),
-        );
+        ).catch((error) => {
+            console.error("Error broadcasting global store change:", error);
+        });
     });
 
     for (const siteName of supportedSites) {
-        store.sites.entry(siteName).subscribe(async (changed) => {
-            await broadcastStoreChanged(
+        store.sites.entry(siteName).subscribe((changed) => {
+            void broadcastStoreChanged(
                 {
                     type: "store-changed",
                     data: {
@@ -161,7 +167,12 @@ function runBackgroundScript() {
                     },
                 },
                 (tab) => tab.url!.includes(siteName),
-            );
+            ).catch((error) => {
+                console.error(
+                    `Error broadcasting store change for "${siteName}":`,
+                    error,
+                );
+            });
         });
     }
 

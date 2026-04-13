@@ -23,7 +23,12 @@ export function onExtensionMessage<K extends keyof MessageMap>(
             "data" in message ? message.data : undefined
         ) as HandlerPayload<K>;
 
-        Promise.resolve(handler(payload, sender)).then(sendResponse);
+        Promise.resolve(handler(payload, sender))
+            .then(sendResponse)
+            .catch((error) => {
+                console.error(`Error handling "${type}" message:`, error);
+                sendResponse();
+            });
 
         return true;
     };
