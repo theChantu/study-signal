@@ -20,6 +20,7 @@ const hostPermissions = [
 // See https://wxt.dev/api/config.html
 export default defineConfig({
     srcDir: "src",
+    manifestVersion: 3,
     modulesDir: "wxt-modules",
     modules: ["@wxt-dev/module-svelte"],
     vite: () => ({
