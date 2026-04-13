@@ -9,7 +9,6 @@ import {
     updateRuntimeCache,
 } from "./runtimeCache";
 import {
-    clearRuntimeMeta,
     enrichRuntimeData,
     hasRuntimeStrategy,
     updateRuntimeMeta,
@@ -92,14 +91,8 @@ export function registerRuntimeSync(store: SettingsStore): void {
         await runtimeMetaReady;
 
         const changes = clearRuntimeTab(runtimeCache, tabId, retainSiteName);
-        let metaChanged = false;
 
         for (const change of changes) {
-            if (change.data === null && hasRuntimeStrategy(change.channel)) {
-                clearRuntimeMeta(runtimeMeta, change.channel, change.siteName);
-                metaChanged = true;
-            }
-
             await broadcastRuntimeChanged(
                 change.channel,
                 change.siteName,
@@ -111,11 +104,6 @@ export function registerRuntimeSync(store: SettingsStore): void {
                           change.data,
                       ),
             );
-        }
-
-        if (metaChanged) {
-            runtimeMeta = pruneRuntimeMeta(runtimeMeta, Date.now());
-            await saveRuntimeMetaStore(runtimeMeta);
         }
 
         void badgeSync.recompute();
