@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronDown, ExternalLink, LoaderCircle } from "@lucide/svelte";
+    import { ExternalLink, LoaderCircle } from "@lucide/svelte";
+    import SelectControl from "@/components/SelectControl.svelte";
     import Analytics from "../Analytics.svelte";
     import StudyCard from "../StudyCard.svelte";
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
@@ -8,6 +9,7 @@
     import { getCurrency, getCurrencySymbol } from "@/lib/currency/";
     import { ensureConversionRates } from "@/lib/currency/rates";
     import { capitalize, rateToColor } from "@/lib/utils";
+    import { matchesAlertRules } from "@/lib/notifications/alertRules";
     import {
         studySortOptions,
         type StudySort,
@@ -78,14 +80,14 @@
                 ),
             quickest: (left, right) =>
                 compareNullableNumbers(
-                    left.averageCompletionSeconds,
-                    right.averageCompletionSeconds,
+                    left.averageCompletionMinutes,
+                    right.averageCompletionMinutes,
                     "asc",
                 ),
             longest: (left, right) =>
                 compareNullableNumbers(
-                    left.averageCompletionSeconds,
-                    right.averageCompletionSeconds,
+                    left.averageCompletionMinutes,
+                    right.averageCompletionMinutes,
                     "desc",
                 ),
             "page-order": (left, right) => left.order - right.order,
@@ -249,6 +251,8 @@
             const hostStudies = runtimeState.studies[host];
             if (!Array.isArray(hostStudies)) continue;
 
+            const rules = settingsState.sites[host]?.studyAlerts.rules;
+
             for (const study of hostStudies) {
                 const display = convertStudyDisplayValues(study);
 
@@ -270,6 +274,8 @@
                         study.symbol,
                         HIGHLIGHT_BASE_CURRENCY,
                     ),
+                    matchesAlertRules:
+                        !rules || matchesAlertRules(study, rules),
                 });
 
                 order += 1;
@@ -322,21 +328,15 @@
 
     {#if sortedStudies.length > 0}
         <div class="shrink-0 px-4">
-            <div class="relative">
-                <select
-                    class="popup-select-control"
-                    value={studySort}
-                    onchange={(e) =>
-                        patchStudySort(e.currentTarget.value as StudySort)}
-                >
-                    {#each options as option}
-                        <option value={option.value}>{option.label}</option>
-                    {/each}
-                </select>
-                <div class="popup-control-chevron">
-                    <ChevronDown size={12} strokeWidth={2.4} />
-                </div>
-            </div>
+            <SelectControl
+                value={studySort}
+                onchange={(e) =>
+                    patchStudySort(e.currentTarget.value as StudySort)}
+            >
+                {#each options as option}
+                    <option value={option.value}>{option.label}</option>
+                {/each}
+            </SelectControl>
         </div>
     {/if}
 

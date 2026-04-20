@@ -1,4 +1,5 @@
 import type { ProviderConfigMap } from "@/providers/providers";
+import type { AlertRules } from "@/lib/notifications/alertRules";
 
 export type Enhancement = {
     apply(): void;
@@ -28,10 +29,10 @@ interface StudyAlerts {
         cache: {
             studies: Record<string, number>;
             researchers: Record<string, number>;
+            titles: Record<string, number>;
         };
         enabled: boolean;
-        included: string[];
-        excluded: string[];
+        rules: AlertRules;
     };
 }
 

@@ -39,7 +39,7 @@ export interface StudyInfo {
     symbol: string | null;
     devices: StudyDevice[];
     peripherals: StudyPeripheral[];
-    averageCompletionSeconds: number | null;
+    averageCompletionMinutes: number | null;
     slots: number | null;
 }
 
@@ -260,10 +260,11 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
         return null;
     }
 
-    protected getStudyAverageCompletionSeconds(el: HTMLElement): number | null {
-        return parseDurationSeconds(
+    protected getStudyAverageCompletionMinutes(el: HTMLElement): number | null {
+        const seconds = parseDurationSeconds(
             this.getStudyAverageCompletionText(el) ?? "",
         );
+        return seconds !== null ? seconds / 60 : null;
     }
 
     protected getStudySlotsText(el: HTMLElement): string | null {
@@ -300,7 +301,7 @@ export abstract class BaseAdapter<H extends SupportedHosts = SupportedHosts> {
                 capabilityHints,
                 PERIPHERAL_PATTERNS,
             ),
-            averageCompletionSeconds: this.getStudyAverageCompletionSeconds(el),
+            averageCompletionMinutes: this.getStudyAverageCompletionMinutes(el),
             slots: this.getStudySlots(el),
         };
     }

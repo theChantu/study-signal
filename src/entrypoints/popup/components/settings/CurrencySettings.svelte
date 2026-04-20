@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { CircleDollarSign, ChevronDown } from "@lucide/svelte";
+    import { CircleDollarSign } from "@lucide/svelte";
+    import SelectControl from "@/components/SelectControl.svelte";
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
     import Field from "@/components/Field.svelte";
@@ -42,25 +43,19 @@
     >
         {#snippet children()}
             <Field label="Selected currency" id="currency">
-                <div class="relative text-popup-text-faint">
-                    <select
-                        id="currency"
-                        class="popup-select-control"
-                        bind:value={model.currency.target}
-                        onchange={(e) =>
-                            handleCurrencyChange(
-                                (e.target as HTMLSelectElement)
-                                    .value as Currency,
-                            )}
-                    >
-                        {#each currencyKeys as currency}
-                            <option value={currency}>{currency}</option>
-                        {/each}
-                    </select>
-                    <div class="popup-control-chevron">
-                        <ChevronDown size={12} strokeWidth={2.4} />
-                    </div>
-                </div>
+                <SelectControl
+                    id="currency"
+                    bind:value={model.currency.target}
+                    onchange={(e) =>
+                        handleCurrencyChange(
+                            (e.target as HTMLSelectElement)
+                                .value as Currency,
+                        )}
+                >
+                    {#each currencyKeys as currency}
+                        <option value={currency}>{currency}</option>
+                    {/each}
+                </SelectControl>
             </Field>
         {/snippet}
     </ToggleControl>

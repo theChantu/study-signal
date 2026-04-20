@@ -7,7 +7,9 @@
 
     let { item }: StudyCardModel = $props();
 
-    const isNew = $derived(item.firstSeenAt > popupSession.seenAt);
+    const highlighted = $derived(
+        item.firstSeenAt > popupSession.seenAt && item.matchesAlertRules,
+    );
 
     const title = $derived(item.title ?? "Untitled study");
     const researcher = $derived(item.researcher ?? "Researcher unavailable");
@@ -15,7 +17,7 @@
     const reward = $derived(formatValue(item.reward, item.symbol));
     const rate = $derived(formatValue(item.rate, item.symbol));
     const averageCompletion = $derived(
-        formatDuration(item.averageCompletionSeconds),
+        formatDuration(item.averageCompletionMinutes),
     );
     const slots = $derived(item.slots);
     const accent = $derived(item.color ?? "rgb(100, 116, 139)");
@@ -38,11 +40,11 @@
 {#snippet cardContent()}
     <div class="flex items-start justify-between gap-2">
         <div class="flex min-w-0 flex-1 items-center gap-1.5">
-            {#if isNew}
+            {#if highlighted}
                 <span
                     class="relative inline-flex h-2 w-2 shrink-0"
-                    title="New study"
-                    aria-label="New study"
+                    title="Matches your alert rules"
+                    aria-label="Matches your alert rules"
                 >
                     <span
                         class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"

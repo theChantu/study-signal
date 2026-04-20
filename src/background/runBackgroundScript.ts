@@ -7,7 +7,7 @@ import { handleStoreMutate } from "./handlers/handleStoreMutate";
 import {
     handleNotificationClicked,
     handleNotificationClosed,
-    handleStudyAlert,
+    deliverNotifications,
     handleStudiesDetected,
 } from "./handlers/handleNotifications";
 import {
@@ -140,7 +140,7 @@ function runBackgroundScript() {
     );
 
     onExtensionMessage("study-alert", (payload) =>
-        handleStudyAlert(store, payload),
+        deliverNotifications(store, payload),
     );
 
     store.globals.subscribe((changed) => {

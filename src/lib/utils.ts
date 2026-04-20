@@ -54,10 +54,6 @@ function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
 
-function cleanResearcherName(name: string): string {
-    return name.trim().toLowerCase();
-}
-
 function rateToColor(rate: number, min = 7, max = 15) {
     const clamped = Math.min(Math.max(rate, min), max);
 
@@ -78,7 +74,6 @@ function rateToColor(rate: number, min = 7, max = 15) {
 
 export {
     clamp,
-    cleanResearcherName,
     extractSymbol,
     getRandomTimeoutMs,
     scheduleTimeout,

@@ -41,6 +41,7 @@ export type StudyItem = RuntimeStudy & {
     color: string | null;
     normalizedReward: number | null;
     normalizedRate: number | null;
+    matchesAlertRules: boolean;
 };
 
 export type SettingComponentProps = {

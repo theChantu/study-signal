@@ -14,7 +14,7 @@ export function createStudy(
         symbol: "$",
         devices: [],
         peripherals: [],
-        averageCompletionSeconds: 600,
+        averageCompletionMinutes: 10,
         slots: 10,
         ...overrides,
     };

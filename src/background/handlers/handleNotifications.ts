@@ -5,14 +5,22 @@ import {
     type ProviderName,
 } from "@/providers/providers";
 import { NOTIFY_TTL_MS, NAME_CACHE_TTL_MS } from "@/constants";
-import { capitalize, cleanResearcherName } from "@/lib/utils";
+import { capitalize } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { sites, type SupportedHosts } from "@/adapters/siteConfigs";
 import { playSound } from "@/lib/playSound";
+import {
+    matchesAlertRules,
+    type AlertRules,
+} from "@/lib/notifications/alertRules";
 
 import type { StudyInfo } from "@/adapters/BaseAdapter";
 import type { MessageMap } from "@/messages/types";
-import type { GlobalSettings, NotificationSound } from "@/store/types";
+import type {
+    GlobalSettings,
+    NotificationSound,
+    SiteSettings,
+} from "@/store/types";
 
 export interface NotificationData {
     title: string;
@@ -175,6 +183,27 @@ function buildNotification(
     };
 }
 
+function pruneStudyCache(cache: SiteSettings["studyAlerts"]["cache"]) {
+    const now = Date.now();
+
+    const studies = { ...cache.studies };
+    for (const [key, timestamp] of Object.entries(studies)) {
+        if (now - timestamp >= NOTIFY_TTL_MS) delete studies[key];
+    }
+
+    const researchers = { ...cache.researchers };
+    for (const [name, timestamp] of Object.entries(researchers)) {
+        if (now - timestamp >= NAME_CACHE_TTL_MS) delete researchers[name];
+    }
+
+    const titles = { ...cache.titles };
+    for (const [title, timestamp] of Object.entries(titles)) {
+        if (now - timestamp >= NAME_CACHE_TTL_MS) delete titles[title];
+    }
+
+    return { studies, researchers, titles };
+}
+
 export async function handleStudiesDetected(
     store: SettingsStore,
     payload: MessageMap["studies-detected"],
@@ -186,42 +215,36 @@ export async function handleStudiesDetected(
     const now = Date.now();
 
     let newStudies: StudyInfo[] = [];
-    let included: string[] = [];
-    let excluded: string[] = [];
+    let rules!: AlertRules;
 
     await siteStore.update((current) => {
-        const { cache } = current.studyAlerts;
-        included = current.studyAlerts.included;
-        excluded = current.studyAlerts.excluded;
+        rules = current.studyAlerts.rules;
+        const nextStudyCache = pruneStudyCache(current.studyAlerts.cache);
 
-        newStudies = studies.filter((s) => !(s.id in cache.studies));
+        newStudies = studies.filter((s) => !(s.id in nextStudyCache.studies));
         if (newStudies.length === 0) return {};
 
-        const nextStudyCache = { ...cache.studies };
-        for (const [key, timestamp] of Object.entries(nextStudyCache)) {
-            if (now - timestamp >= NOTIFY_TTL_MS) delete nextStudyCache[key];
-        }
         for (const study of newStudies) {
-            nextStudyCache[study.id] = now;
+            nextStudyCache.studies[study.id] = now;
         }
 
-        const nextResearcherCache = { ...cache.researchers };
-        for (const [name, timestamp] of Object.entries(nextResearcherCache)) {
-            if (now - timestamp >= NAME_CACHE_TTL_MS)
-                delete nextResearcherCache[name];
-        }
         for (const study of newStudies) {
             if (!study.researcher) continue;
-            const name = cleanResearcherName(study.researcher);
-            if (!(name in cache.researchers)) nextResearcherCache[name] = now;
+            const name = study.researcher.trim();
+            if (!(name in nextStudyCache.researchers))
+                nextStudyCache.researchers[name] = now;
+        }
+
+        for (const study of newStudies) {
+            if (!study.title) continue;
+            const title = study.title.trim();
+            if (title && !(title in nextStudyCache.titles))
+                nextStudyCache.titles[title] = now;
         }
 
         return {
             studyAlerts: {
-                cache: {
-                    studies: nextStudyCache,
-                    researchers: nextResearcherCache,
-                },
+                cache: nextStudyCache,
             },
         };
     });
@@ -230,30 +253,41 @@ export async function handleStudiesDetected(
 
     if (!hidden) return;
 
-    const includedSet = new Set(included);
-    const excludedSet = new Set(excluded);
-
     const notifications: NotificationData[] = [];
     for (const study of newStudies) {
-        const { researcher } = study;
-        if (!researcher) continue;
-        const cleaned = cleanResearcherName(researcher);
-
-        if (excludedSet.has(cleaned)) continue;
-        if (includedSet.size > 0 && !includedSet.has(cleaned)) continue;
+        if (!matchesAlertRules(study, rules)) continue;
 
         notifications.push(buildNotification(study, siteName));
     }
 
     if (notifications.length === 0) return;
 
-    await handleStudyAlert(store, {
+    await deliverNotifications(store, {
         siteName,
         notifications,
     });
 }
 
-export async function handleStudyAlert(
+async function sendProviderNotificationsAndPersist(
+    store: SettingsStore,
+    siteName: string,
+    notifications: NotificationData[],
+    providers: GlobalSettings["providers"],
+): Promise<boolean> {
+    const { sent, updatedProviders } = await sendProviderNotifications(
+        siteName,
+        notifications,
+        providers,
+    );
+
+    if (Object.keys(updatedProviders).length > 0) {
+        await store.globals.set({ providers: updatedProviders });
+    }
+
+    return sent;
+}
+
+export async function deliverNotifications(
     store: SettingsStore,
     payload: MessageMap["study-alert"],
 ): Promise<boolean> {
@@ -285,19 +319,12 @@ export async function handleStudyAlert(
     ]);
 
     if (mode === "provider") {
-        const { sent, updatedProviders } = await sendProviderNotifications(
+        return await sendProviderNotificationsAndPersist(
+            store,
             siteName,
             notifications,
             providers,
         );
-
-        if (Object.keys(updatedProviders).length > 0) {
-            await store.globals.set({
-                providers: updatedProviders,
-            });
-        }
-
-        return sent;
     }
 
     const enabledProviders = Object.entries(providers).filter(
@@ -310,19 +337,12 @@ export async function handleStudyAlert(
     const state = await browser.idle.queryState(idleThreshold);
 
     if (state === "idle" || state === "locked") {
-        const { sent, updatedProviders } = await sendProviderNotifications(
+        return await sendProviderNotificationsAndPersist(
+            store,
             siteName,
             notifications,
             providers,
         );
-
-        if (Object.keys(updatedProviders).length > 0) {
-            await store.globals.set({
-                providers: updatedProviders,
-            });
-        }
-
-        return sent;
     }
 
     if (browserEnabled) return await sendBrowserNotifications(notifications);

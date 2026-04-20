@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { Bell, ChevronDown } from "@lucide/svelte";
+    import { Bell } from "@lucide/svelte";
     import Field from "@/components/Field.svelte";
+    import SelectControl from "@/components/SelectControl.svelte";
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
-    import { capitalize, cleanResearcherName } from "@/lib/utils";
-    import TagInput from "@/components/TagInput.svelte";
+    import { capitalize } from "@/lib/utils";
     import type {
         DeepPartial,
         GlobalSettings,
@@ -12,21 +12,26 @@
         SiteSettings,
     } from "@/store/types";
     import { playSound } from "@/lib/playSound";
+    import AlertRuleGroupEditor from "./AlertRuleGroupEditor.svelte";
 
+    import type {
+        AlertRuleGroup,
+        AlertRules,
+    } from "@/lib/notifications/alertRules";
     import type { NotificationSettingsModel } from "../../types";
 
     let { model }: { model: NotificationSettingsModel } = $props();
+
+    let ruleSuggestions = $derived({
+        researcher: Object.keys(model.studyAlerts.cache.researchers),
+        title: Object.keys(model.studyAlerts.cache.titles),
+    });
 
     const notificationSounds = [
         "alert",
         "bloop",
         "chime",
     ] as const satisfies NotificationSound[];
-
-    type ResearcherKey = Exclude<
-        keyof SiteSettings["studyAlerts"],
-        "cache" | "enabled"
-    >;
 
     function patchGlobalNotifications(
         data: DeepPartial<GlobalSettings["notifications"]>,
@@ -51,24 +56,13 @@
         });
     }
 
-    function updateResearcherList(
-        key: ResearcherKey,
-        name: string,
-        method: "add" | "remove",
-    ) {
-        if (method === "add") {
-            if (model.studyAlerts[key].includes(name)) return;
-
-            patchSiteNotifications({
-                [key]: [...model.studyAlerts[key], name],
-            });
-        } else {
-            patchSiteNotifications({
-                [key]: model.studyAlerts[key].filter(
-                    (candidate) => candidate !== name,
-                ),
-            });
-        }
+    function updateRuleGroup(key: keyof AlertRules, group: AlertRuleGroup) {
+        patchSiteNotifications({
+            rules: {
+                ...model.studyAlerts.rules,
+                [key]: group,
+            },
+        });
     }
 
     function onVolumeChange(e: Event) {
@@ -146,25 +140,19 @@
             >
                 {#snippet children()}
                     <Field label="Alert sound" id="notification-sound">
-                        <div class="relative text-popup-text-faint">
-                            <select
-                                id="notification-sound"
-                                class="popup-select-control"
-                                bind:value={
-                                    model.notifications.delivery.sound.type
-                                }
-                                onchange={onSoundChange}
-                            >
-                                {#each notificationSounds as sound}
-                                    <option value={sound}>
-                                        {capitalize(sound)}
-                                    </option>
-                                {/each}
-                            </select>
-                            <div class="popup-control-chevron">
-                                <ChevronDown size={12} strokeWidth={2.4} />
-                            </div>
-                        </div>
+                        <SelectControl
+                            id="notification-sound"
+                            bind:value={
+                                model.notifications.delivery.sound.type
+                            }
+                            onchange={onSoundChange}
+                        >
+                            {#each notificationSounds as sound}
+                                <option value={sound}>
+                                    {capitalize(sound)}
+                                </option>
+                            {/each}
+                        </SelectControl>
                     </Field>
                     <Field
                         label={`Volume (${Math.round(model.notifications.delivery.sound.volume * 100)}%)`}
@@ -185,25 +173,19 @@
                     </Field>
                 {/snippet}
             </ToggleControl>
-            <TagInput
-                title="Included researchers"
-                values={model.studyAlerts.included}
-                suggestions={Object.keys(model.studyAlerts.cache.researchers)}
-                placeholder="Add researcher"
-                clean={cleanResearcherName}
-                onAdd={(name) => updateResearcherList("included", name, "add")}
-                onRemove={(name) =>
-                    updateResearcherList("included", name, "remove")}
+            <AlertRuleGroupEditor
+                title="Notify when"
+                group={model.studyAlerts.rules.include}
+                emptyLabel="All new studies"
+                suggestions={ruleSuggestions}
+                onChange={(group) => updateRuleGroup("include", group)}
             />
-            <TagInput
-                title="Excluded researchers"
-                values={model.studyAlerts.excluded}
-                suggestions={Object.keys(model.studyAlerts.cache.researchers)}
-                placeholder="Add researcher"
-                clean={cleanResearcherName}
-                onAdd={(name) => updateResearcherList("excluded", name, "add")}
-                onRemove={(name) =>
-                    updateResearcherList("excluded", name, "remove")}
+            <AlertRuleGroupEditor
+                title="Never notify when"
+                group={model.studyAlerts.rules.exclude}
+                emptyLabel="No exclusions"
+                suggestions={ruleSuggestions}
+                onChange={(group) => updateRuleGroup("exclude", group)}
             />
         {/snippet}
     </ToggleControl>

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronDown, LoaderCircle } from "@lucide/svelte";
+    import { LoaderCircle } from "@lucide/svelte";
+    import SelectControl from "@/components/SelectControl.svelte";
 
     import {
         sites,
@@ -28,23 +29,18 @@
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
     <div class="shrink-0 px-4">
-        <div class="relative text-popup-text-faint">
-            <select
-                class="popup-select-control font-medium"
-                value={model.activeSite.url}
-                onchange={(e) =>
-                    selectHost(e.currentTarget.value as SupportedHosts)}
-            >
-                {#each supportedHosts as url}
-                    <option value={url}>
-                        {capitalize(sites[url].name)}
-                    </option>
-                {/each}
-            </select>
-            <div class="popup-control-chevron">
-                <ChevronDown size={12} strokeWidth={2.4} />
-            </div>
-        </div>
+        <SelectControl
+            class="font-medium"
+            value={model.activeSite.url}
+            onchange={(e) =>
+                selectHost(e.currentTarget.value as SupportedHosts)}
+        >
+            {#each supportedHosts as url}
+                <option value={url}>
+                    {capitalize(sites[url].name)}
+                </option>
+            {/each}
+        </SelectControl>
     </div>
 
     <div

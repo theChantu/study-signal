@@ -1,23 +1,37 @@
 <script lang="ts">
     import { X } from "@lucide/svelte";
+    import SuggestionList from "./SuggestionList.svelte";
     import Subsection from "./Subsection.svelte";
 
-    export let title: string;
-    export let values: string[];
-    export let suggestions: string[] = [];
-    export let placeholder: string = "Add...";
-    export let onAdd: (value: string) => void;
-    export let onRemove: (value: string) => void;
-    export let clean: (value: string) => string = (v) => v.trim();
+    type Props = {
+        title: string;
+        values: string[];
+        suggestions?: string[];
+        placeholder?: string;
+        onAdd: (value: string) => void;
+        onRemove: (value: string) => void;
+        clean?: (value: string) => string;
+    };
 
-    let input = "";
+    let {
+        title,
+        values,
+        suggestions = [],
+        placeholder = "Add...",
+        onAdd,
+        onRemove,
+        clean = (v: string) => v.trim(),
+    }: Props = $props();
 
-    $: filtered =
+    let input = $state("");
+
+    let filtered = $derived(
         input.length > 0
             ? suggestions.filter(
                   (s) => s.includes(clean(input)) && !values.includes(s),
               )
-            : [];
+            : [],
+    );
 
     function add(value: string) {
         const cleaned = clean(value);
@@ -53,7 +67,7 @@
                     {value}
                     <button
                         class="inline-flex cursor-pointer items-center border-none bg-transparent p-0 leading-none text-popup-text-faint hover:text-popup-danger-text"
-                        on:click={() => onRemove(value)}
+                        onclick={() => onRemove(value)}
                         aria-label="Remove {value}"
                     >
                         <X size={10} />
@@ -68,23 +82,8 @@
             {placeholder}
             class="popup-control box-border placeholder:text-popup-text-faint"
             bind:value={input}
-            on:keydown={handleKeydown}
+            onkeydown={handleKeydown}
         />
-        {#if filtered.length > 0}
-            <ul
-                class="absolute top-full left-0 right-0 z-10 mt-1 max-h-35 list-none overflow-y-auto rounded-md border border-popup-border bg-popup-surface py-1 shadow-lg"
-            >
-                {#each filtered.slice(0, 5) as suggestion}
-                    <li>
-                        <button
-                            class="block w-full cursor-pointer border-none bg-transparent px-2.5 py-1.5 text-left text-xs font-[inherit] text-popup-text-soft hover:bg-popup-surface-muted"
-                            on:mousedown|preventDefault={() => add(suggestion)}
-                        >
-                            {suggestion}
-                        </button>
-                    </li>
-                {/each}
-            </ul>
-        {/if}
+        <SuggestionList items={filtered.slice(0, 5)} onSelect={add} />
     </div>
 </Subsection>

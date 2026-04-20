@@ -1,15 +1,24 @@
 <script lang="ts">
-    import type { Component } from "svelte";
+    import type { Component, Snippet } from "svelte";
 
-    export let title: string;
-    export let icon: Component<{ size: number; strokeWidth: number }>;
-    export let tone: "default" | "muted" = "default";
+    type Props = {
+        title: string;
+        icon: Component<{ size: number; strokeWidth: number }>;
+        tone?: "default" | "muted";
+        children?: Snippet;
+    };
+
+    let { title, icon: Icon, tone = "default", children }: Props = $props();
 </script>
 
 <div class="border-t border-popup-border pt-3">
-    <h2 class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""}`}>
-        <svelte:component this={icon} size={14} strokeWidth={2.5} />
+    <h2
+        class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""}`}
+    >
+        <Icon size={14} strokeWidth={2.5} />
         {title}
     </h2>
-    <slot />
+    {#if children}
+        {@render children()}
+    {/if}
 </div>

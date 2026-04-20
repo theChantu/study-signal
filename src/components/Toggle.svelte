@@ -1,8 +1,12 @@
 <script lang="ts">
-    export let title: string;
-    export let description: string;
-    export let value: boolean;
-    export let onClick: () => void;
+    type Props = {
+        title: string;
+        description: string;
+        value: boolean;
+        onClick: () => void;
+    };
+
+    let { title, description, value, onClick }: Props = $props();
 </script>
 
 <label class="flex cursor-pointer items-center justify-between gap-4 border-t border-popup-border-subtle py-2">
@@ -12,7 +16,7 @@
     </div>
     <button
         class="relative h-5 w-9 shrink-0 cursor-pointer rounded-full border-none p-0 transition-colors duration-150 {value ? 'bg-popup-accent-text' : 'bg-popup-border'}"
-        on:click={onClick}
+        onclick={onClick}
         role="switch"
         aria-checked={value}
         aria-label={title}

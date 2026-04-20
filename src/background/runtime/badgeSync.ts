@@ -1,6 +1,7 @@
 import { browser } from "#imports";
 import { readRuntimeCache, type RuntimeCache } from "./runtimeCache";
 import { setBadgeCount } from "./badge";
+import { matchesAlertRules } from "@/lib/notifications/alertRules";
 
 import type { SettingsStore } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
@@ -49,7 +50,7 @@ export function createBadgeSync(
         });
     });
 
-    function countNewStudies(): number {
+    async function countNewStudies(): Promise<number> {
         if (popupOpen) return 0;
 
         const runtimeCache = getRuntimeCache();
@@ -66,10 +67,20 @@ export function createBadgeSync(
             );
             if (!aggregated) continue;
 
+            const siteSettings = await store.sites
+                .entry(siteName)
+                .get(["studyAlerts"]);
+            const { rules } = siteSettings.studyAlerts;
+
             const meta = runtimeMeta.studies?.[siteName];
             for (const study of aggregated) {
                 const firstSeenAt = meta?.[study.id]?.firstSeenAt ?? 0;
-                if (firstSeenAt > lastPopupOpenedAt) count += 1;
+                if (
+                    firstSeenAt > lastPopupOpenedAt &&
+                    matchesAlertRules(study, rules)
+                ) {
+                    count += 1;
+                }
             }
         }
 
@@ -79,7 +90,7 @@ export function createBadgeSync(
     async function recompute(): Promise<void> {
         try {
             await ensureBadgeSync();
-            await setBadgeCount(countNewStudies());
+            await setBadgeCount(await countNewStudies());
         } catch (error) {
             console.error("Error recomputing badge:", error);
         }

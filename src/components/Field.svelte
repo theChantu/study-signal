@@ -1,8 +1,14 @@
 <script lang="ts">
     import Subsection from "./Subsection.svelte";
+    import type { Snippet } from "svelte";
 
-    export let label: string;
-    export let id: string = "";
+    type Props = {
+        label: string;
+        id?: string;
+        children?: Snippet;
+    };
+
+    let { label, id = "", children }: Props = $props();
 </script>
 
 <Subsection
@@ -12,5 +18,7 @@
     <label for={id} class="text-xs font-medium text-popup-text-muted">
         {label}
     </label>
-    <slot />
+    {#if children}
+        {@render children()}
+    {/if}
 </Subsection>

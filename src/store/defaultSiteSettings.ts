@@ -1,3 +1,5 @@
+import { defaultAlertRules } from "@/lib/notifications/defaultAlertRules";
+
 import type { SiteSettings } from "./types";
 
 const defaultSiteSettings = Object.freeze({
@@ -5,10 +7,10 @@ const defaultSiteSettings = Object.freeze({
         cache: {
             studies: {},
             researchers: {},
+            titles: {},
         },
         enabled: true,
-        included: [],
-        excluded: [],
+        rules: defaultAlertRules,
     },
     autoReload: {
         enabled: false,
