@@ -12,7 +12,7 @@
 </script>
 
 <Subsection
-    className="flex flex-col gap-1.5"
+    class="flex flex-col gap-1.5"
     borderClass="border-popup-border-subtle"
 >
     <label for={id} class="text-xs font-medium text-popup-text-muted">

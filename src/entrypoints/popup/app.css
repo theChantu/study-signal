@@ -92,6 +92,14 @@
     .popup-analytics-accent {
         @apply text-popup-accent-text;
     }
+
+    .popup-alert-condition-grid {
+        @apply grid min-w-0 flex-1 gap-1.5;
+        grid-template-columns:
+            minmax(6rem, 1.35fr)
+            minmax(4.25rem, 0.75fr)
+            minmax(5rem, 1fr);
+    }
 }
 
 html,

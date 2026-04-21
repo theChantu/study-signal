@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { X } from "@lucide/svelte";
     import {
         dismissToast,
         pauseToast,
@@ -22,6 +23,7 @@
 
             {#if toast.actionLabel}
                 <button
+                    type="button"
                     class="shrink-0 cursor-pointer rounded border-none bg-transparent p-0 text-xs font-semibold text-popup-accent-text transition-colors hover:text-popup-accent-text-strong"
                     onclick={() => runToastAction(toast.id)}
                 >
@@ -30,11 +32,12 @@
             {/if}
 
             <button
+                type="button"
                 class="shrink-0 cursor-pointer rounded border-none bg-transparent p-0 text-sm leading-none text-popup-text-faint transition-colors hover:text-popup-text-soft"
                 onclick={() => dismissToast(toast.id)}
                 aria-label="Dismiss notification"
             >
-                ×
+                <X size={14} strokeWidth={2.2} />
             </button>
         </div>
     {/each}

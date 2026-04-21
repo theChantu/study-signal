@@ -23,12 +23,31 @@
     }
 
     function handleTelegramToggle() {
+        const telegram = model.providers.telegram;
+
         void model.queueMutation("store-patch", {
             namespace: "globals",
             data: {
                 providers: {
                     telegram: {
-                        enabled: !model.providers.telegram?.enabled,
+                        enabled: !(telegram?.enabled ?? false),
+                        botToken: telegram?.botToken ?? "",
+                        onlyWhenIdle: telegram?.onlyWhenIdle ?? true,
+                    },
+                },
+            },
+        });
+    }
+
+    function handleTelegramIdleToggle() {
+        void model.queueMutation("store-patch", {
+            namespace: "globals",
+            data: {
+                providers: {
+                    telegram: {
+                        onlyWhenIdle: !(
+                            model.providers.telegram?.onlyWhenIdle ?? false
+                        ),
                     },
                 },
             },
@@ -59,29 +78,46 @@
             class="popup-inline-link ml-1">Open the setup guide</a
         >
     </div>
-    <Field label="Idle threshold (minutes)" id="idle-threshold">
-        <input
-            id="idle-threshold"
-            type="number"
-            min="1"
-            step="1"
-            class="popup-control box-border"
-            value={Math.max(1, Math.round(model.idleThreshold / 60))}
-            onchange={(e) => {
-                const minutes = parsePositiveInt(e.currentTarget.value);
-                if (minutes === null) return;
-                handleIdleThresholdChange(minutes);
-            }}
-        />
-    </Field>
     <Subsection withDivider={false}>
         <ToggleControl
             title="Telegram alerts"
-            description="Send alerts through Telegram when you are idle."
+            description="Send matching alerts through Telegram."
             value={model.providers.telegram?.enabled ?? false}
             onClick={handleTelegramToggle}
         >
             {#snippet children()}
+                <ToggleControl
+                    title="Only when idle"
+                    description="Use Telegram only when the browser reports you are away."
+                    value={model.providers.telegram?.onlyWhenIdle ?? false}
+                    onClick={handleTelegramIdleToggle}
+                >
+                    {#snippet children()}
+                        <Field
+                            label="Idle threshold (minutes)"
+                            id="idle-threshold"
+                        >
+                            <input
+                                id="idle-threshold"
+                                type="number"
+                                min="1"
+                                step="1"
+                                class="popup-control box-border"
+                                value={Math.max(
+                                    1,
+                                    Math.round(model.idleThreshold / 60),
+                                )}
+                                onchange={(e) => {
+                                    const minutes = parsePositiveInt(
+                                        e.currentTarget.value,
+                                    );
+                                    if (minutes === null) return;
+                                    handleIdleThresholdChange(minutes);
+                                }}
+                            />
+                        </Field>
+                    {/snippet}
+                </ToggleControl>
                 <Field label="Bot token" id="telegram-bot-token">
                     <input
                         id="telegram-bot-token"

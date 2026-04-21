@@ -68,14 +68,33 @@ type ProviderSendResult = {
     updatedProviders: Partial<ProviderConfigMap>;
 };
 
+type ProviderEntries = Array<[ProviderName, ProviderConfigMap[ProviderName]]>;
+
+function getEnabledProviders(
+    providers: GlobalSettings["providers"],
+): ProviderEntries {
+    return Object.entries(providers).filter(
+        (entry): entry is ProviderEntries[number] => entry[1].enabled,
+    );
+}
+
+function entriesToProviders(
+    entries: ProviderEntries,
+): GlobalSettings["providers"] {
+    return Object.fromEntries(entries) as GlobalSettings["providers"];
+}
+
+async function isIdleOrLocked(idleThreshold: number): Promise<boolean> {
+    const state = await browser.idle.queryState(idleThreshold);
+    return state === "idle" || state === "locked";
+}
+
 async function sendProviderNotifications(
     siteName: string,
     notifications: NotificationData[],
     providers: GlobalSettings["providers"],
 ): Promise<ProviderSendResult> {
-    const enabledProviders = Object.entries(providers).filter(
-        ([, config]) => config.enabled,
-    );
+    const enabledProviders = getEnabledProviders(providers);
 
     let providerSendResult: ProviderSendResult = {
         sent: false,
@@ -95,8 +114,10 @@ async function sendProviderNotifications(
                 })
                 .join("\n\n");
 
+            const studyLabel = notifications.length === 1 ? "Study" : "Studies";
+
             const ok = await provider.sendMessage({
-                title: `${capitalize(siteName)} - ${notifications.length} New Study${notifications.length > 1 ? "s" : ""}`,
+                title: `${capitalize(siteName)} - ${notifications.length} New ${studyLabel}`,
                 body: combined,
             });
 
@@ -287,6 +308,73 @@ async function sendProviderNotificationsAndPersist(
     return sent;
 }
 
+async function sendProviderEntriesAndPersist(
+    store: SettingsStore,
+    siteName: string,
+    notifications: NotificationData[],
+    providers: ProviderEntries,
+): Promise<boolean> {
+    if (providers.length === 0) return false;
+
+    return await sendProviderNotificationsAndPersist(
+        store,
+        siteName,
+        notifications,
+        entriesToProviders(providers),
+    );
+}
+
+async function deliverAutoNotifications(
+    store: SettingsStore,
+    siteName: string,
+    notifications: NotificationData[],
+    browserEnabled: boolean,
+    providers: GlobalSettings["providers"],
+    idleThreshold: number,
+): Promise<boolean> {
+    const enabledProviders = getEnabledProviders(providers);
+
+    const immediate: ProviderEntries = [];
+    const idleOnly: ProviderEntries = [];
+
+    for (const entry of enabledProviders) {
+        const [, config] = entry;
+        if (config.onlyWhenIdle) {
+            idleOnly.push(entry);
+        } else {
+            immediate.push(entry);
+        }
+    }
+
+    const deliveryResults: boolean[] = [];
+
+    deliveryResults.push(
+        await sendProviderEntriesAndPersist(
+            store,
+            siteName,
+            notifications,
+            immediate,
+        ),
+    );
+
+    if (idleOnly.length > 0 && (await isIdleOrLocked(idleThreshold))) {
+        deliveryResults.push(
+            await sendProviderEntriesAndPersist(
+                store,
+                siteName,
+                notifications,
+                idleOnly,
+            ),
+        );
+    }
+
+    if (browserEnabled) {
+        deliveryResults.push(await sendBrowserNotifications(notifications));
+    }
+
+    return deliveryResults.some(Boolean);
+}
+
 export async function deliverNotifications(
     store: SettingsStore,
     payload: MessageMap["study-alert"],
@@ -327,27 +415,14 @@ export async function deliverNotifications(
         );
     }
 
-    const enabledProviders = Object.entries(providers).filter(
-        ([, config]) => config.enabled,
+    return await deliverAutoNotifications(
+        store,
+        siteName,
+        notifications,
+        browserEnabled,
+        providers,
+        idleThreshold,
     );
-    if (browserEnabled && enabledProviders.length === 0) {
-        return await sendBrowserNotifications(notifications);
-    }
-
-    const state = await browser.idle.queryState(idleThreshold);
-
-    if (state === "idle" || state === "locked") {
-        return await sendProviderNotificationsAndPersist(
-            store,
-            siteName,
-            notifications,
-            providers,
-        );
-    }
-
-    if (browserEnabled) return await sendBrowserNotifications(notifications);
-
-    return false;
 }
 
 export async function handleNotificationClicked(id: string): Promise<void> {

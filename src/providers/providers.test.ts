@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BaseProvider } from "./BaseProvider";
 import { TelegramProvider } from "./TelegramProvider";
 
+import type { ProviderConfigMap } from "./providers";
+
 function createResponse(ok: boolean, body: unknown = {}) {
     return {
         ok,
@@ -12,6 +14,18 @@ function createResponse(ok: boolean, body: unknown = {}) {
 async function settleRetriedSend(sendPromise: Promise<boolean>) {
     await vi.runAllTimersAsync();
     return await sendPromise;
+}
+
+function createProviderConfig<K extends keyof ProviderConfigMap>(
+    type: K,
+    overrides?: Partial<ProviderConfigMap[K]>,
+) {
+    return {
+        enabled: true,
+        botToken: "token",
+        onlyWhenIdle: true,
+        ...overrides,
+    };
 }
 
 class RetryTestProvider extends BaseProvider<{ enabled: boolean }> {
@@ -100,6 +114,7 @@ describe("TelegramProvider", () => {
         const provider = new TelegramProvider({
             enabled: true,
             botToken: "token",
+            onlyWhenIdle: true,
         });
 
         await provider.sendMessage({ title: "One", body: "Body" });
@@ -122,13 +137,14 @@ describe("TelegramProvider", () => {
         const fetchMock = vi.mocked(globalThis.fetch);
         fetchMock.mockResolvedValue(createResponse(false));
 
-        const provider = new TelegramProvider({
-            enabled: true,
-            botToken: "token",
-            chatId: 123,
-        });
+        const provider = new TelegramProvider(
+            createProviderConfig("telegram", { chatId: 123 }),
+        );
 
-        const sendPromise = provider.sendMessage({ title: "Fail", body: "Body" });
+        const sendPromise = provider.sendMessage({
+            title: "Fail",
+            body: "Body",
+        });
         await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         expect(fetchMock).toHaveBeenCalledTimes(4);
@@ -139,13 +155,14 @@ describe("TelegramProvider", () => {
         const fetchMock = vi.mocked(globalThis.fetch);
         fetchMock.mockRejectedValue(new Error("boom"));
 
-        const provider = new TelegramProvider({
-            enabled: true,
-            botToken: "token",
-            chatId: 123,
-        });
+        const provider = new TelegramProvider(
+            createProviderConfig("telegram", { chatId: 123 }),
+        );
 
-        const sendPromise = provider.sendMessage({ title: "Throw", body: "Body" });
+        const sendPromise = provider.sendMessage({
+            title: "Throw",
+            body: "Body",
+        });
         await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         expect(fetchMock).toHaveBeenCalledTimes(4);
@@ -159,9 +176,13 @@ describe("TelegramProvider", () => {
         const provider = new TelegramProvider({
             enabled: true,
             botToken: "token",
+            onlyWhenIdle: true,
         });
 
-        const sendPromise = provider.sendMessage({ title: "Missing", body: "Body" });
+        const sendPromise = provider.sendMessage({
+            title: "Missing",
+            body: "Body",
+        });
         await expect(settleRetriedSend(sendPromise)).resolves.toBe(false);
 
         const updateCalls = fetchMock.mock.calls.filter(([input]) =>
@@ -179,11 +200,9 @@ describe("TelegramProvider", () => {
         const fetchMock = vi.mocked(globalThis.fetch);
         fetchMock.mockResolvedValue(createResponse(true));
 
-        const provider = new TelegramProvider({
-            enabled: true,
-            botToken: "token",
-            chatId: 123,
-        });
+        const provider = new TelegramProvider(
+            createProviderConfig("telegram", { chatId: 123 }),
+        );
 
         await provider.sendMessage({ title: "T", body: "x".repeat(9000) });
 
@@ -214,11 +233,11 @@ describe("TelegramProvider", () => {
             return createResponse(false);
         });
 
-        const provider = new TelegramProvider({
-            enabled: true,
-            botToken: "token",
-            chatId: 111,
-        });
+        const provider = new TelegramProvider(
+            createProviderConfig("telegram", {
+                chatId: 111,
+            }),
+        );
 
         const sendPromise = provider.sendMessage({
             title: "Recover",

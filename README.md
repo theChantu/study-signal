@@ -16,14 +16,12 @@ A browser extension that monitors research study platforms and alerts you when n
 
 ## Features
 
-- **Live Studies Inbox:** View cached studies from supported sites in one popup tab, with sorting by reward and hourly rate.
+- **Studies Inbox:** View studies from supported sites in one popup tab, with various sorting options.
 - **Highlight Rates:** Applies color scaling to hourly rates to highlight higher and lower paying studies.
 - **Currency Conversion:** Converts rewards into your selected target currency.
-- **Direct Study Links:** Open study detail pages directly from the popup or supported listings pages.
-- **Notifications:** Browser alerts with optional sound, provider delivery, and researcher include/exclude filters.
+- **Notifications:** Study alerts with configurable rules for title, researcher, reward, hourly rate, slots, and average completion time.
 - **Auto Reload:** Automatically refreshes the page at random intervals to check for new studies.
 - **Analytics:** Tracks completed studies and daily progress per supported site.
-- **Mixed Scope Settings:** Configure site-specific study behavior alongside global delivery and display preferences.
 
 ## Supported Sites
 
@@ -56,21 +54,24 @@ A browser extension that monitors research study platforms and alerts you when n
 
 ## Provider Setup
 
-The extension supports Telegram notifications when your device is idle/locked and the provider is enabled.
-Browser notifications are available directly in the extension, and sound alerts are supported in Chromium-based browsers.
+The extension supports browser notifications, optional sounds, and Telegram provider delivery.
+Telegram can send every matching alert, or only send when your browser reports that you are idle/locked.
 
 ### Telegram setup
 
 1. Open Telegram and start a chat with [@BotFather](https://t.me/BotFather).
 2. Create a bot using `/newbot` and copy the bot token.
 3. Send at least one message to your bot from your Telegram account.
-4. Paste the token into **Providers -> Telegram -> Bot token**.
+4. Open **Settings -> Delivery**, enable **Telegram alerts**, and paste the token into **Bot token**.
+5. In **Settings -> Developer**, enable **Developer mode**, then click **Provider** under **Test notifications**. This sends a test message and saves the Telegram chat ID for future alerts.
+6. Turn on **Only when idle** if you want Telegram to act as an away-from-computer fallback instead of sending every matching alert.
 
 ### Troubleshooting
 
 - Ensure the extension has been reloaded after permission changes.
 - Confirm your token is correct.
-- For Telegram, make sure you sent a message to the bot before testing.
+- For Telegram, make sure you sent a message to the bot before testing the provider.
+- If the first Telegram test fails, send another message to the bot and click **Provider** again.
 
 Provider credentials are stored in extension storage on your local browser profile.
 

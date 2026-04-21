@@ -14,8 +14,10 @@
         {#each items as item}
             <li>
                 <button
+                    type="button"
                     class="block w-full cursor-pointer border-none bg-transparent px-2.5 py-1.5 text-left text-xs font-[inherit] text-popup-text-soft hover:bg-popup-surface-muted"
-                    onmousedown={(e) => { e.preventDefault(); onSelect(item); }}
+                    onmousedown={(e) => e.preventDefault()}
+                    onclick={() => onSelect(item)}
                 >
                     {item}
                 </button>

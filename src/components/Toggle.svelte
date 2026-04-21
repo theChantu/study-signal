@@ -15,6 +15,7 @@
         <div class="mt-0.5 text-xs leading-snug text-popup-text-muted">{description}</div>
     </div>
     <button
+        type="button"
         class="relative h-5 w-9 shrink-0 cursor-pointer rounded-full border-none p-0 transition-colors duration-150 {value ? 'bg-popup-accent-text' : 'bg-popup-border'}"
         onclick={onClick}
         role="switch"

@@ -7,6 +7,8 @@
         "dev:firefox": "wxt -b firefox",
         "build": "wxt build",
         "build:firefox": "wxt build -b firefox",
+        "check": "svelte-check",
+        "test": "vitest run",
         "zip": "wxt zip",
         "zip:firefox": "wxt zip -b firefox",
         "postinstall": "wxt prepare"

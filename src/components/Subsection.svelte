@@ -4,14 +4,14 @@
     type Props = {
         withDivider?: boolean;
         borderClass?: string;
-        className?: string;
+        class?: string;
         children?: Snippet;
     };
 
     let {
         withDivider = true,
         borderClass = "border-popup-border",
-        className = "",
+        class: className = "",
         children,
     }: Props = $props();
 </script>

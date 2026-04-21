@@ -84,7 +84,7 @@
 </script>
 
 <Subsection
-    className="flex flex-col gap-2"
+    class="flex flex-col gap-2"
     borderClass="border-popup-border-subtle"
 >
     <span class="text-xs font-medium text-popup-text-muted">
@@ -93,6 +93,7 @@
     <div class="flex flex-wrap gap-1">
         {#each resettableGlobalKeys as key}
             <button
+                type="button"
                 class="popup-compact-button popup-compact-button-danger"
                 onclick={() => handleResetGlobalKey(key)}
             >
@@ -101,6 +102,7 @@
         {/each}
         {#each resettableSiteKeys as key}
             <button
+                type="button"
                 class="popup-compact-button popup-compact-button-danger"
                 onclick={() => handleResetSiteKey(key)}
             >

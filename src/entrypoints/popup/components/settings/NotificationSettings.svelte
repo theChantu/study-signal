@@ -57,9 +57,11 @@
     }
 
     function updateRuleGroup(key: keyof AlertRules, group: AlertRuleGroup) {
+        const rules = $state.snapshot(model.studyAlerts.rules);
+
         patchSiteNotifications({
             rules: {
-                ...model.studyAlerts.rules,
+                ...rules,
                 [key]: group,
             },
         });
@@ -105,7 +107,7 @@
 <Section title="Alerts" icon={Bell}>
     <ToggleControl
         title="New study alerts"
-        description={`Get notified when a new study shows up. Applies to  ${capitalize(model.siteName)} only.`}
+        description={`Get notified when a new study shows up. Applies to ${capitalize(model.siteName)} only.`}
         value={model.studyAlerts.enabled}
         onClick={() =>
             patchSiteNotifications({

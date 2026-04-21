@@ -1,6 +1,6 @@
 <script lang="ts">
     import { slide } from "svelte/transition";
-    import { ChevronDown, Plus, X } from "@lucide/svelte";
+    import { Plus, X } from "@lucide/svelte";
     import SelectControl from "@/components/SelectControl.svelte";
     import SuggestionList from "@/components/SuggestionList.svelte";
     import Subsection from "@/components/Subsection.svelte";
@@ -45,9 +45,15 @@
         };
     }
 
+    function getConditionsSnapshot(): AlertCondition[] {
+        return $state.snapshot(group.conditions);
+    }
+
     function updateGroup(patch: Partial<AlertRuleGroup>) {
+        const current = $state.snapshot(group);
+
         onChange({
-            ...group,
+            ...current,
             ...patch,
         });
     }
@@ -56,13 +62,14 @@
         condition: AlertCondition,
         patch: Partial<AlertCondition>,
     ) {
+        const conditions = getConditionsSnapshot();
         const nextCondition = {
             ...condition,
             ...patch,
         };
 
         updateGroup({
-            conditions: group.conditions.map((candidate) =>
+            conditions: conditions.map((candidate) =>
                 candidate.id === condition.id ? nextCondition : candidate,
             ),
         });
@@ -70,13 +77,15 @@
 
     function addCondition() {
         updateGroup({
-            conditions: [...group.conditions, createCondition()],
+            conditions: [...getConditionsSnapshot(), createCondition()],
         });
     }
 
     function removeCondition(condition: AlertCondition) {
+        const conditions = getConditionsSnapshot();
+
         updateGroup({
-            conditions: group.conditions.filter(
+            conditions: conditions.filter(
                 (candidate) => candidate.id !== condition.id,
             ),
         });
@@ -148,10 +157,19 @@
         updateCondition(condition, { value });
         focusedConditionId = null;
     }
+
+    function handleValueFocusOut(condition: AlertCondition, e: FocusEvent) {
+        const container = e.currentTarget as HTMLElement;
+        const next = e.relatedTarget;
+        if (next instanceof Node && container.contains(next)) return;
+        if (focusedConditionId === condition.id) {
+            focusedConditionId = null;
+        }
+    }
 </script>
 
 <Subsection
-    className="flex flex-col gap-2"
+    class="flex flex-col gap-2"
     borderClass="border-popup-border-subtle"
 >
     <div class="flex items-center justify-between gap-2">
@@ -172,7 +190,7 @@
 
     {#if group.conditions.length === 0}
         <div
-            class="rounded-lg border border-dashed border-popup-border px-3 py-2.5 text-center text-xs text-popup-text-faint"
+            class="rounded-md border border-dashed border-popup-border px-3 py-2.5 text-center text-xs text-popup-text-faint"
         >
             {emptyLabel}
         </div>
@@ -180,65 +198,72 @@
         <div class="flex flex-col gap-2">
             {#each group.conditions as condition (condition.id)}
                 <div
-                    class="flex items-center gap-1.5"
+                    class="flex items-start gap-1.5"
                     transition:slide={{ duration: 150 }}
                 >
-                    <div class="relative min-w-0 flex-1">
-                        <div class="flex rounded-md border border-popup-border bg-popup-surface">
-                            <div class="relative shrink-0 border-r border-popup-border">
-                                <select
-                                    class="h-full cursor-pointer appearance-none border-none bg-transparent py-1.5 pr-5 pl-2 text-xs font-[inherit] text-popup-text outline-none"
-                                    value={condition.field}
-                                    onchange={(e) => onFieldChange(condition, e)}
-                                >
-                                    {#each alertRuleFields as field}
-                                        <option value={field}>
-                                            {alertRuleFieldLabels[field]}
-                                        </option>
-                                    {/each}
-                                </select>
-                                <div class="pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 text-popup-text-faint">
-                                    <ChevronDown size={10} strokeWidth={2.4} />
-                                </div>
-                            </div>
-                            <div class="relative shrink-0 border-r border-popup-border">
-                                <select
-                                    class="h-full cursor-pointer appearance-none border-none bg-transparent py-1.5 pr-5 pl-2 text-xs font-[inherit] text-popup-text outline-none"
-                                    value={condition.operator}
-                                    onchange={(e) => onOperatorChange(condition, e)}
-                                >
-                                    {#each getAlertRuleOperators(condition.field) as operator}
-                                        <option value={operator}>
-                                            {alertRuleOperatorLabels[operator]}
-                                        </option>
-                                    {/each}
-                                </select>
-                                <div class="pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 text-popup-text-faint">
-                                    <ChevronDown size={10} strokeWidth={2.4} />
-                                </div>
-                            </div>
+                    <div class="popup-alert-condition-grid">
+                        <SelectControl
+                            variant="sm"
+                            class="h-8"
+                            value={condition.field}
+                            aria-label="Condition field"
+                            onchange={(e) => onFieldChange(condition, e)}
+                        >
+                            {#each alertRuleFields as field}
+                                <option value={field}>
+                                    {alertRuleFieldLabels[field]}
+                                </option>
+                            {/each}
+                        </SelectControl>
+                        <SelectControl
+                            variant="sm"
+                            class="h-8"
+                            value={condition.operator}
+                            aria-label="Condition operator"
+                            onchange={(e) => onOperatorChange(condition, e)}
+                        >
+                            {#each getAlertRuleOperators(condition.field) as operator}
+                                <option value={operator}>
+                                    {alertRuleOperatorLabels[operator]}
+                                </option>
+                            {/each}
+                        </SelectControl>
+                        <div
+                            class="relative min-w-0"
+                            onfocusout={(e) =>
+                                handleValueFocusOut(condition, e)}
+                        >
                             <input
-                                type={getAlertRuleFieldType(condition.field) === "number" ? "number" : "text"}
-                                step={getAlertRuleFieldType(condition.field) === "number" ? "any" : undefined}
-                                class="min-w-0 flex-1 border-none bg-transparent px-2 py-1.5 text-xs font-[inherit] text-popup-text outline-none placeholder:text-popup-text-faint"
+                                type={getAlertRuleFieldType(condition.field) ===
+                                "number"
+                                    ? "number"
+                                    : "text"}
+                                step={getAlertRuleFieldType(condition.field) ===
+                                "number"
+                                    ? "any"
+                                    : undefined}
+                                class="popup-control box-border h-8 px-2 py-1 text-xs placeholder:text-popup-text-faint"
                                 value={condition.value ?? ""}
-                                placeholder={alertRuleFieldPlaceholders[condition.field]}
+                                placeholder={alertRuleFieldPlaceholders[
+                                    condition.field
+                                ]}
                                 aria-label="Condition value"
                                 oninput={(e) => onValueChange(condition, e)}
-                                onfocus={() => (focusedConditionId = condition.id)}
-                                onblur={() => (focusedConditionId = null)}
+                                onfocus={() =>
+                                    (focusedConditionId = condition.id)}
                             />
+                            {#if focusedConditionId === condition.id && getAlertRuleFieldType(condition.field) === "text"}
+                                <SuggestionList
+                                    items={getFilteredSuggestions(condition)}
+                                    onSelect={(value) =>
+                                        selectSuggestion(condition, value)}
+                                />
+                            {/if}
                         </div>
-                        {#if focusedConditionId === condition.id && getAlertRuleFieldType(condition.field) === "text"}
-                            <SuggestionList
-                                items={getFilteredSuggestions(condition)}
-                                onSelect={(value) => selectSuggestion(condition, value)}
-                            />
-                        {/if}
                     </div>
                     <button
                         type="button"
-                        class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-popup-text-faint hover:text-popup-danger-text"
+                        class="flex h-8 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-popup-text-faint hover:text-popup-danger-text"
                         onclick={() => removeCondition(condition)}
                         aria-label="Remove condition"
                         title="Remove condition"

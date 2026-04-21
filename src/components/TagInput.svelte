@@ -54,7 +54,7 @@
 </script>
 
 <Subsection
-    className="flex flex-col gap-1.5"
+    class="flex flex-col gap-1.5"
     borderClass="border-popup-border-subtle"
 >
     <span class="text-xs font-medium text-popup-text-muted">{title}</span>
@@ -66,6 +66,7 @@
                 >
                     {value}
                     <button
+                        type="button"
                         class="inline-flex cursor-pointer items-center border-none bg-transparent p-0 leading-none text-popup-text-faint hover:text-popup-danger-text"
                         onclick={() => onRemove(value)}
                         aria-label="Remove {value}"

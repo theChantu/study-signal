@@ -55,7 +55,7 @@
 </script>
 
 <Subsection
-    className="flex flex-col gap-2"
+    class="flex flex-col gap-2"
     borderClass="border-popup-border-subtle"
 >
     <div class="flex flex-col gap-0.5">
@@ -69,6 +69,7 @@
     <div class="grid grid-cols-3 gap-1.5">
         {#each testNotificationModes as mode}
             <button
+                type="button"
                 class="popup-compact-button"
                 onclick={() => handleTestNotification(mode)}
             >

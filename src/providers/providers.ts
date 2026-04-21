@@ -17,10 +17,13 @@ export function isProviderName(value: string): value is ProviderName {
     return value in nameToProvider;
 }
 
-type ProviderConfig<T> = { enabled: boolean } & T;
+type ProviderConfig<T> = { enabled: boolean; onlyWhenIdle: boolean } & T;
 
 export type ProviderConfigMap = {
-    telegram: ProviderConfig<{ botToken: string; chatId?: number }>;
+    telegram: ProviderConfig<{
+        botToken: string;
+        chatId?: number;
+    }>;
 };
 
 export function getProvider<K extends ProviderName>(
