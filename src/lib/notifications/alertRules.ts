@@ -77,7 +77,7 @@ export type AlertCondition = {
     id: string;
     field: AlertRuleField;
     operator: AlertRuleOperator;
-    value?: string | number;
+    value?: string;
 };
 
 export type AlertRuleGroup = {
@@ -118,21 +118,28 @@ function normalizeText(value: string): string {
     return value.trim().toLowerCase();
 }
 
-function coerceText(value: unknown): string | null {
-    if (typeof value !== "string") return null;
+const completeNumberPattern =
+    /^[+-]?(?:\d+|\d+\.\d+|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+function coerceText(value: AlertCondition["value"]): string | null {
+    if (!value) return null;
 
     const normalized = normalizeText(value);
     return normalized.length > 0 ? normalized : null;
 }
 
-function coerceNumber(value: unknown): number | null {
-    const number =
-        typeof value === "number"
-            ? value
-            : typeof value === "string" && value.trim().length > 0
-              ? Number(value)
-              : NaN;
+function isCompleteNumberInput(value: AlertCondition["value"]): value is string {
+    if (!value) return false;
 
+    return completeNumberPattern.test(value.trim());
+}
+
+function coerceNumber(value: AlertCondition["value"]): number | null {
+    if (!isCompleteNumberInput(value)) {
+        return null;
+    }
+
+    const number = Number(value);
     return Number.isFinite(number) ? number : null;
 }
 
@@ -167,15 +174,15 @@ function matchesTextCondition(
                 actualValue.includes(expectedValue)
             );
         case "not_contains":
-            return (
-                actualValue !== null &&
-                expectedValue !== null &&
-                !actualValue.includes(expectedValue)
-            );
+            if (expectedValue === null) return false;
+            if (actualValue === null) return true;
+            return !actualValue.includes(expectedValue);
         case "equals":
             return actualValue !== null && actualValue === expectedValue;
         case "not_equals":
-            return actualValue !== null && actualValue !== expectedValue;
+            if (expectedValue === null) return false;
+            if (actualValue === null) return true;
+            return actualValue !== expectedValue;
         default:
             return false;
     }
@@ -215,7 +222,9 @@ function matchesNumberCondition(
         case "equals":
             return actualValue !== null && actualValue === expectedValue;
         case "not_equals":
-            return actualValue !== null && actualValue !== expectedValue;
+            if (expectedValue === null) return false;
+            if (actualValue === null) return true;
+            return actualValue !== expectedValue;
         default:
             return false;
     }
@@ -230,7 +239,10 @@ export function matchesAlertCondition(
     const value = study[condition.field];
 
     if (getAlertRuleFieldType(condition.field) === "number") {
-        return matchesNumberCondition(coerceNumber(value), condition);
+        return matchesNumberCondition(
+            typeof value === "number" ? value : null,
+            condition,
+        );
     }
 
     return matchesTextCondition(

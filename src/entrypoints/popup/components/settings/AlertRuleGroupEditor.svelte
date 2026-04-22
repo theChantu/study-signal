@@ -125,17 +125,9 @@
 
     function onValueChange(condition: AlertCondition, e: Event) {
         const input = e.currentTarget as HTMLInputElement;
-        let value: string | number | undefined;
-
-        if (getAlertRuleFieldType(condition.field) === "number") {
-            value = Number.isFinite(input.valueAsNumber)
-                ? input.valueAsNumber
-                : undefined;
-        } else {
-            value = input.value;
-        }
-
-        updateCondition(condition, { value });
+        updateCondition(condition, {
+            value: input.value.trim() === "" ? undefined : input.value,
+        });
     }
 
     let focusedConditionId = $state<string | null>(null);

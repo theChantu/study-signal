@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    isAlertConditionComplete,
     matchesAlertCondition,
     matchesAlertRules,
     type AlertRules,
@@ -39,7 +40,7 @@ describe("alert rules", () => {
                         id: "rate",
                         field: "rate",
                         operator: "gte",
-                        value: 15,
+                        value: "15",
                     },
                     {
                         id: "title",
@@ -75,7 +76,7 @@ describe("alert rules", () => {
                         id: "rate",
                         field: "rate",
                         operator: "gte",
-                        value: 15,
+                        value: "15",
                     },
                     {
                         id: "title",
@@ -107,7 +108,7 @@ describe("alert rules", () => {
                         id: "rate",
                         field: "rate",
                         operator: "gte",
-                        value: 15,
+                        value: "15",
                     },
                 ],
             },
@@ -130,7 +131,7 @@ describe("alert rules", () => {
                         id: "rate",
                         field: "rate",
                         operator: "gte",
-                        value: 15,
+                        value: "15",
                     },
                 ],
             },
@@ -172,6 +173,30 @@ describe("alert rules", () => {
         expect(matchesAlertRules(study(), rules)).toBe(true);
     });
 
+    it("treats partial numeric input as incomplete", () => {
+        for (const value of ["1.", ".", "-", "+", "1e", "1e+"]) {
+            expect(
+                isAlertConditionComplete({
+                    id: value,
+                    field: "rate",
+                    operator: "gte",
+                    value,
+                }),
+            ).toBe(false);
+        }
+
+        for (const value of ["1", "1.5", ".5", "-0.5", "1e3", "1e-3"]) {
+            expect(
+                isAlertConditionComplete({
+                    id: value,
+                    field: "rate",
+                    operator: "gte",
+                    value,
+                }),
+            ).toBe(true);
+        }
+    });
+
     it("matches text values case-insensitively", () => {
         expect(
             matchesAlertCondition(study(), {
@@ -179,6 +204,38 @@ describe("alert rules", () => {
                 field: "researcher",
                 operator: "contains",
                 value: "research lab",
+            }),
+        ).toBe(true);
+    });
+
+    it("matches negative conditions when the field is missing/null", () => {
+        const nullFieldStudy = study({ researcher: null });
+
+        expect(
+            matchesAlertCondition(nullFieldStudy, {
+                id: "researcher_not_contains",
+                field: "researcher",
+                operator: "not_contains",
+                value: "Oxford",
+            }),
+        ).toBe(true);
+
+        expect(
+            matchesAlertCondition(nullFieldStudy, {
+                id: "researcher_not_equals",
+                field: "researcher",
+                operator: "not_equals",
+                value: "Oxford",
+            }),
+        ).toBe(true);
+
+        const nullNumberStudy = study({ rate: null });
+        expect(
+            matchesAlertCondition(nullNumberStudy, {
+                id: "rate_not_equals",
+                field: "rate",
+                operator: "not_equals",
+                value: "15",
             }),
         ).toBe(true);
     });
