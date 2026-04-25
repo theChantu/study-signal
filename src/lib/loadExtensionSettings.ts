@@ -1,5 +1,4 @@
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
-import { defaultSettings } from "@/store/defaultSettings";
 import {
     defaultSiteSettings,
     defaultSiteSettingsKeys,
@@ -12,14 +11,14 @@ import {
 import type { GlobalSettings, SiteSettings } from "@/store/types";
 import type { SiteName } from "@/adapters/siteConfigs";
 
-type LoadedSettings = {
+type ExtensionSettings = {
     globals: GlobalSettings;
     site: SiteSettings;
 };
 
-export async function loadSettings(
+export async function loadExtensionSettings(
     siteName: SiteName,
-): Promise<LoadedSettings> {
+): Promise<ExtensionSettings> {
     let siteSettings = (await sendExtensionMessage({
         type: "store-fetch",
         data: {

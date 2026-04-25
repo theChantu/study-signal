@@ -88,6 +88,7 @@ export interface EnhancementSettings {
 }
 
 export interface GlobalSettings extends EnhancementSettings {
+    changelogLastSeenVersion: string;
     conversionRates: Record<
         Currency,
         { timestamp: number; rates: Record<Currency, number> }

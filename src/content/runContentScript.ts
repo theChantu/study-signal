@@ -6,7 +6,7 @@ import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import debounce from "@/lib/debounce";
 import deepMerge from "@/lib/deepMerge";
-import { loadSettings } from "../lib/loadSettings";
+import { loadExtensionSettings } from "../lib/loadExtensionSettings";
 import { getRuntimeSyncChannels } from "@/background/runtime/runtimeHelpers";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 
@@ -22,7 +22,7 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     const adapter = getSiteAdapter();
 
-    let { globals, site } = await loadSettings(adapter.config.name);
+    let { globals, site } = await loadExtensionSettings(adapter.config.name);
     const enhancementHandler = new EnhancementHandler(adapter, {
         ...globals,
         ...site,

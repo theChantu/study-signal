@@ -20,6 +20,7 @@ const conversionRates: GlobalSettings["conversionRates"] = {
 };
 
 const defaultGlobalSettings = Object.freeze({
+    changelogLastSeenVersion: "",
     conversionRates,
     currency: {
         target: "USD",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDurationSeconds } from "../parse/parseDurationSeconds";
+import { parseDurationSeconds } from "./parseDurationSeconds";
 
 describe("parseDurationSeconds", () => {
     it("parses minutes", () => {

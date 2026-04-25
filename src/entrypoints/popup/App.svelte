@@ -7,6 +7,7 @@
     import SettingsTab from "./components/tabs/SettingsTab.svelte";
     import OpportunitiesTab from "./components/tabs/OpportunitiesTab.svelte";
     import TabBar from "./components/TabBar.svelte";
+    import ChangelogCard from "./components/ChangelogCard.svelte";
 
     import type { ActiveSiteState } from "./types";
 
@@ -23,6 +24,8 @@
     <div class="px-4">
         <TabBar />
     </div>
+
+    <ChangelogCard />
 
     {#if uiState.selectedTab === "opportunities"}
         <OpportunitiesTab
