@@ -13,7 +13,6 @@ export type OpportunityCacheEntry =
     SiteSettings["opportunityAlerts"]["cache"]["opportunities"][string];
 
 type OpportunityNotificationContext = {
-    siteName: string;
     siteLabel: string;
     previous: OpportunityCacheEntry | undefined;
 };
@@ -114,7 +113,7 @@ export function buildNotification(
     previous: OpportunityCacheEntry | undefined,
 ): NotificationData {
     const siteLabel = capitalize(siteName);
-    const context = { siteName, siteLabel, previous };
+    const context = { siteLabel, previous };
     const config = opportunityNotificationConfig[opportunity.kind];
     const title =
         opportunity.title ?? config.fallbackTitle(opportunity, context);

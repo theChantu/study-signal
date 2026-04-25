@@ -46,7 +46,7 @@ const defaultGlobalSettings = Object.freeze({
             },
         },
     },
-    studySort: "page-order",
+    opportunitySort: "page-order",
 } as const) satisfies GlobalSettings;
 
 const defaultGlobalSettingsKeys = Object.keys(

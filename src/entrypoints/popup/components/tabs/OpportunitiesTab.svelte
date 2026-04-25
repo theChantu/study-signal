@@ -11,25 +11,29 @@
     import { ensureConversionRates } from "@/lib/currency/rates";
     import { capitalize, rateToColor } from "@/lib/utils";
     import { matchesAlertRules } from "@/lib/notifications/alertRules";
+    import { getOpportunityKey as getBaseOpportunityKey } from "@/lib/opportunities";
     import {
-        studySortOptions,
-        type StudySort,
+        opportunitySortOptions,
+        type OpportunitySort,
         type Currency,
         type GlobalSettings,
     } from "@/store/types";
     import { HIGHLIGHT_BASE_CURRENCY } from "@/constants";
 
-    import type { OpportunityItem, StudiesTabModel } from "../../types";
+    import type { OpportunityItem, OpportunitiesTabModel } from "../../types";
+    import type { RuntimeOutputDataMap } from "@/messages/types";
     import type { StudyInfo } from "@/adapters/BaseAdapter";
 
-    let { model }: { model: StudiesTabModel } = $props();
+    let { model }: { model: OpportunitiesTabModel } = $props();
+
+    type RuntimeOpportunity = RuntimeOutputDataMap["opportunities"][number];
 
     type SortOption = {
-        value: StudySort;
+        value: OpportunitySort;
         label: string;
     };
 
-    const options: SortOption[] = studySortOptions.map((value) => ({
+    const options: SortOption[] = opportunitySortOptions.map((value) => ({
         value,
         label: capitalize(value.replaceAll("-", " ")),
     }));
@@ -46,66 +50,58 @@
         return direction === "asc" ? left - right : right - left;
     }
 
+    type OpportunitySorter = (
+        left: OpportunityItem,
+        right: OpportunityItem,
+    ) => number;
+
+    const opportunitySorters: Record<OpportunitySort, OpportunitySorter> = {
+        "first-seen": (left, right) => right.firstSeenAt - left.firstSeenAt,
+        "last-seen": (left, right) => right.lastSeenAt - left.lastSeenAt,
+        "highest-reward": (left, right) =>
+            compareNullableNumbers(
+                left.normalizedReward,
+                right.normalizedReward,
+                "desc",
+            ),
+        "lowest-reward": (left, right) =>
+            compareNullableNumbers(
+                left.normalizedReward,
+                right.normalizedReward,
+                "asc",
+            ),
+        "highest-hourly-rate": (left, right) =>
+            compareNullableNumbers(
+                left.normalizedRate,
+                right.normalizedRate,
+                "desc",
+            ),
+        "lowest-hourly-rate": (left, right) =>
+            compareNullableNumbers(
+                left.normalizedRate,
+                right.normalizedRate,
+                "asc",
+            ),
+        quickest: (left, right) =>
+            compareNullableNumbers(
+                left.sortCompletionMinutes,
+                right.sortCompletionMinutes,
+                "asc",
+            ),
+        longest: (left, right) =>
+            compareNullableNumbers(
+                left.sortCompletionMinutes,
+                right.sortCompletionMinutes,
+                "desc",
+            ),
+        "page-order": (left, right) => left.order - right.order,
+    };
+
     function sortOpportunities(
         items: OpportunityItem[],
-        sort: StudySort,
+        sort: OpportunitySort,
     ): OpportunityItem[] {
-        const sorted = [...items];
-
-        const sorters: Record<
-            StudySort,
-            (left: OpportunityItem, right: OpportunityItem) => number
-        > = {
-            "first-seen": (left, right) => right.firstSeenAt - left.firstSeenAt,
-            "last-seen": (left, right) => right.lastSeenAt - left.lastSeenAt,
-            "highest-reward": (left, right) =>
-                compareNullableNumbers(
-                    left.kind === "study" ? left.normalizedReward : null,
-                    right.kind === "study" ? right.normalizedReward : null,
-                    "desc",
-                ),
-            "lowest-reward": (left, right) =>
-                compareNullableNumbers(
-                    left.kind === "study" ? left.normalizedReward : null,
-                    right.kind === "study" ? right.normalizedReward : null,
-                    "asc",
-                ),
-            "highest-hourly-rate": (left, right) =>
-                compareNullableNumbers(
-                    left.kind === "study" ? left.normalizedRate : null,
-                    right.kind === "study" ? right.normalizedRate : null,
-                    "desc",
-                ),
-            "lowest-hourly-rate": (left, right) =>
-                compareNullableNumbers(
-                    left.kind === "study" ? left.normalizedRate : null,
-                    right.kind === "study" ? right.normalizedRate : null,
-                    "asc",
-                ),
-            quickest: (left, right) =>
-                compareNullableNumbers(
-                    left.kind === "study"
-                        ? left.averageCompletionMinutes
-                        : null,
-                    right.kind === "study"
-                        ? right.averageCompletionMinutes
-                        : null,
-                    "asc",
-                ),
-            longest: (left, right) =>
-                compareNullableNumbers(
-                    left.kind === "study"
-                        ? left.averageCompletionMinutes
-                        : null,
-                    right.kind === "study"
-                        ? right.averageCompletionMinutes
-                        : null,
-                    "desc",
-                ),
-            "page-order": (left, right) => left.order - right.order,
-        };
-
-        return sorted.sort(sorters[sort] ?? sorters["page-order"]);
+        return [...items].sort(opportunitySorters[sort]);
     }
 
     function convertStudyDisplayValues(
@@ -256,6 +252,63 @@
         void updateConversionRates(currenciesNeedingRates, snapshot);
     });
 
+    function buildOpportunityBase(
+        opportunity: RuntimeOpportunity,
+        host: (typeof supportedHosts)[number],
+        order: number,
+    ) {
+        const rules = settingsState.sites[host]?.opportunityAlerts.rules;
+
+        return {
+            host,
+            siteName: sites[host].name,
+            siteLabel: capitalize(sites[host].name),
+            order,
+            matchesAlertRules: !rules || matchesAlertRules(opportunity, rules),
+        };
+    }
+
+    function buildProjectItem(
+        project: Extract<RuntimeOpportunity, { kind: "project" }>,
+        host: (typeof supportedHosts)[number],
+        order: number,
+    ): OpportunityItem {
+        return {
+            ...project,
+            ...buildOpportunityBase(project, host, order),
+            color: null,
+            normalizedReward: null,
+            normalizedRate: null,
+            sortCompletionMinutes: null,
+        };
+    }
+
+    function buildStudyItem(
+        study: Extract<RuntimeOpportunity, { kind: "study" }>,
+        host: (typeof supportedHosts)[number],
+        order: number,
+    ): OpportunityItem {
+        const display = convertStudyDisplayValues(study);
+
+        return {
+            ...study,
+            ...display,
+            ...buildOpportunityBase(study, host, order),
+            color: getNormalizedRateColor(display.rate, display.symbol),
+            normalizedReward: getNormalizedValue(
+                study.reward,
+                study.symbol,
+                HIGHLIGHT_BASE_CURRENCY,
+            ),
+            normalizedRate: getNormalizedValue(
+                study.rate,
+                study.symbol,
+                HIGHLIGHT_BASE_CURRENCY,
+            ),
+            sortCompletionMinutes: study.averageCompletionMinutes,
+        };
+    }
+
     const opportunities: OpportunityItem[] = $derived.by(() => {
         const items: OpportunityItem[] = [];
         let order = 0;
@@ -264,50 +317,12 @@
             const hostOpportunities = runtimeState.opportunities[host];
             if (!Array.isArray(hostOpportunities)) continue;
 
-            const rules = settingsState.sites[host]?.opportunityAlerts.rules;
-
             for (const opportunity of hostOpportunities) {
-                if (opportunity.kind === "project") {
-                    items.push({
-                        ...opportunity,
-                        host,
-                        siteName: sites[host].name,
-                        siteLabel: capitalize(sites[host].name),
-                        order,
-                        color: null,
-                        normalizedReward: null,
-                        normalizedRate: null,
-                        matchesAlertRules:
-                            !rules || matchesAlertRules(opportunity, rules),
-                    });
-                    order += 1;
-                    continue;
-                }
-
-                const study = opportunity;
-                const display = convertStudyDisplayValues(study);
-
-                items.push({
-                    ...study,
-                    ...display,
-                    host,
-                    siteName: sites[host].name,
-                    siteLabel: capitalize(sites[host].name),
-                    order,
-                    color: getNormalizedRateColor(display.rate, display.symbol),
-                    normalizedReward: getNormalizedValue(
-                        study.reward,
-                        study.symbol,
-                        HIGHLIGHT_BASE_CURRENCY,
-                    ),
-                    normalizedRate: getNormalizedValue(
-                        study.rate,
-                        study.symbol,
-                        HIGHLIGHT_BASE_CURRENCY,
-                    ),
-                    matchesAlertRules:
-                        !rules || matchesAlertRules(study, rules),
-                });
+                items.push(
+                    opportunity.kind === "study"
+                        ? buildStudyItem(opportunity, host, order)
+                        : buildProjectItem(opportunity, host, order),
+                );
 
                 order += 1;
             }
@@ -316,16 +331,20 @@
         return items;
     });
 
-    function patchStudySort(sort: StudySort) {
+    function patchOpportunitySort(sort: OpportunitySort) {
         void queueMutation("store-patch", {
             namespace: "globals",
             data: {
-                studySort: sort,
+                opportunitySort: sort,
             },
         });
     }
 
-    let studySort = $derived(settingsState.globals.studySort);
+    let opportunitySort = $derived(settingsState.globals.opportunitySort);
+
+    function getOpportunityKey(opportunity: OpportunityItem): string {
+        return `${opportunity.siteName}:${getBaseOpportunityKey(opportunity)}`;
+    }
 
     const loading = $derived(
         supportedHosts.some(
@@ -339,7 +358,7 @@
     );
 
     const sortedOpportunities = $derived(
-        sortOpportunities(opportunities, studySort),
+        sortOpportunities(opportunities, opportunitySort),
     );
     const emptyMessage = $derived.by(() => {
         if (loading) {
@@ -364,9 +383,11 @@
     {#if sortedOpportunities.length > 0}
         <div class="shrink-0 px-4">
             <SelectControl
-                value={studySort}
+                value={opportunitySort}
                 onchange={(e) =>
-                    patchStudySort(e.currentTarget.value as StudySort)}
+                    patchOpportunitySort(
+                        e.currentTarget.value as OpportunitySort,
+                    )}
             >
                 {#each options as option}
                     <option value={option.value}>{option.label}</option>
@@ -389,8 +410,8 @@
                 </div>
             {/if}
 
-            <div class="popup-studies-list flex flex-col gap-3 pl-4 pb-4">
-                {#each sortedOpportunities as opportunity (opportunity.siteName + ":" + opportunity.kind + ":" + opportunity.id)}
+            <div class="popup-opportunities-list flex flex-col gap-3 pl-4 pb-4">
+                {#each sortedOpportunities as opportunity (getOpportunityKey(opportunity))}
                     {#if opportunity.kind === "study"}
                         <StudyCard item={opportunity} />
                     {:else}
@@ -409,7 +430,7 @@
                     />
                 {/if}
                 <p class="text-sm font-medium text-popup-text">
-                    No studies yet
+                    No opportunities yet
                 </p>
                 <p
                     class="max-w-[18rem] text-xs leading-5 text-popup-text-faint"

@@ -43,6 +43,7 @@ export type OpportunityItem = RuntimeOpportunity & {
     color: string | null;
     normalizedReward: number | null;
     normalizedRate: number | null;
+    sortCompletionMinutes: number | null;
     matchesAlertRules: boolean;
 };
 
@@ -101,7 +102,7 @@ export type DebugSettingsModel = GlobalMutationModel &
 
 export type AnalyticsModel = SiteSettings["analytics"];
 
-export type StudiesTabModel = SettingComponentProps & {};
+export type OpportunitiesTabModel = SettingComponentProps & {};
 
 export type SettingsTabModel = SettingComponentProps & {};
 

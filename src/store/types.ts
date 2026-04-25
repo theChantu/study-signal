@@ -6,7 +6,7 @@ export type Enhancement = {
     revert(): void;
 };
 
-export const studySortOptions = [
+export const opportunitySortOptions = [
     "first-seen",
     "last-seen",
     "highest-reward",
@@ -18,7 +18,7 @@ export const studySortOptions = [
     "page-order",
 ] as const;
 
-export type StudySort = (typeof studySortOptions)[number];
+export type OpportunitySort = (typeof opportunitySortOptions)[number];
 
 export type NotificationSound = "alert" | "bloop" | "chime";
 
@@ -99,7 +99,7 @@ export interface GlobalSettings extends EnhancementSettings {
     idleThreshold: number;
     lastPopupOpenedAt: number;
     providers: Partial<ProviderConfigMap>;
-    studySort: StudySort;
+    opportunitySort: OpportunitySort;
 }
 
 export type Settings = SiteSettings & GlobalSettings;
