@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Sparkles, X } from "@lucide/svelte";
+    import { slide } from "svelte/transition";
     import { latestChangelogEntry } from "@/lib/changelog";
     import { settingsState } from "../state.svelte";
     import { queueMutation } from "../popupModel.svelte";
@@ -23,11 +24,13 @@
             },
         });
     }
+
 </script>
 
 {#if visible && entry}
-    <div class="px-4">
+    <div class="shrink-0 px-4" transition:slide={{ duration: 150 }}>
         <section
+            role="status"
             class="popup-surface border border-popup-accent-border bg-popup-accent-surface p-3"
         >
             <div class="flex items-start gap-3">
@@ -52,7 +55,7 @@
 
                         <button
                             type="button"
-                            class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-popup-text-faint hover:bg-popup-surface-muted hover:text-popup-text"
+                            class="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-popup-text-faint hover:text-popup-text-soft"
                             aria-label="Dismiss changelog"
                             onclick={dismiss}
                         >

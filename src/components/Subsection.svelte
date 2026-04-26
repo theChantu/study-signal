@@ -17,7 +17,9 @@
 </script>
 
 <div
-    class={`mt-2.5 ${withDivider ? `pt-2.5 border-t ${borderClass}` : ""} ${className}`.trim()}
+    class={["mt-2.5", withDivider && `border-t pt-2.5 ${borderClass}`, className]
+        .filter(Boolean)
+        .join(" ")}
 >
     {#if children}
         {@render children()}

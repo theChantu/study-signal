@@ -44,7 +44,7 @@
     </div>
 
     <div
-        class="popup-settings-list flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pl-4 pb-4"
+        class="popup-settings-list flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pl-4 pb-4 [scrollbar-gutter:stable]"
     >
         {#if !model.activeSite.settings}
             <div

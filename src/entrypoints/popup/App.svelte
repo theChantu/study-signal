@@ -20,8 +20,8 @@
     });
 </script>
 
-<div class="flex h-full flex-col gap-4 pt-4">
-    <div class="px-4">
+<div class="flex h-full flex-col gap-4 overflow-hidden pt-4">
+    <div class="shrink-0 px-4">
         <TabBar />
     </div>
 

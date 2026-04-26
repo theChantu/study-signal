@@ -72,7 +72,7 @@
 
     {#if open && children}
         <div
-            transition:slide={{ duration: 160 }}
+            transition:slide={{ duration: 150 }}
             class="border-t border-popup-border px-3 py-2.5"
         >
             {@render children()}

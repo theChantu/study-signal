@@ -12,7 +12,7 @@ type AlertRuleFieldConfig = {
 
 export const alertRuleFieldConfig = {
     kind: {
-        label: "Opportunity type",
+        label: "Opportunity",
         type: "text",
         placeholder: "e.g. study",
         getValue: (opportunity) => opportunity.kind,
@@ -58,15 +58,6 @@ export const alertRuleFieldConfig = {
         getValue: (opportunity) =>
             opportunity.kind === "study"
                 ? opportunity.averageCompletionMinutes
-                : null,
-    },
-    availableStudyCount: {
-        label: "Available studies",
-        type: "number",
-        placeholder: "e.g. 2",
-        getValue: (opportunity) =>
-            opportunity.kind === "project"
-                ? opportunity.availableStudyCount
                 : null,
     },
 } as const satisfies Record<string, AlertRuleFieldConfig>;
