@@ -28,7 +28,7 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
-    <div class="shrink-0 px-4">
+    <div class="shrink-0 px-5">
         <SelectControl
             class="font-medium"
             value={model.activeSite.url}
@@ -44,7 +44,7 @@
     </div>
 
     <div
-        class="popup-settings-list flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pl-4 pb-4 [scrollbar-gutter:stable]"
+        class="popup-settings-list flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pl-5 pr-1 pb-4 [scrollbar-gutter:stable]"
     >
         {#if !model.activeSite.settings}
             <div
@@ -62,6 +62,8 @@
                     model={{
                         queueMutation,
                         siteName: model.activeSite.name,
+                        conversionRates: settingsState.globals.conversionRates,
+                        currency: settingsState.globals.currency,
                         highlightRates: settingsState.globals.highlightRates,
                     }}
                 />

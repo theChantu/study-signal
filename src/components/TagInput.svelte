@@ -53,10 +53,7 @@
     }
 </script>
 
-<Subsection
-    class="flex flex-col gap-1.5"
-    borderClass="border-popup-border-subtle"
->
+<Subsection class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-popup-text-muted">{title}</span>
     {#if values.length > 0}
         <div class="flex flex-wrap gap-1">

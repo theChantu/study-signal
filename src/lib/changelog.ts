@@ -13,6 +13,8 @@ export const changelogEntries = [
             "Filter alerts by title, researcher, reward, hourly rate, slots, and completion time.",
             "Added opportunity support for Prolific projects.",
             "Updated alerts, badges, and the popup to track opportunities instead of studies only.",
+            "Gave the UI a new look.",
+            "Added min and max sliders for highlighting rates.",
         ],
     },
 ] as const satisfies ChangelogEntry[];

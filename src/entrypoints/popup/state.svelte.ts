@@ -16,4 +16,6 @@ export const uiState: UiState = $state({
     selectedHost: supportedHosts[0],
     selectedTab: "opportunities",
     detectedHost: null,
+    platformFilter: "all",
+    activeFilters: [],
 });

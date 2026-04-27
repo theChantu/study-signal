@@ -84,7 +84,10 @@ export interface EnhancementSettings {
     currency: SharedEnhancementSettings<{
         target: Currency;
     }>;
-    highlightRates: SharedEnhancementSettings<{}>;
+    highlightRates: SharedEnhancementSettings<{
+        min: number;
+        max: number;
+    }>;
 }
 
 export interface GlobalSettings extends EnhancementSettings {

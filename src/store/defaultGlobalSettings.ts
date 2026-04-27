@@ -31,6 +31,8 @@ const defaultGlobalSettings = Object.freeze({
     },
     highlightRates: {
         enabled: true,
+        min: 7,
+        max: 15,
     },
     idleThreshold: 15 * 60,
     lastPopupOpenedAt: 0,

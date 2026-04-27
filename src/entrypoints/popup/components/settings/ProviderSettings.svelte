@@ -78,7 +78,7 @@
             class="popup-inline-link ml-1">Open the setup guide</a
         >
     </div>
-    <Subsection withDivider={false}>
+    <Subsection>
         <ToggleControl
             title="Telegram alerts"
             description="Send matching alerts through Telegram."
@@ -122,7 +122,10 @@
                     <input
                         id="telegram-bot-token"
                         type="password"
-                        class="popup-control box-border"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Paste token here"
+                        class="popup-control box-border placeholder:text-popup-text-faint"
                         value={model.providers.telegram?.botToken ?? ""}
                         onchange={(e) => {
                             handleBotTokenChange(

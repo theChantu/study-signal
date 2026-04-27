@@ -17,5 +17,7 @@
 
 <Toggle {title} {description} {value} {onClick} />
 {#if value && children}
-    {@render children()}
+    <div class="flex flex-col gap-3 pb-2 pt-1">
+        {@render children()}
+    </div>
 {/if}

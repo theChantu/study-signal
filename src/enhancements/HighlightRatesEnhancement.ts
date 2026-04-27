@@ -1,5 +1,4 @@
 import BaseEnhancement from "./BaseEnhancement";
-import { MIN_AMOUNT_PER_HOUR, MAX_AMOUNT_PER_HOUR } from "@/constants";
 import { parseNumericValue } from "@/lib/parse/parseNumericValue";
 import { getCurrency } from "@/lib/currency";
 import { ensureConversionRates } from "@/lib/currency/rates";
@@ -11,7 +10,7 @@ import type { Currency } from "@/store/types";
 
 class HighlightRatesEnhancement extends BaseEnhancement {
     async apply() {
-        const { conversionRates } = this.settings;
+        const { conversionRates, highlightRates } = this.settings;
 
         const rateElements = this.adapter.getHourlyRateElements();
         const sourceCurrencies = new Set<Currency>();
@@ -64,8 +63,8 @@ class HighlightRatesEnhancement extends BaseEnhancement {
 
             rateEl.style.backgroundColor = rateToColor(
                 rate * currencyToUsd,
-                MIN_AMOUNT_PER_HOUR,
-                MAX_AMOUNT_PER_HOUR,
+                highlightRates.min,
+                highlightRates.max,
             );
 
             if (!rateEl.classList.contains("se-rate-highlight"))

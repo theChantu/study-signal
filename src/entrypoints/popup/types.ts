@@ -11,14 +11,19 @@ export type SettingsState = {
     sites: Partial<Record<SupportedHosts, SiteSettings>>;
 };
 
-export const tabs = ["opportunities", "settings"] as const;
+export const tabs = ["opportunities", "analytics", "settings"] as const;
 
 export type PopupTab = (typeof tabs)[number];
+
+export const filterChips = ["highRate", "quick", "new"] as const;
+export type FilterChip = (typeof filterChips)[number];
 
 export type UiState = {
     selectedHost: SupportedHosts;
     selectedTab: PopupTab;
     detectedHost: SupportedHosts | null;
+    platformFilter: SupportedHosts | "all";
+    activeFilters: FilterChip[];
 };
 
 export type RuntimeState = {
@@ -69,6 +74,8 @@ type GlobalMutationModel = {
 };
 
 export type HighlightSettingsModel = SiteMutationModel & {
+    conversionRates: GlobalSettings["conversionRates"];
+    currency: GlobalSettings["currency"];
     highlightRates: GlobalSettings["highlightRates"];
 };
 
@@ -103,6 +110,10 @@ export type DebugSettingsModel = GlobalMutationModel &
 export type AnalyticsModel = SiteSettings["analytics"];
 
 export type OpportunitiesTabModel = SettingComponentProps & {};
+
+export type AnalyticsTabModel = {
+    sites: SettingsState["sites"];
+};
 
 export type SettingsTabModel = SettingComponentProps & {};
 

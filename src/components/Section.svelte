@@ -11,7 +11,7 @@
     let { title, icon: Icon, tone = "default", children }: Props = $props();
 </script>
 
-<div class="border-t border-popup-border pt-3">
+<div>
     <h2
         class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""}`}
     >

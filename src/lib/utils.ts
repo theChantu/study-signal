@@ -54,7 +54,7 @@ function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
 
-function rateToColor(rate: number, min = 7, max = 15) {
+function rateToColor(rate: number, min = 7, max = 15, dark = false) {
     const clamped = Math.min(Math.max(rate, min), max);
 
     const logMin = Math.log(min);
@@ -64,10 +64,12 @@ function rateToColor(rate: number, min = 7, max = 15) {
     const ratio = (logRate - logMin) / (logMax - logMin);
     const t = Math.pow(ratio, 0.6);
 
-    // gray -> green.
-    const r = Math.round(156 * (1 - t) + 22 * t);
-    const g = Math.round(163 * (1 - t) + 163 * t);
-    const b = Math.round(175 * (1 - t) + 74 * t);
+    const [fromR, fromG, fromB] = dark ? [90, 95, 105] : [156, 163, 175];
+    const [toR, toG, toB] = dark ? [80, 200, 110] : [22, 163, 74];
+
+    const r = Math.round(fromR * (1 - t) + toR * t);
+    const g = Math.round(fromG * (1 - t) + toG * t);
+    const b = Math.round(fromB * (1 - t) + toB * t);
 
     return `rgb(${r}, ${g}, ${b})`;
 }

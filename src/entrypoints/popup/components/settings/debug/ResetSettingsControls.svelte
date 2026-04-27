@@ -85,7 +85,7 @@
 
 <Subsection
     class="flex flex-col gap-2"
-    borderClass="border-popup-border-subtle"
+
 >
     <span class="text-xs font-medium text-popup-text-muted">
         Reset to default

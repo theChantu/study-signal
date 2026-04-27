@@ -160,10 +160,7 @@
     }
 </script>
 
-<Subsection
-    class="flex flex-col gap-2"
-    borderClass="border-popup-border-subtle"
->
+<Subsection class="flex flex-col gap-2">
     <div class="flex items-center justify-between gap-2">
         <span class="text-xs font-medium text-popup-text-muted">{title}</span>
         {#if group.conditions.length >= 2}
@@ -182,7 +179,7 @@
 
     {#if group.conditions.length === 0}
         <div
-            class="rounded-md border border-dashed border-popup-border px-3 py-2.5 text-center text-xs text-popup-text-faint"
+            class="rounded-lg border border-popup-border px-3 py-2 text-center text-[12px] text-popup-text-muted"
         >
             {emptyLabel}
         </div>
@@ -269,10 +266,10 @@
 
     <button
         type="button"
-        class="inline-flex h-8 w-fit cursor-pointer items-center gap-1.5 rounded border border-dashed border-popup-border bg-transparent px-2.5 text-xs font-medium text-popup-text-faint hover:border-popup-text-faint hover:text-popup-text-soft"
+        class="popup-compact-button mt-1 inline-flex w-fit items-center gap-1"
         onclick={addCondition}
     >
-        <Plus size={13} />
+        <Plus size={12} strokeWidth={2.2} />
         Add condition
     </button>
 </Subsection>

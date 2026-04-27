@@ -28,7 +28,7 @@
 </script>
 
 {#if visible && entry}
-    <div class="shrink-0 px-4" transition:slide={{ duration: 150 }}>
+    <div class="shrink-0 px-5" transition:slide={{ duration: 150 }}>
         <section
             role="status"
             class="popup-surface border border-popup-accent-border bg-popup-accent-surface p-3"

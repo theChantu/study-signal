@@ -1,44 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-    --color-popup-canvas: #f8fafc;
+    --color-popup-canvas: #f5f5f8;
     --color-popup-surface: #ffffff;
-    --color-popup-surface-muted: #f9fafb;
+    --color-popup-surface-muted: #fafafe;
     --color-popup-surface-subtle: #f3f4f6;
 
-    --color-popup-border: #d1d5db;
-    --color-popup-border-subtle: #e5e7eb;
+    --color-popup-border: rgba(0, 0, 0, 0.06);
+    --color-popup-border-subtle: rgba(0, 0, 0, 0.04);
 
-    --color-popup-text: #374151;
-    --color-popup-text-strong: #1f2937;
+    --color-popup-text: #1a1a2e;
+    --color-popup-text-strong: #1a1a2e;
     --color-popup-text-soft: #4b5563;
-    --color-popup-text-muted: #6b7280;
-    --color-popup-text-faint: #9ca3af;
+    --color-popup-text-muted: #6b6b80;
+    --color-popup-text-faint: #9999aa;
     --color-popup-text-subtle: #d1d5db;
 
-    --color-popup-accent-surface: #eff6ff;
-    --color-popup-accent-surface-strong: #dbeafe;
-    --color-popup-accent-border: #bfdbfe;
-    --color-popup-accent-border-soft: #93c5fd;
-    --color-popup-accent-border-strong: #60a5fa;
-    --color-popup-accent-text: #2563eb;
-    --color-popup-accent-text-strong: #1d4ed8;
-    --color-popup-accent-text-soft: #3b82f6;
-    --color-popup-accent-text-muted: #2563ebbf;
-    --color-popup-accent-indicator: #3b82f699;
+    --color-popup-accent-surface: oklch(0.65 0.2 255 / 0.06);
+    --color-popup-accent-surface-strong: oklch(0.65 0.2 255 / 0.12);
+    --color-popup-accent-border: oklch(0.65 0.2 255 / 0.2);
+    --color-popup-accent-border-soft: oklch(0.65 0.2 255 / 0.15);
+    --color-popup-accent-border-strong: oklch(0.65 0.2 255 / 0.4);
+    --color-popup-accent-text: oklch(0.65 0.2 255);
+    --color-popup-accent-text-strong: oklch(0.55 0.2 255);
+    --color-popup-accent-text-soft: oklch(0.65 0.2 255);
+    --color-popup-accent-text-muted: oklch(0.65 0.2 255 / 0.75);
+    --color-popup-accent-indicator: oklch(0.65 0.2 255 / 0.6);
 
     --color-popup-danger-surface: #fef2f2;
     --color-popup-danger-border: #fca5a5;
     --color-popup-danger-text: #dc2626;
+
+    --color-popup-tab-bg: #ebebf0;
+    --color-popup-tag-bg: rgba(0, 0, 0, 0.04);
+    --color-popup-new-dot: oklch(0.7 0.18 55);
+    --color-popup-good: oklch(0.52 0.17 145);
+    --color-popup-good-bg: oklch(0.52 0.17 145 / 0.1);
 }
 
 @layer components {
     .popup-surface {
-        @apply rounded-md border border-popup-border bg-popup-surface;
+        @apply rounded-xl border border-popup-border bg-popup-surface;
     }
 
     .popup-collapsible {
-        @apply rounded-md border border-popup-border bg-popup-surface transition-colors duration-150 hover:border-popup-border focus-within:border-popup-accent-border-strong focus-within:hover:border-popup-accent-border-strong;
+        @apply rounded-xl border border-popup-border bg-popup-surface transition-colors duration-150 hover:border-popup-border focus-within:border-popup-accent-border-strong focus-within:hover:border-popup-accent-border-strong;
     }
 
     .popup-collapsible-accent {
@@ -46,23 +52,23 @@
     }
 
     .popup-surface-inner {
-        @apply rounded-md border border-popup-border bg-popup-surface-muted;
+        @apply rounded-xl border border-popup-border bg-popup-surface-muted;
     }
 
     .popup-control {
-        @apply w-full rounded-md border border-popup-border bg-popup-surface px-3 py-2.5 text-sm font-[inherit] text-popup-text outline-none transition-colors duration-150 hover:bg-popup-surface-muted focus:border-popup-accent-border-strong;
+        @apply w-full rounded-lg border border-popup-border bg-popup-surface px-3 py-2.5 text-sm font-[inherit] text-popup-text outline-none transition-[border-color,box-shadow] duration-150 focus:border-popup-accent-border-strong focus:shadow-[0_0_0_2px_var(--color-popup-accent-border)];
     }
 
     .popup-select-control {
-        @apply w-full appearance-none cursor-pointer rounded-md border border-popup-border bg-popup-surface px-3 py-2.5 pr-11 text-sm font-[inherit] text-popup-text outline-none transition-colors duration-150 hover:bg-popup-surface-muted focus:border-popup-accent-border-strong;
+        @apply w-full appearance-none cursor-pointer rounded-lg border border-popup-border bg-popup-surface px-3 py-2.5 pr-11 text-sm font-[inherit] text-popup-text outline-none transition-[border-color,box-shadow] duration-150 focus:border-popup-accent-border-strong focus:shadow-[0_0_0_2px_var(--color-popup-accent-border)];
     }
 
     .popup-control-chevron {
-        @apply pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full border border-popup-border bg-popup-surface-muted p-1 text-popup-text-faint;
+        @apply pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-popup-text-faint;
     }
 
     .popup-chip-chevron {
-        @apply rounded-full border border-popup-border bg-popup-surface-muted p-1 text-popup-text-faint;
+        @apply text-popup-text-faint;
     }
 
     .popup-badge {
@@ -70,7 +76,7 @@
     }
 
     .popup-section-heading {
-        @apply mb-2 flex items-center gap-1.5 text-xs font-medium tracking-[0.04em] text-popup-text-muted [&_svg]:text-popup-accent-text-soft;
+        @apply mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.03em] text-popup-accent-text [&_svg]:text-popup-accent-text-soft;
     }
 
     .popup-section-heading-muted {
@@ -78,11 +84,11 @@
     }
 
     .popup-compact-button {
-        @apply cursor-pointer rounded-md border border-popup-border bg-popup-surface px-2.5 py-1.5 text-xs font-medium font-[inherit] text-popup-text-soft transition-colors duration-150 hover:border-popup-border hover:bg-popup-surface-muted;
+        @apply cursor-pointer rounded-[7px] border border-popup-border bg-transparent px-2.5 py-[5px] text-[11px] font-medium font-[inherit] text-popup-text-muted transition-colors duration-150 hover:bg-[rgba(0,0,0,0.06)];
     }
 
     .popup-compact-button-danger {
-        @apply text-popup-text-muted hover:border-popup-danger-border hover:bg-popup-danger-surface hover:text-popup-danger-text;
+        @apply hover:border-popup-danger-border hover:bg-popup-danger-surface hover:text-popup-danger-text;
     }
 
     .popup-inline-link {
@@ -114,14 +120,82 @@ body {
     background: var(--color-popup-canvas);
     color: var(--color-popup-text);
     font-family:
+        "DM Sans",
         system-ui,
         -apple-system,
         sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition:
+        background 0.3s ease,
+        color 0.3s ease;
 }
 
 #app {
     height: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-popup-canvas: #13131f;
+        --color-popup-surface: #1c1c2e;
+        --color-popup-surface-muted: #22223a;
+        --color-popup-surface-subtle: #1c1c2e;
+
+        --color-popup-border: rgba(255, 255, 255, 0.06);
+        --color-popup-border-subtle: rgba(255, 255, 255, 0.04);
+
+        --color-popup-text: #e4e4ed;
+        --color-popup-text-strong: #e4e4ed;
+        --color-popup-text-soft: #b0b0c4;
+        --color-popup-text-muted: #8888a4;
+        --color-popup-text-faint: #5c5c78;
+        --color-popup-text-subtle: #3a3a52;
+
+        --color-popup-accent-surface: oklch(0.65 0.2 255 / 0.08);
+        --color-popup-accent-surface-strong: oklch(0.65 0.2 255 / 0.15);
+        --color-popup-accent-border: oklch(0.65 0.2 255 / 0.25);
+        --color-popup-accent-border-soft: oklch(0.65 0.2 255 / 0.18);
+        --color-popup-accent-border-strong: oklch(0.65 0.2 255 / 0.5);
+        --color-popup-accent-text: oklch(0.72 0.18 255);
+        --color-popup-accent-text-strong: oklch(0.78 0.16 255);
+        --color-popup-accent-text-soft: oklch(0.72 0.18 255);
+        --color-popup-accent-text-muted: oklch(0.72 0.18 255 / 0.75);
+        --color-popup-accent-indicator: oklch(0.72 0.18 255 / 0.6);
+
+        --color-popup-danger-surface: rgba(220, 38, 38, 0.1);
+        --color-popup-danger-border: rgba(220, 38, 38, 0.3);
+        --color-popup-danger-text: #f87171;
+
+        --color-popup-tab-bg: #1c1c2e;
+        --color-popup-tag-bg: rgba(255, 255, 255, 0.06);
+        --color-popup-new-dot: oklch(0.7 0.18 55);
+        --color-popup-good: oklch(0.72 0.19 145);
+        --color-popup-good-bg: oklch(0.72 0.19 145 / 0.12);
+    }
+
+    body {
+        color-scheme: dark;
+    }
+}
+
+select:hover:not(:focus),
+input[type="text"]:hover:not(:focus),
+input[type="number"]:hover:not(:focus),
+input[type="password"]:hover:not(:focus) {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    select:hover:not(:focus),
+    input[type="text"]:hover:not(:focus),
+    input[type="number"]:hover:not(:focus),
+    input[type="password"]:hover:not(:focus) {
+        border-color: rgba(255, 255, 255, 0.15) !important;
+    }
+}
+
+input[type="range"]:hover {
+    filter: brightness(1.1);
 }
 
 @supports (-moz-appearance: none) {
@@ -129,4 +203,16 @@ body {
     .popup-settings-list {
         padding-right: 1rem;
     }
+}
+
+@keyframes ping-dot {
+    75%,
+    100% {
+        opacity: 0;
+        transform: scale(2.2);
+    }
+}
+
+.animate-ping-dot {
+    animation: ping-dot 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }

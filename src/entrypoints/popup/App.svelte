@@ -4,8 +4,10 @@
     import ToastHost from "@/components/ToastHost.svelte";
     import { settingsState, uiState } from "./state.svelte";
     import { initPopup } from "./popupModel.svelte";
+    import AnalyticsTab from "./components/tabs/AnalyticsTab.svelte";
     import SettingsTab from "./components/tabs/SettingsTab.svelte";
     import OpportunitiesTab from "./components/tabs/OpportunitiesTab.svelte";
+    import PopupHeader from "./components/PopupHeader.svelte";
     import TabBar from "./components/TabBar.svelte";
     import ChangelogCard from "./components/ChangelogCard.svelte";
 
@@ -21,7 +23,11 @@
 </script>
 
 <div class="flex h-full flex-col gap-4 overflow-hidden pt-4">
-    <div class="shrink-0 px-4">
+    <div class="shrink-0 px-5">
+        <PopupHeader />
+    </div>
+
+    <div class="shrink-0 px-5">
         <TabBar />
     </div>
 
@@ -31,6 +37,12 @@
         <OpportunitiesTab
             model={{
                 activeSite,
+            }}
+        />
+    {:else if uiState.selectedTab === "analytics"}
+        <AnalyticsTab
+            model={{
+                sites: settingsState.sites,
             }}
         />
     {:else}

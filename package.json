@@ -27,6 +27,7 @@
         "wxt": "^0.20.20"
     },
     "dependencies": {
+        "@fontsource/dm-sans": "^5.2.8",
         "@lucide/svelte": "^0.577.0",
         "@tailwindcss/vite": "^4.2.2",
         "tailwindcss": "^4.2.2",

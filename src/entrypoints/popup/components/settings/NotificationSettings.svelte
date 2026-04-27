@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Bell } from "@lucide/svelte";
     import Field from "@/components/Field.svelte";
+    import RangeInput from "@/components/RangeInput.svelte";
     import SelectControl from "@/components/SelectControl.svelte";
     import ToggleControl from "@/components/ToggleControl.svelte";
     import Section from "@/components/Section.svelte";
@@ -157,23 +158,17 @@
                             {/each}
                         </SelectControl>
                     </Field>
-                    <Field
+                    <RangeInput
                         label={`Volume (${Math.round(model.notifications.delivery.sound.volume * 100)}%)`}
                         id="notification-volume"
-                    >
-                        <input
-                            id="notification-volume"
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="5"
-                            class="w-full accent-popup-accent-text"
-                            value={Math.round(
-                                model.notifications.delivery.sound.volume * 100,
-                            )}
-                            onchange={onVolumeChange}
-                        />
-                    </Field>
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={Math.round(
+                            model.notifications.delivery.sound.volume * 100,
+                        )}
+                        onchange={onVolumeChange}
+                    />
                 {/snippet}
             </ToggleControl>
             <AlertRuleGroupEditor

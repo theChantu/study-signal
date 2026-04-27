@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { ExternalLink, LoaderCircle } from "@lucide/svelte";
-    import SelectControl from "@/components/SelectControl.svelte";
-    import Analytics from "../Analytics.svelte";
+    import { onMount } from "svelte";
+    import { ExternalLink, LoaderCircle, Search } from "@lucide/svelte";
+    import FilterBar from "../FilterBar.svelte";
     import ProjectCard from "../ProjectCard.svelte";
     import StudyCard from "../StudyCard.svelte";
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
@@ -13,7 +13,6 @@
     import { matchesAlertRules } from "@/lib/notifications/alertRules";
     import { getOpportunityKey as getBaseOpportunityKey } from "@/lib/opportunities";
     import {
-        opportunitySortOptions,
         type OpportunitySort,
         type Currency,
         type GlobalSettings,
@@ -26,17 +25,21 @@
 
     let { model }: { model: OpportunitiesTabModel } = $props();
 
+    let prefersDark = $state(false);
+
+    onMount(() => {
+        const query = window.matchMedia("(prefers-color-scheme: dark)");
+        const updatePreference = () => (prefersDark = query.matches);
+
+        updatePreference();
+        query.addEventListener("change", updatePreference);
+
+        return () => query.removeEventListener("change", updatePreference);
+    });
+
+    import type { FilterChip } from "../../types";
+
     type RuntimeOpportunity = RuntimeOutputDataMap["opportunities"][number];
-
-    type SortOption = {
-        value: OpportunitySort;
-        label: string;
-    };
-
-    const options: SortOption[] = opportunitySortOptions.map((value) => ({
-        value,
-        label: capitalize(value.replaceAll("-", " ")),
-    }));
 
     function compareNullableNumbers(
         left: number | null,
@@ -155,7 +158,14 @@
             HIGHLIGHT_BASE_CURRENCY,
         );
 
-        return normalizedRate === null ? null : rateToColor(normalizedRate);
+        return normalizedRate === null
+            ? null
+            : rateToColor(
+                  normalizedRate,
+                  settingsState.globals.highlightRates.min,
+                  settingsState.globals.highlightRates.max,
+                  prefersDark,
+              );
     }
 
     function getNormalizedValue(
@@ -331,19 +341,54 @@
         return items;
     });
 
-    function patchOpportunitySort(sort: OpportunitySort) {
-        void queueMutation("store-patch", {
-            namespace: "globals",
-            data: {
-                opportunitySort: sort,
-            },
-        });
-    }
-
     let opportunitySort = $derived(settingsState.globals.opportunitySort);
 
     function getOpportunityKey(opportunity: OpportunityItem): string {
         return `${opportunity.siteName}:${getBaseOpportunityKey(opportunity)}`;
+    }
+
+    const QUICK_THRESHOLD_MINUTES = 15;
+    const NEW_THRESHOLD_MS = 10 * 60_000;
+
+    function applyFilters(
+        items: OpportunityItem[],
+        filters: FilterChip[],
+        platform: typeof uiState.platformFilter,
+    ): OpportunityItem[] {
+        let filtered = items;
+
+        if (platform !== "all") {
+            filtered = filtered.filter((item) => item.host === platform);
+        }
+
+        for (const filter of filters) {
+            switch (filter) {
+                case "highRate":
+                    filtered = filtered.filter(
+                        (item) =>
+                            item.normalizedRate !== null &&
+                            item.normalizedRate >=
+                                settingsState.globals.highlightRates.max,
+                    );
+                    break;
+                case "quick":
+                    filtered = filtered.filter(
+                        (item) =>
+                            item.sortCompletionMinutes !== null &&
+                            item.sortCompletionMinutes <=
+                                QUICK_THRESHOLD_MINUTES,
+                    );
+                    break;
+                case "new":
+                    filtered = filtered.filter(
+                        (item) =>
+                            Date.now() - item.firstSeenAt < NEW_THRESHOLD_MS,
+                    );
+                    break;
+            }
+        }
+
+        return filtered;
     }
 
     const loading = $derived(
@@ -357,9 +402,21 @@
         ),
     );
 
-    const sortedOpportunities = $derived(
-        sortOpportunities(opportunities, opportunitySort),
+    const filteredOpportunities = $derived(
+        applyFilters(
+            opportunities,
+            uiState.activeFilters,
+            uiState.platformFilter,
+        ),
     );
+
+    const sortedOpportunities = $derived(
+        sortOpportunities(filteredOpportunities, opportunitySort),
+    );
+    const hasActiveFilters = $derived(
+        uiState.activeFilters.length > 0 || uiState.platformFilter !== "all",
+    );
+
     const emptyMessage = $derived.by(() => {
         if (loading) {
             return "Looking for live opportunities across your synced tabs.";
@@ -369,38 +426,32 @@
             return "Open a study listings page to start syncing.";
         }
 
+        if (hasActiveFilters && opportunities.length > 0) {
+            return "Try adjusting your filters or check back soon.";
+        }
+
         return "No opportunities are currently available in the synced tabs.";
     });
+
+    const emptyTitle = $derived(
+        hasActiveFilters && opportunities.length > 0
+            ? "No studies match"
+            : "No opportunities yet",
+    );
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-4">
-    {#if uiState.detectedHost === model.activeSite.url && model.activeSite.settings?.analytics}
-        <div class="px-4">
-            <Analytics model={model.activeSite.settings?.analytics} />
-        </div>
-    {/if}
+    <div class="shrink-0 px-5">
+        <FilterBar />
+    </div>
 
-    {#if sortedOpportunities.length > 0}
-        <div class="shrink-0 px-4">
-            <SelectControl
-                value={opportunitySort}
-                onchange={(e) =>
-                    patchOpportunitySort(
-                        e.currentTarget.value as OpportunitySort,
-                    )}
-            >
-                {#each options as option}
-                    <option value={option.value}>{option.label}</option>
-                {/each}
-            </SelectControl>
-        </div>
-    {/if}
-
-    <div class="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">
+    <div
+        class="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]"
+    >
         {#if sortedOpportunities.length > 0}
             {#if loading}
                 <div
-                    class="flex items-center gap-2 px-4 pt-3 text-xs text-popup-text-faint"
+                    class="flex items-center gap-2 pl-5 pt-3 text-xs text-popup-text-faint"
                 >
                     <LoaderCircle
                         size={14}
@@ -410,7 +461,9 @@
                 </div>
             {/if}
 
-            <div class="popup-opportunities-list flex flex-col gap-3 pl-4 pb-4">
+            <div
+                class="popup-opportunities-list flex flex-col gap-2 pl-5 pr-1 pb-4"
+            >
                 {#each sortedOpportunities as opportunity (getOpportunityKey(opportunity))}
                     {#if opportunity.kind === "study"}
                         <StudyCard item={opportunity} />
@@ -421,16 +474,22 @@
             </div>
         {:else}
             <div
-                class="flex min-h-44 flex-col items-center justify-center gap-2 px-6 py-8 text-center"
+                class="flex min-h-44 flex-col items-center justify-center gap-2 px-8 py-8 text-center"
             >
                 {#if loading}
                     <LoaderCircle
                         size={18}
                         class="animate-spin text-popup-accent-indicator"
                     />
+                {:else}
+                    <div
+                        class="mb-1 flex h-12 w-12 items-center justify-center rounded-[14px] bg-popup-accent-surface-strong text-popup-accent-text"
+                    >
+                        <Search size={24} strokeWidth={2} />
+                    </div>
                 {/if}
                 <p class="text-sm font-medium text-popup-text">
-                    No opportunities yet
+                    {emptyTitle}
                 </p>
                 <p
                     class="max-w-[18rem] text-xs leading-5 text-popup-text-faint"
@@ -438,13 +497,15 @@
                     {emptyMessage}
                 </p>
                 {#if !loading && !hasLiveSnapshot}
-                    <div class="mt-2 flex flex-wrap justify-center gap-2">
+                    <div
+                        class="mt-2 grid w-full max-w-[18rem] grid-cols-2 gap-1.5"
+                    >
                         {#each supportedHosts as host}
                             <a
                                 href={`https://${host}${sites[host].studyPath}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                class="popup-compact-button inline-flex items-center gap-1.5"
+                                class="popup-compact-button inline-flex items-center justify-center gap-1.5 no-underline"
                             >
                                 {capitalize(sites[host].name)}
                                 <ExternalLink size={11} strokeWidth={2.2} />

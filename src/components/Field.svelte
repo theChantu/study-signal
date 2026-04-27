@@ -11,10 +11,7 @@
     let { label, id = "", children }: Props = $props();
 </script>
 
-<Subsection
-    class="flex flex-col gap-1.5"
-    borderClass="border-popup-border-subtle"
->
+<Subsection class="flex flex-col gap-1.5">
     <label for={id} class="text-xs font-medium text-popup-text-muted">
         {label}
     </label>

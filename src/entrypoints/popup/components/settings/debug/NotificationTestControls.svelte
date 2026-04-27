@@ -56,7 +56,7 @@
 
 <Subsection
     class="flex flex-col gap-2"
-    borderClass="border-popup-border-subtle"
+
 >
     <div class="flex flex-col gap-0.5">
         <span class="text-xs font-medium text-popup-text-muted">
