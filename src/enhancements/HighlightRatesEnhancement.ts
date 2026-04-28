@@ -44,11 +44,6 @@ class HighlightRatesEnhancement extends BaseEnhancement {
         }
 
         for (const rateEl of rateElements) {
-            // Check if the element should be ignored
-            if (rateEl.classList.contains("se-rate-highlight")) {
-                continue;
-            }
-
             const { originalText, originalSymbol } =
                 this.adapter.getRewardState(rateEl);
 
@@ -61,6 +56,7 @@ class HighlightRatesEnhancement extends BaseEnhancement {
             const currencyToUsd =
                 updatedConversionRates[originalCurrency].rates.USD;
 
+            // Recalculate existing highlighted elements because threshold settings can change.
             rateEl.style.backgroundColor = rateToColor(
                 rate * currencyToUsd,
                 highlightRates.min,
