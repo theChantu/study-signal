@@ -11,7 +11,8 @@
     import { ensureConversionRates } from "@/lib/currency/rates";
     import { capitalize, rateToColor } from "@/lib/utils";
     import { matchesAlertRules } from "@/lib/notifications/alertRules";
-    import { getOpportunityKey as getBaseOpportunityKey } from "@/lib/opportunities";
+    import { getOpportunityKey as getBaseOpportunityKey } from "@/lib/opportunities/opportunities";
+    import { isDisplayableOpportunity } from "../../lib/opportunities";
     import {
         type OpportunitySort,
         type Currency,
@@ -328,6 +329,8 @@
             if (!Array.isArray(hostOpportunities)) continue;
 
             for (const opportunity of hostOpportunities) {
+                if (!isDisplayableOpportunity(opportunity)) continue;
+
                 items.push(
                     opportunity.kind === "study"
                         ? buildStudyItem(opportunity, host, order)
@@ -348,7 +351,7 @@
     }
 
     const QUICK_THRESHOLD_MINUTES = 15;
-    const NEW_THRESHOLD_MS = 10 * 60_000;
+    const RECENT_THRESHOLD_MS = 10 * 60_000;
 
     function applyFilters(
         items: OpportunityItem[],
@@ -379,10 +382,12 @@
                                 QUICK_THRESHOLD_MINUTES,
                     );
                     break;
-                case "new":
+                case "recent":
                     filtered = filtered.filter(
                         (item) =>
-                            Date.now() - item.firstSeenAt < NEW_THRESHOLD_MS,
+                            Date.now() - item.firstSeenAt < RECENT_THRESHOLD_MS ||
+                            Date.now() - item.lastAlertableChangeAt <
+                                RECENT_THRESHOLD_MS,
                     );
                     break;
             }
