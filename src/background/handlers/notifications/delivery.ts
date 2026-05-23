@@ -4,6 +4,7 @@ import {
     type ProviderName,
 } from "@/providers/providers";
 import { capitalize } from "@/lib/utils";
+import log from "@/lib/log";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 import { playSound } from "@/lib/playSound";
 import { NOTIFICATION_SOUND_COOLDOWN_MS } from "@/constants";
@@ -105,6 +106,13 @@ async function sendProviderNotifications(
 
     for (const [name, config] of enabledProviders) {
         try {
+            log("Sending provider notifications", {
+                siteName,
+                provider: name,
+                count: notifications.length,
+                onlyWhenIdle: config.onlyWhenIdle,
+            });
+
             const provider = getProvider(name as ProviderName, config);
             const combined = notifications
                 .map((notification) => {
@@ -122,6 +130,11 @@ async function sendProviderNotifications(
             });
 
             if (ok) {
+                log("Provider notifications sent", {
+                    siteName,
+                    provider: name,
+                    count: notifications.length,
+                });
                 providerSendResult.sent = true;
                 providerSendResult.updatedProviders[name as ProviderName] =
                     provider.configData;
@@ -153,6 +166,13 @@ async function sendBrowserNotifications(
                 iconUrl: resolvedIconUrl,
                 title,
                 message,
+            });
+
+            log("Browser notification created", {
+                notificationId,
+                title,
+                hasLink: Boolean(link),
+                iconUrl: resolvedIconUrl,
             });
 
             sent = true;
@@ -230,6 +250,14 @@ async function deliverAutoNotifications(
         }
     }
 
+    log("Auto notification delivery", {
+        siteName,
+        count: notifications.length,
+        browserEnabled,
+        immediateProviders: immediate.map(([name]) => name),
+        idleOnlyProviders: idleOnly.map(([name]) => name),
+    });
+
     const deliveryResults: boolean[] = [];
 
     deliveryResults.push(
@@ -256,7 +284,10 @@ async function deliverAutoNotifications(
         deliveryResults.push(await sendBrowserNotifications(notifications));
     }
 
-    return deliveryResults.some(Boolean);
+    const delivered = deliveryResults.some(Boolean);
+    log("Auto notification delivery complete", { siteName, delivered });
+
+    return delivered;
 }
 
 export async function deliverNotifications(
@@ -272,7 +303,18 @@ export async function deliverNotifications(
         },
     } = await store.namespace("globals").get(["notifications"]);
 
-    if (sound.enabled && shouldPlayNotificationSound(siteName)) {
+    const soundAllowed = sound.enabled && shouldPlayNotificationSound(siteName);
+
+    log("Notification delivery check", {
+        siteName,
+        mode,
+        count: notifications.length,
+        browserEnabled,
+        soundEnabled: sound.enabled,
+        soundAllowed,
+    });
+
+    if (soundAllowed) {
         try {
             await playNotificationSound(sound.type, sound.volume);
         } catch (error) {
@@ -282,7 +324,9 @@ export async function deliverNotifications(
 
     if (mode === "browser") {
         if (!browserEnabled) return false;
-        return await sendBrowserNotifications(notifications);
+        const delivered = await sendBrowserNotifications(notifications);
+        log("Browser notification delivery complete", { siteName, delivered });
+        return delivered;
     }
 
     const { providers, idleThreshold } = await store.globals.get([
@@ -291,12 +335,14 @@ export async function deliverNotifications(
     ]);
 
     if (mode === "provider") {
-        return await sendProviderNotificationsAndPersist(
+        const delivered = await sendProviderNotificationsAndPersist(
             store,
             siteName,
             notifications,
             providers,
         );
+        log("Provider notification delivery complete", { siteName, delivered });
+        return delivered;
     }
 
     return await deliverAutoNotifications(

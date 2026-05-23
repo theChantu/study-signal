@@ -4,6 +4,7 @@ import {
     matchesAlertRules,
     type AlertRules,
 } from "@/lib/notifications/alertRules";
+import log from "@/lib/log";
 import {
     getOpportunityFingerprint,
     getOpportunityKey,
@@ -100,6 +101,8 @@ export async function handleOpportunitiesDetected(
 
     const previousCacheEntries = new Map<string, OpportunityCacheEntry>();
     let alertableOpportunities: OpportunityInfo[] = [];
+    let cacheableOpportunityCount = 0;
+    let cachePruned = false;
     let suppressVisibleAlerts = false;
     let rules!: AlertRules;
 
@@ -107,8 +110,11 @@ export async function handleOpportunitiesDetected(
         suppressVisibleAlerts =
             !hidden && current.opportunityAlerts.suppressWhenVisible;
         rules = current.opportunityAlerts.rules;
-        const { cache: nextOpportunityCache, pruned: cachePruned } =
-            pruneOpportunityCache(current.opportunityAlerts.cache, now);
+        const { cache: nextOpportunityCache, pruned } = pruneOpportunityCache(
+            current.opportunityAlerts.cache,
+            now,
+        );
+        cachePruned = pruned;
 
         const cacheableOpportunities: OpportunityInfo[] = [];
         alertableOpportunities = [];
@@ -137,6 +143,7 @@ export async function handleOpportunitiesDetected(
                 cacheableOpportunities.push(opportunity);
             }
         }
+        cacheableOpportunityCount = cacheableOpportunities.length;
 
         if (cacheableOpportunities.length === 0 && !cachePruned) return {};
 
@@ -169,12 +176,50 @@ export async function handleOpportunitiesDetected(
         };
     });
 
+    log("Notification check", {
+        siteName,
+        hidden,
+        received: opportunities.length,
+        alertable: alertableOpportunities.length,
+        cacheable: cacheableOpportunityCount,
+        cachePruned,
+        suppressVisibleAlerts,
+    });
+
+    if (alertableOpportunities.length > 0) {
+        log(
+            "Alertable opportunities",
+            alertableOpportunities.map((opportunity) => {
+                const key = getOpportunityKey(opportunity);
+                const previous = previousCacheEntries.get(key);
+
+                return {
+                    key,
+                    kind: opportunity.kind,
+                    title: opportunity.title,
+                    fingerprint: getOpportunityFingerprint(opportunity),
+                    previousNotifiedAt: previous?.notifiedAt,
+                    previousFingerprint: previous?.fingerprint,
+                    previousAvailableStudyCount: previous?.availableStudyCount,
+                };
+            }),
+        );
+    }
+
     if (alertableOpportunities.length === 0) return;
     if (suppressVisibleAlerts) return;
 
     const notifications: NotificationData[] = [];
     for (const opportunity of alertableOpportunities) {
-        if (!matchesAlertRules(opportunity, rules)) continue;
+        if (!matchesAlertRules(opportunity, rules)) {
+            log("Opportunity alert skipped by rules", {
+                siteName,
+                key: getOpportunityKey(opportunity),
+                kind: opportunity.kind,
+                title: opportunity.title,
+            });
+            continue;
+        }
 
         notifications.push(
             buildNotification(
@@ -186,6 +231,12 @@ export async function handleOpportunitiesDetected(
     }
 
     if (notifications.length === 0) return;
+
+    log("Delivering opportunity notifications", {
+        siteName,
+        count: notifications.length,
+        titles: notifications.map((notification) => notification.title),
+    });
 
     await deliverNotifications(store, {
         siteName,
