@@ -6,6 +6,7 @@ import {
     hasRuntimeStrategy,
     updateRuntimeMeta,
 } from "../runtimeStrategies";
+import { NOTIFY_TTL_MS } from "@/constants";
 import { createProject, createStudy } from "@/tests/utils/opportunities";
 
 describe("runtimeStrategies", () => {
@@ -300,6 +301,72 @@ describe("runtimeStrategies", () => {
             lastChangedAt: 300,
             lastAlertableChangeAt: 300,
             fingerprint: "1",
+        });
+    });
+
+    it("marks stale study reappearances as alertable changes", () => {
+        const runtimeMeta = {};
+
+        updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createStudy("study-a")],
+            100,
+        );
+
+        const reappearedAt = 100 + NOTIFY_TTL_MS;
+        const reappeared = updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createStudy("study-a")],
+            reappearedAt,
+        );
+
+        expect(reappeared["study:study-a"]).toMatchObject({
+            firstSeenAt: 100,
+            lastSeenAt: reappearedAt,
+            lastChangedAt: 100,
+            lastAlertableChangeAt: reappearedAt,
+            fingerprint: "present",
+        });
+    });
+
+    it("does not mark stale zero-count projects as alertable changes", () => {
+        const runtimeMeta = {};
+
+        updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 1 })],
+            100,
+        );
+
+        updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 0 })],
+            200,
+        );
+
+        const reappearedAt = 200 + NOTIFY_TTL_MS;
+        const stillEmpty = updateRuntimeMeta(
+            runtimeMeta,
+            "opportunities",
+            "prolific",
+            [createProject("project-a", { availableStudyCount: 0 })],
+            reappearedAt,
+        );
+
+        expect(stillEmpty["project:project-a"]).toMatchObject({
+            firstSeenAt: 100,
+            lastSeenAt: reappearedAt,
+            lastChangedAt: 200,
+            lastAlertableChangeAt: 100,
+            fingerprint: "0",
         });
     });
 });

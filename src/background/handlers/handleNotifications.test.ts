@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { storage } from "#imports";
 import { SettingsStore } from "@/store/SettingsStore";
+import { NOTIFY_TTL_MS } from "@/constants";
 import { getOpportunityKey } from "@/lib/opportunities/opportunities";
 import { createProject, createStudy } from "@/tests/utils/opportunities";
 import { handleOpportunitiesDetected } from "./handleNotifications";
@@ -38,6 +39,10 @@ beforeEach(() => {
     mockStorage._clear();
     deliverNotificationsMock.mockReset();
     deliverNotificationsMock.mockResolvedValue(true);
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe("handleOpportunitiesDetected", () => {
@@ -100,6 +105,75 @@ describe("handleOpportunitiesDetected", () => {
         });
 
         expect(deliverNotificationsMock).not.toHaveBeenCalled();
+    });
+
+    it("refreshes continuously observed study baselines without re-alerting after the original TTL", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+
+        const store = new SettingsStore();
+
+        await handleOpportunitiesDetected(store, {
+            siteName,
+            opportunities: [study],
+            hidden: true,
+        });
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+
+        vi.setSystemTime(NOTIFY_TTL_MS / 2);
+
+        await handleOpportunitiesDetected(store, {
+            siteName,
+            opportunities: [study],
+            hidden: true,
+        });
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+
+        vi.setSystemTime(NOTIFY_TTL_MS + 1);
+
+        await handleOpportunitiesDetected(store, {
+            siteName,
+            opportunities: [study],
+            hidden: true,
+        });
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("alerts when an absent study reappears after the opportunity TTL", async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+
+        const store = new SettingsStore();
+
+        await handleOpportunitiesDetected(store, {
+            siteName,
+            opportunities: [study],
+            hidden: true,
+        });
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+
+        vi.setSystemTime(NOTIFY_TTL_MS);
+
+        await handleOpportunitiesDetected(store, {
+            siteName,
+            opportunities: [],
+            hidden: true,
+        });
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+
+        vi.setSystemTime(NOTIFY_TTL_MS + 1);
+        await handleOpportunitiesDetected(store, {
+            siteName,
+            opportunities: [study],
+            hidden: true,
+        });
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(2);
     });
 
     it("updates project baselines when availability drops to zero", async () => {

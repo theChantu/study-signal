@@ -8,6 +8,7 @@ import {
     getOpportunityFingerprint,
     getOpportunityKey,
     isOpportunityAlertable,
+    shouldRefreshOpportunityBaseline,
 } from "@/lib/opportunities/opportunities";
 import {
     buildNotification,
@@ -28,25 +29,35 @@ export type { NotificationData } from "./notifications/types";
 
 function pruneOpportunityCache(
     cache: SiteSettings["opportunityAlerts"]["cache"],
+    now = Date.now(),
 ) {
-    const now = Date.now();
+    let pruned = false;
 
     const opportunities = { ...cache.opportunities };
     for (const [key, entry] of Object.entries(opportunities)) {
-        if (now - entry.notifiedAt >= NOTIFY_TTL_MS) delete opportunities[key];
+        if (now - entry.notifiedAt >= NOTIFY_TTL_MS) {
+            delete opportunities[key];
+            pruned = true;
+        }
     }
 
     const researchers = { ...cache.researchers };
     for (const [name, timestamp] of Object.entries(researchers)) {
-        if (now - timestamp >= NAME_CACHE_TTL_MS) delete researchers[name];
+        if (now - timestamp >= NAME_CACHE_TTL_MS) {
+            delete researchers[name];
+            pruned = true;
+        }
     }
 
     const titles = { ...cache.titles };
     for (const [title, timestamp] of Object.entries(titles)) {
-        if (now - timestamp >= NAME_CACHE_TTL_MS) delete titles[title];
+        if (now - timestamp >= NAME_CACHE_TTL_MS) {
+            delete titles[title];
+            pruned = true;
+        }
     }
 
-    return { opportunities, researchers, titles };
+    return { cache: { opportunities, researchers, titles }, pruned };
 }
 
 function getCachedOpportunity(
@@ -78,23 +89,11 @@ function buildOpportunityCacheEntry(
     };
 }
 
-function shouldUpdateProjectBaseline(
-    opportunity: OpportunityInfo,
-    previousEntry: OpportunityCacheEntry | undefined,
-): boolean {
-    return (
-        opportunity.kind === "project" &&
-        previousEntry !== undefined &&
-        previousEntry.availableStudyCount !== opportunity.availableStudyCount
-    );
-}
-
 export async function handleOpportunitiesDetected(
     store: SettingsStore,
     payload: MessageMap["opportunities-detected"],
 ): Promise<void> {
     const { siteName, opportunities, hidden } = payload;
-    if (opportunities.length === 0) return;
 
     const siteStore = store.sites.entry(siteName);
     const now = Date.now();
@@ -108,9 +107,8 @@ export async function handleOpportunitiesDetected(
         suppressVisibleAlerts =
             !hidden && current.opportunityAlerts.suppressWhenVisible;
         rules = current.opportunityAlerts.rules;
-        const nextOpportunityCache = pruneOpportunityCache(
-            current.opportunityAlerts.cache,
-        );
+        const { cache: nextOpportunityCache, pruned: cachePruned } =
+            pruneOpportunityCache(current.opportunityAlerts.cache, now);
 
         const cacheableOpportunities: OpportunityInfo[] = [];
         alertableOpportunities = [];
@@ -130,14 +128,17 @@ export async function handleOpportunitiesDetected(
             }
 
             if (
-                alertable ||
-                shouldUpdateProjectBaseline(opportunity, previousEntry)
+                shouldRefreshOpportunityBaseline(
+                    opportunity,
+                    previousEntry,
+                    alertable,
+                )
             ) {
                 cacheableOpportunities.push(opportunity);
             }
         }
 
-        if (cacheableOpportunities.length === 0) return {};
+        if (cacheableOpportunities.length === 0 && !cachePruned) return {};
 
         for (const opportunity of cacheableOpportunities) {
             nextOpportunityCache.opportunities[getOpportunityKey(opportunity)] =

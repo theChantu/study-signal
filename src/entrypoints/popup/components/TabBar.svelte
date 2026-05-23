@@ -2,9 +2,9 @@
     import { supportedHosts } from "@/adapters/siteConfigs";
     import { Activity, Settings } from "@lucide/svelte";
     import { capitalize } from "@/lib/utils";
+    import { isOpportunityCurrentlyAvailable } from "@/lib/opportunities/opportunities";
     import { runtimeState, uiState } from "../state.svelte";
     import { tabs } from "../types";
-    import { isDisplayableOpportunity } from "../lib/opportunities";
 
     const opportunityCount = $derived(
         supportedHosts.reduce((sum, host) => {
@@ -12,7 +12,7 @@
             return (
                 sum +
                 (Array.isArray(opportunities)
-                    ? opportunities.filter(isDisplayableOpportunity).length
+                    ? opportunities.filter(isOpportunityCurrentlyAvailable).length
                     : 0)
             );
         }, 0),

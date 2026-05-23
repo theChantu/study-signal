@@ -3,6 +3,7 @@ import {
     getOpportunityFingerprint,
     getOpportunityKey,
     isOpportunityAlertable,
+    isStaleAlertableOpportunityReappearance,
 } from "@/lib/opportunities/opportunities";
 import type {
     RuntimeChannel,
@@ -74,6 +75,13 @@ export const runtimeChannelStrategies = defineRuntimeStrategies({
                 const current = next[key];
                 const fingerprint = getOpportunityFingerprint(opportunity);
                 const changed = current?.fingerprint !== fingerprint;
+                const staleAlertableReappearance = current
+                    ? isStaleAlertableOpportunityReappearance(
+                          opportunity,
+                          current.lastSeenAt,
+                          now,
+                      )
+                    : false;
 
                 next[key] = current
                     ? {
@@ -81,8 +89,12 @@ export const runtimeChannelStrategies = defineRuntimeStrategies({
                           lastSeenAt: now,
                           lastChangedAt: changed ? now : current.lastChangedAt,
                           lastAlertableChangeAt:
-                              changed &&
-                              isAlertableOpportunityChange(opportunity, current)
+                              staleAlertableReappearance ||
+                              (changed &&
+                                  isAlertableOpportunityChange(
+                                      opportunity,
+                                      current,
+                                  ))
                                   ? now
                                   : current.lastAlertableChangeAt,
                           fingerprint,
