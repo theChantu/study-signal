@@ -4,11 +4,15 @@ import { getRandomTimeoutMs, scheduleTimeout } from "../lib/utils";
 import getSiteAdapter from "../lib/site/getSiteAdapter";
 import { onExtensionMessage } from "@/messages/onExtensionMessage";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
-import debounce from "@/lib/debounce";
 import deepMerge from "@/lib/deepMerge";
 import { loadExtensionSettings } from "../lib/loadExtensionSettings";
 import { getRuntimeSyncChannels } from "@/background/runtime/runtimeHelpers";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
+import {
+    createEnhancementScheduler,
+    hasRelevantDomChanges,
+    type EnhancementRunReason,
+} from "./enhancementScheduler";
 
 import type { ContentScriptContext } from "#imports";
 import type { Settings, SiteSettings } from "@/store/types";
@@ -47,7 +51,8 @@ async function runContentScript(ctx: ContentScriptContext) {
         }
     }
 
-    async function runEnhancements() {
+    async function runEnhancements(reason: EnhancementRunReason) {
+        log("Enhancement run started.", { reason });
         observer.disconnect();
         try {
             await enhancementHandler.update({ ...globals, ...site });
@@ -55,21 +60,19 @@ async function runContentScript(ctx: ContentScriptContext) {
             await syncRuntime();
         } finally {
             observer.observe(document.body, observerConfig);
+            log("Enhancement run finished.", { reason });
         }
     }
 
-    const debounced = debounce(async () => {
-        await runEnhancements();
-    }, 300);
+    const enhancementScheduler = createEnhancementScheduler({
+        run: runEnhancements,
+    });
 
     // Observe the DOM for changes and re-run the enhancements if necessary
     observer = new MutationObserver((mutations) => {
-        const hasChanges = mutations.some(
-            (m) => m.addedNodes.length > 0 || m.removedNodes.length > 0,
-        );
-        if (!hasChanges) return;
+        if (!hasRelevantDomChanges(mutations)) return;
 
-        debounced();
+        enhancementScheduler.schedule("dom", { followUp: true });
     });
 
     const pageReloadTimeout = scheduleTimeout(() => {
@@ -83,7 +86,8 @@ async function runContentScript(ctx: ContentScriptContext) {
     });
 
     // Apply the enhancements initially
-    await runEnhancements();
+    await enhancementScheduler.runNow("initial");
+    enhancementScheduler.scheduleFollowUp();
 
     const supportsAutoReload = adapter.hasFeature("autoReload");
 
@@ -161,7 +165,7 @@ async function runContentScript(ctx: ContentScriptContext) {
             if (keys.every((key) => irrelevantKeys.has(key))) return;
         }
 
-        debounced();
+        enhancementScheduler.schedule("settings");
     });
 
     onExtensionMessage("runtime-sync-request", async (payload) => {
