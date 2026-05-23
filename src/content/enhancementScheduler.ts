@@ -3,11 +3,7 @@ import log from "@/lib/log";
 const ENHANCEMENT_RUN_DELAY_MS = 300;
 const ENHANCEMENT_FOLLOW_UP_DELAY_MS = 150;
 
-export type EnhancementRunReason =
-    | "initial"
-    | "dom"
-    | "settings"
-    | "follow-up";
+export type EnhancementRunReason = "initial" | "dom" | "settings" | "follow-up";
 
 type QueuedEnhancementRun = {
     reason: EnhancementRunReason;
@@ -22,13 +18,6 @@ type ScheduleOptions = {
 type EnhancementSchedulerOptions = {
     run(reason: EnhancementRunReason): Promise<void>;
 };
-
-export function hasRelevantDomChanges(mutations: MutationRecord[]): boolean {
-    return mutations.some(
-        (mutation) =>
-            mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0,
-    );
-}
 
 export function createEnhancementScheduler({
     run,
@@ -95,21 +84,12 @@ export function createEnhancementScheduler({
         }
     }
 
-    async function runNow(reason: EnhancementRunReason): Promise<void> {
+    function cancel(): void {
         if (runTimer) {
             clearTimeout(runTimer);
             runTimer = undefined;
         }
-
-        await execute(reason, false);
     }
 
-    function scheduleFollowUp(): void {
-        schedule("follow-up", {
-            delay: ENHANCEMENT_FOLLOW_UP_DELAY_MS,
-            followUp: false,
-        });
-    }
-
-    return { runNow, schedule, scheduleFollowUp };
+    return { schedule, cancel };
 }

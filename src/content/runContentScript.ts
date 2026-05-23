@@ -10,12 +10,11 @@ import { getRuntimeSyncChannels } from "@/background/runtime/runtimeHelpers";
 import { EnhancementHandler } from "./handlers/EnhancementHandler";
 import {
     createEnhancementScheduler,
-    hasRelevantDomChanges,
     type EnhancementRunReason,
 } from "./enhancementScheduler";
 
 import type { ContentScriptContext } from "#imports";
-import type { Settings, SiteSettings } from "@/store/types";
+import type { GlobalSettings, SiteSettings } from "@/store/types";
 import type { RuntimeChannel, StoreChangedMessage } from "@/messages/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
@@ -68,9 +67,11 @@ async function runContentScript(ctx: ContentScriptContext) {
         run: runEnhancements,
     });
 
-    // Observe the DOM for changes and re-run the enhancements if necessary
     observer = new MutationObserver((mutations) => {
-        if (!hasRelevantDomChanges(mutations)) return;
+        const hasRelevantChanges = mutations.some(
+            (m) => m.addedNodes.length > 0 || m.removedNodes.length > 0,
+        );
+        if (!hasRelevantChanges) return;
 
         enhancementScheduler.schedule("dom", { followUp: true });
     });
@@ -86,8 +87,7 @@ async function runContentScript(ctx: ContentScriptContext) {
     });
 
     // Apply the enhancements initially
-    await enhancementScheduler.runNow("initial");
-    enhancementScheduler.scheduleFollowUp();
+    enhancementScheduler.schedule("initial", { delay: 0, followUp: true });
 
     const supportsAutoReload = adapter.hasFeature("autoReload");
 
@@ -142,11 +142,12 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     initializeAutoReload(site.autoReload);
 
-    const irrelevantKeys: Set<Partial<keyof Settings>> = new Set([
-        "opportunityAlerts",
-    ]);
+    const irrelevantKeys: Record<string, Set<string>> = {
+        globals: new Set<keyof GlobalSettings>(["lastPopupOpenedAt"]),
+        sites: new Set<keyof SiteSettings>(["opportunityAlerts"]),
+    };
 
-    onExtensionMessage("store-changed", (payload) => {
+    const unsubStoreChanged = onExtensionMessage("store-changed", (payload) => {
         if (payload.namespace === "globals") {
             globals = deepMerge(globals, payload.data);
         } else {
@@ -158,21 +159,23 @@ async function runContentScript(ctx: ContentScriptContext) {
             if (supportsAutoReload && payload.data.autoReload) {
                 updateAutoReload(previousAutoReload, site.autoReload);
             }
-
-            const keys = Object.keys(
-                payload.data,
-            ) as (keyof StoreChangedMessage["data"])[];
-            if (keys.every((key) => irrelevantKeys.has(key))) return;
         }
+
+        const keys = Object.keys(payload.data);
+        const ignored = irrelevantKeys[payload.namespace];
+        if (ignored && keys.every((key) => ignored.has(key))) return;
 
         enhancementScheduler.schedule("settings");
     });
 
-    onExtensionMessage("runtime-sync-request", async (payload) => {
-        await syncRuntime(payload?.channels);
-    });
+    const unsubRuntimeSync = onExtensionMessage(
+        "runtime-sync-request",
+        async (payload) => {
+            await syncRuntime(payload?.channels);
+        },
+    );
 
-    const unsubscribe = adapter.observeNetwork();
+    const unsubNetwork = adapter.observeNetwork();
 
     adapter.on("studyCompletion", (data) => {
         sendExtensionMessage({
@@ -182,6 +185,16 @@ async function runContentScript(ctx: ContentScriptContext) {
                 url: data.url,
             },
         });
+    });
+
+    ctx.onInvalidated(() => {
+        enhancementScheduler.cancel();
+        observer.disconnect();
+        pageReloadTimeout.clear();
+        unsubStoreChanged();
+        unsubRuntimeSync();
+        unsubNetwork();
+        log("Content script invalidated.");
     });
 }
 
