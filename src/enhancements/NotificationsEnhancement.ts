@@ -4,7 +4,6 @@ import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
 export class NotificationsEnhancement extends BaseEnhancement {
     async apply() {
         const opportunities = this.adapter.extractOpportunities("display");
-        if (opportunities.length === 0) return;
 
         await sendExtensionMessage({
             type: "opportunities-detected",

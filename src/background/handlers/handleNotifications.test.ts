@@ -4,10 +4,14 @@ import { SettingsStore } from "@/store/SettingsStore";
 import { NOTIFY_TTL_MS } from "@/constants";
 import { getOpportunityKey } from "@/lib/opportunities/opportunities";
 import { createProject, createStudy } from "@/tests/utils/opportunities";
-import { handleOpportunitiesDetected } from "./handleNotifications";
+import {
+    handleOpportunitiesDetected,
+    type RuntimeOpportunityMetaProvider,
+} from "./handleNotifications";
 import { deliverNotifications } from "./notifications/delivery";
 
 import type { ProjectInfo } from "@/adapters/BaseAdapter";
+import type { RuntimeSeenMeta } from "@/messages/types";
 
 vi.mock("./notifications/delivery", () => ({
     deliverNotifications: vi.fn(async () => true),
@@ -33,6 +37,13 @@ const project = createProject("project-1", {
 
 function withProjectCount(availableStudyCount: number): ProjectInfo {
     return { ...project, availableStudyCount };
+}
+
+function createRuntimeOpportunityMetaProvider(
+    key: string,
+    meta: RuntimeSeenMeta,
+): RuntimeOpportunityMetaProvider {
+    return async () => ({ [key]: meta });
 }
 
 beforeEach(() => {
@@ -107,7 +118,7 @@ describe("handleOpportunitiesDetected", () => {
         expect(deliverNotificationsMock).not.toHaveBeenCalled();
     });
 
-    it("refreshes continuously observed study baselines without re-alerting after the original TTL", async () => {
+    it("refreshes continuously observed study baselines without re-alerting after the dedupe TTL", async () => {
         vi.useFakeTimers();
         vi.setSystemTime(0);
 
@@ -174,6 +185,113 @@ describe("handleOpportunitiesDetected", () => {
         });
 
         expect(deliverNotificationsMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("uses recent runtime metadata to avoid alerting known studies when the notification cache is missing", async () => {
+        vi.useFakeTimers();
+        const now = NOTIFY_TTL_MS * 2;
+        vi.setSystemTime(now);
+
+        const store = new SettingsStore();
+        const key = getOpportunityKey(study);
+        const getRuntimeOpportunityMeta = createRuntimeOpportunityMetaProvider(
+            key,
+            {
+                firstSeenAt: now - NOTIFY_TTL_MS / 2,
+                lastSeenAt: now - NOTIFY_TTL_MS / 2,
+                lastChangedAt: now - NOTIFY_TTL_MS / 2,
+                lastAlertableChangeAt: now - NOTIFY_TTL_MS / 2,
+                fingerprint: "present",
+            },
+        );
+
+        await handleOpportunitiesDetected(
+            store,
+            {
+                siteName,
+                opportunities: [study],
+                hidden: true,
+            },
+            getRuntimeOpportunityMeta,
+        );
+
+        expect(deliverNotificationsMock).not.toHaveBeenCalled();
+
+        const state = await store.sites
+            .entry(siteName)
+            .get(["opportunityAlerts"]);
+        expect(state.opportunityAlerts.cache.opportunities).toHaveProperty(key);
+    });
+
+    it("allows known studies to alert again when runtime metadata is stale", async () => {
+        vi.useFakeTimers();
+        const now = NOTIFY_TTL_MS * 2;
+        vi.setSystemTime(now);
+
+        const store = new SettingsStore();
+        const getRuntimeOpportunityMeta = createRuntimeOpportunityMetaProvider(
+            getOpportunityKey(study),
+            {
+                firstSeenAt: now - NOTIFY_TTL_MS,
+                lastSeenAt: now - NOTIFY_TTL_MS,
+                lastChangedAt: now - NOTIFY_TTL_MS,
+                lastAlertableChangeAt: now - NOTIFY_TTL_MS,
+                fingerprint: "present",
+            },
+        );
+
+        await handleOpportunitiesDetected(
+            store,
+            {
+                siteName,
+                opportunities: [study],
+                hidden: true,
+            },
+            getRuntimeOpportunityMeta,
+        );
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses recent runtime project metadata as the previous alert baseline", async () => {
+        vi.useFakeTimers();
+        const now = NOTIFY_TTL_MS * 2;
+        vi.setSystemTime(now);
+
+        const store = new SettingsStore();
+        const getRuntimeOpportunityMeta = createRuntimeOpportunityMetaProvider(
+            getOpportunityKey(project),
+            {
+                firstSeenAt: now - NOTIFY_TTL_MS / 2,
+                lastSeenAt: now - NOTIFY_TTL_MS / 2,
+                lastChangedAt: now - NOTIFY_TTL_MS / 2,
+                lastAlertableChangeAt: now - NOTIFY_TTL_MS / 2,
+                fingerprint: "0",
+            },
+        );
+
+        await handleOpportunitiesDetected(
+            store,
+            {
+                siteName,
+                opportunities: [withProjectCount(1)],
+                hidden: true,
+            },
+            getRuntimeOpportunityMeta,
+        );
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
+        expect(deliverNotificationsMock).toHaveBeenLastCalledWith(store, {
+            siteName,
+            notifications: [
+                expect.objectContaining({
+                    title: project.title,
+                    message: expect.stringContaining(
+                        "0 -> 1 studies available",
+                    ),
+                }),
+            ],
+        });
     });
 
     it("updates project baselines when availability drops to zero", async () => {

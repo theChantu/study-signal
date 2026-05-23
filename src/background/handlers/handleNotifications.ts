@@ -23,10 +23,20 @@ export {
 } from "./notifications/delivery";
 
 import type { OpportunityInfo, StudyInfo } from "@/adapters/BaseAdapter";
-import type { MessageMap } from "@/messages/types";
+import type { SiteName } from "@/adapters/siteConfigs";
+import type { MessageMap, RuntimeSeenMeta } from "@/messages/types";
 import type { SiteSettings } from "@/store/types";
 import type { NotificationData } from "./notifications/types";
-export type { NotificationData } from "./notifications/types";
+
+export type RuntimeOpportunityMetaProvider = (
+    siteName: SiteName,
+) => Promise<Record<string, RuntimeSeenMeta> | undefined>;
+
+type PreviousOpportunityBaseline = {
+    cacheEntry: OpportunityCacheEntry | undefined;
+    opportunity: OpportunityInfo | undefined;
+    usedRuntimeMeta: boolean;
+};
 
 function pruneOpportunityCache(
     cache: SiteSettings["opportunityAlerts"]["cache"],
@@ -90,19 +100,97 @@ function buildOpportunityCacheEntry(
     };
 }
 
+function getProjectCountFromRuntimeFingerprint(
+    fingerprint: string,
+): number | null {
+    if (!fingerprint) return null;
+
+    const count = Number(fingerprint);
+    return Number.isFinite(count) ? count : null;
+}
+
+function getRuntimeBaselineOpportunity(
+    opportunity: OpportunityInfo,
+    entry: RuntimeSeenMeta | undefined,
+    now: number,
+): OpportunityInfo | undefined {
+    if (!entry || now - entry.lastSeenAt >= NOTIFY_TTL_MS) return undefined;
+
+    if (opportunity.kind === "study") return opportunity;
+
+    return {
+        ...opportunity,
+        availableStudyCount: getProjectCountFromRuntimeFingerprint(
+            entry.fingerprint,
+        ),
+    };
+}
+
+function buildRuntimeCacheEntry(
+    opportunity: OpportunityInfo,
+    entry: RuntimeSeenMeta,
+): OpportunityCacheEntry {
+    return {
+        notifiedAt: entry.lastSeenAt,
+        fingerprint: entry.fingerprint,
+        availableStudyCount:
+            opportunity.kind === "project"
+                ? getProjectCountFromRuntimeFingerprint(entry.fingerprint)
+                : null,
+    };
+}
+
+function getPreviousOpportunityBaseline(
+    opportunity: OpportunityInfo,
+    cache: SiteSettings["opportunityAlerts"]["cache"],
+    runtimeEntry: RuntimeSeenMeta | undefined,
+    now: number,
+): PreviousOpportunityBaseline {
+    const cachedEntry = cache.opportunities[getOpportunityKey(opportunity)];
+    if (cachedEntry) {
+        return {
+            cacheEntry: cachedEntry,
+            opportunity: getCachedOpportunity(opportunity, cache),
+            usedRuntimeMeta: false,
+        };
+    }
+
+    const runtimeOpportunity = getRuntimeBaselineOpportunity(
+        opportunity,
+        runtimeEntry,
+        now,
+    );
+    if (!runtimeOpportunity || !runtimeEntry) {
+        return {
+            cacheEntry: undefined,
+            opportunity: undefined,
+            usedRuntimeMeta: false,
+        };
+    }
+
+    return {
+        cacheEntry: buildRuntimeCacheEntry(opportunity, runtimeEntry),
+        opportunity: runtimeOpportunity,
+        usedRuntimeMeta: true,
+    };
+}
+
 export async function handleOpportunitiesDetected(
     store: SettingsStore,
     payload: MessageMap["opportunities-detected"],
+    getRuntimeOpportunityMeta?: RuntimeOpportunityMetaProvider,
 ): Promise<void> {
     const { siteName, opportunities, hidden } = payload;
 
     const siteStore = store.sites.entry(siteName);
     const now = Date.now();
+    const runtimeOpportunityMeta = await getRuntimeOpportunityMeta?.(siteName);
 
     const previousCacheEntries = new Map<string, OpportunityCacheEntry>();
     let alertableOpportunities: OpportunityInfo[] = [];
     let cacheableOpportunityCount = 0;
     let cachePruned = false;
+    let runtimeBaselineCount = 0;
     let suppressVisibleAlerts = false;
     let rules!: AlertRules;
 
@@ -121,12 +209,20 @@ export async function handleOpportunitiesDetected(
 
         for (const opportunity of opportunities) {
             const key = getOpportunityKey(opportunity);
-            const previousEntry = nextOpportunityCache.opportunities[key];
-            if (previousEntry) previousCacheEntries.set(key, previousEntry);
+            const runtimeEntry = runtimeOpportunityMeta?.[key];
+            const previousBaseline = getPreviousOpportunityBaseline(
+                opportunity,
+                nextOpportunityCache,
+                runtimeEntry,
+                now,
+            );
+            if (previousBaseline.usedRuntimeMeta) runtimeBaselineCount += 1;
+            if (previousBaseline.cacheEntry)
+                previousCacheEntries.set(key, previousBaseline.cacheEntry);
 
             const alertable = isOpportunityAlertable(
                 opportunity,
-                getCachedOpportunity(opportunity, nextOpportunityCache),
+                previousBaseline.opportunity,
             );
 
             if (alertable) {
@@ -136,7 +232,7 @@ export async function handleOpportunitiesDetected(
             if (
                 shouldRefreshOpportunityBaseline(
                     opportunity,
-                    previousEntry,
+                    previousBaseline.cacheEntry,
                     alertable,
                 )
             ) {
@@ -183,6 +279,7 @@ export async function handleOpportunitiesDetected(
         alertable: alertableOpportunities.length,
         cacheable: cacheableOpportunityCount,
         cachePruned,
+        runtimeBaselines: runtimeBaselineCount,
         suppressVisibleAlerts,
     });
 
@@ -207,7 +304,13 @@ export async function handleOpportunitiesDetected(
     }
 
     if (alertableOpportunities.length === 0) return;
-    if (suppressVisibleAlerts) return;
+    if (suppressVisibleAlerts) {
+        log("Opportunity alerts suppressed because the site page is visible", {
+            siteName,
+            count: alertableOpportunities.length,
+        });
+        return;
+    }
 
     const notifications: NotificationData[] = [];
     for (const opportunity of alertableOpportunities) {

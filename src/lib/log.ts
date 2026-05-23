@@ -12,15 +12,13 @@ const log: typeof console.log = (...args) => {
     if (enabled) console.log("[Study Signal]", ...args);
 };
 
-if (typeof browser !== "undefined") {
-    onExtensionMessage("store-changed", (changed) => {
-        if (changed.namespace === "globals" && "debug" in changed.data) {
-            if (changed.data.debug?.enabled === undefined) return;
-            enabled = changed.data.debug.enabled;
-        }
-    });
+onExtensionMessage("store-changed", (changed) => {
+    if (changed.namespace === "globals" && "debug" in changed.data) {
+        if (changed.data.debug?.enabled === undefined) return;
+        enabled = changed.data.debug.enabled;
+    }
+});
 
-    void initDebug();
-}
+void initDebug();
 
 export default log;

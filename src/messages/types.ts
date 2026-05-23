@@ -13,7 +13,7 @@ import type {
 } from "@/store/SettingsStore";
 import type { SiteName } from "@/adapters/siteConfigs";
 import type { OpportunityInfo } from "@/adapters/BaseAdapter";
-import type { NotificationData } from "@/background/handlers/handleNotifications";
+import type { NotificationData } from "@/background/handlers/notifications/types";
 import type { NetworkRequestEvent } from "@/events/network";
 
 type GlobalsTarget<TData> = {
@@ -99,7 +99,8 @@ export type RuntimeOutputDataMap = {
     >;
 };
 
-export type RuntimeChannel = keyof RuntimeInputDataMap & keyof RuntimeOutputDataMap;
+export type RuntimeChannel = keyof RuntimeInputDataMap &
+    keyof RuntimeOutputDataMap;
 
 type RuntimeTarget<
     TDataMap extends Partial<Record<RuntimeChannel, unknown>>,

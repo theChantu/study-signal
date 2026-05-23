@@ -1,3 +1,5 @@
+import { browser } from "#imports";
+
 import type {
     MessageMap,
     MessageResponse,
@@ -32,6 +34,8 @@ export function onExtensionMessage<K extends keyof MessageMap>(
 
         return true;
     };
+
+    if (!browser?.runtime?.onMessage) return () => {};
 
     browser.runtime.onMessage.addListener(listener);
 

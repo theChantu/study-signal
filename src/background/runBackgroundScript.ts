@@ -104,7 +104,7 @@ function runBackgroundScript() {
         handleNotificationClosed(id),
     );
 
-    registerRuntimeSync(store);
+    const runtimeSync = registerRuntimeSync(store);
 
     async function requestRuntimeSync() {
         const channels = getRuntimeSyncChannels();
@@ -136,7 +136,11 @@ function runBackgroundScript() {
     });
 
     onExtensionMessage("opportunities-detected", (payload) =>
-        handleOpportunitiesDetected(store, payload),
+        handleOpportunitiesDetected(
+            store,
+            payload,
+            runtimeSync.getOpportunityMeta,
+        ),
     );
 
     onExtensionMessage("opportunity-alert", (payload) =>

@@ -6,7 +6,7 @@ export type ChangelogEntry = {
 
 export const changelogEntries = [
     {
-        version: "1.8.7",
+        version: "1.8.8",
         title: "Alerts",
         items: [
             "Reduced duplicate opportunity alerts by keeping continuously observed opportunities deduped.",

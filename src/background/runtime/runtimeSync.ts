@@ -27,7 +27,14 @@ import type {
     RuntimeChannel,
     RuntimeInputDataMap,
     RuntimeOutputDataMap,
+    RuntimeSeenMeta,
 } from "@/messages/types";
+
+export type RuntimeSyncApi = {
+    getOpportunityMeta(
+        siteName: SiteName,
+    ): Promise<Record<string, RuntimeSeenMeta> | undefined>;
+};
 
 async function broadcastRuntimeChanged<K extends RuntimeChannel>(
     channel: K,
@@ -63,7 +70,7 @@ async function keepTabLoaded(tabId: number): Promise<void> {
     }
 }
 
-export function registerRuntimeSync(store: SettingsStore): void {
+export function registerRuntimeSync(store: SettingsStore): RuntimeSyncApi {
     const runtimeCache = createRuntimeCache();
     let runtimeMeta: RuntimeMetaStore = {};
     let runtimeMetaReady: Promise<void> | null = null;
@@ -255,4 +262,11 @@ export function registerRuntimeSync(store: SettingsStore): void {
                 };
             }),
     );
+
+    return {
+        async getOpportunityMeta(siteName) {
+            await ensureRuntimeMeta();
+            return runtimeMeta.opportunities?.[siteName];
+        },
+    };
 }
