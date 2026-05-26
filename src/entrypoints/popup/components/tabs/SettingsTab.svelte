@@ -15,6 +15,7 @@
     import HighlightSettings from "../settings/HighlightSettings.svelte";
     import NotificationSettings from "../settings/NotificationSettings.svelte";
     import ProviderSettings from "../settings/ProviderSettings.svelte";
+    import SupportSettings from "../settings/SupportSettings.svelte";
     import { queueMutation, selectHost } from "../../popupModel.svelte";
     import { settingsState } from "../../state.svelte";
 
@@ -110,6 +111,8 @@
                     }}
                 />
             {/if}
+
+            <SupportSettings />
 
             <DebugSettings
                 model={{
