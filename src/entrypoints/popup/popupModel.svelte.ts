@@ -29,6 +29,7 @@ import deepMerge from "@/lib/deepMerge";
 import type { RuntimeState } from "./types";
 
 let globalsPromise: Promise<void> | null = null;
+const sitePromises: Partial<Record<SupportedHosts, Promise<void>>> = {};
 export let pendingMutation: Promise<void> = Promise.resolve();
 
 const siteNameToHost = supportedHosts.reduce(
@@ -59,26 +60,37 @@ function loadGlobals() {
 
 async function loadSite(host: SupportedHosts) {
     if (host in settingsState.sites) return;
+    if (sitePromises[host]) return sitePromises[host];
 
-    try {
-        const response = await sendExtensionMessage({
-            type: "store-fetch",
-            data: {
-                namespace: "sites",
-                entry: sites[host].name,
-                data: { keys: defaultSiteSettingsKeys },
-            },
-        });
+    sitePromises[host] = (async () => {
+        try {
+            const response = await sendExtensionMessage({
+                type: "store-fetch",
+                data: {
+                    namespace: "sites",
+                    entry: sites[host].name,
+                    data: { keys: defaultSiteSettingsKeys },
+                },
+            });
 
-        if (response.namespace === "globals") return;
+            if (response.namespace === "globals") return;
 
-        settingsState.sites[host] = {
-            ...defaultSiteSettings,
-            ...response.data,
-        };
-    } catch (error) {
-        console.error(error);
-    }
+            settingsState.sites[host] = deepMerge(
+                settingsState.sites[host] ?? defaultSiteSettings,
+                response.data,
+            );
+        } catch (error) {
+            console.error(error);
+        } finally {
+            delete sitePromises[host];
+        }
+    })();
+
+    return sitePromises[host];
+}
+
+async function loadAllSites() {
+    await Promise.all(supportedHosts.map((host) => loadSite(host)));
 }
 
 async function loadRuntimeState(host: SupportedHosts) {
@@ -140,9 +152,10 @@ function applyStoreChange(payload: StoreChangedMessage) {
     if (!siteUrl) return;
 
     const current = settingsState.sites[siteUrl];
-    if (!current) return;
-
-    settingsState.sites[siteUrl] = deepMerge(current, payload.data);
+    settingsState.sites[siteUrl] = deepMerge(
+        current ?? defaultSiteSettings,
+        payload.data,
+    );
 }
 
 function applyRuntimeChange(payload: RuntimeChangedMessage) {
@@ -174,11 +187,7 @@ async function initializePopup() {
         }
     }
 
-    await Promise.all([
-        loadGlobals(),
-        loadSite(uiState.selectedHost),
-        loadAllRuntimeState(),
-    ]);
+    await Promise.all([loadGlobals(), loadAllSites(), loadAllRuntimeState()]);
 
     beginPopupSession();
 }

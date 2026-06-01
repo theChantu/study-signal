@@ -6,6 +6,13 @@ export type ChangelogEntry = {
 
 export const changelogEntries = [
     {
+        version: "1.8.9",
+        title: "Popup fixes",
+        items: [
+            "Fixed opportunity highlights and filters using the wrong site's alert rules in the opportunity popup view.",
+        ],
+    },
+    {
         version: "1.8.8",
         title: "Alerts",
         items: [
