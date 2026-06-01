@@ -5,6 +5,7 @@
     "scripts": {
         "dev": "wxt",
         "dev:firefox": "wxt -b firefox",
+        "mock": "bun mock/server.ts",
         "build": "wxt build",
         "build:firefox": "wxt build -b firefox",
         "check": "bun run check:svelte && bun run check:ts",

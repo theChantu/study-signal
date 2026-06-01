@@ -13,6 +13,7 @@ import {
 import {
     isSupportedHostTabUrl,
     getRuntimeSyncChannels,
+    getTabSiteName,
 } from "./runtime/runtimeHelpers";
 import { parseJsonRequestBody } from "./network/requestBody";
 import { registerRuntimeSync } from "./runtime/runtimeSync";
@@ -153,7 +154,7 @@ function runBackgroundScript() {
                 type: "store-changed",
                 data: { namespace: "globals", data: changed },
             },
-            (tab) => supportedSites.some((site) => tab.url!.includes(site)),
+            (tab) => getTabSiteName(tab.url) !== null,
         ).catch((error) => {
             console.error("Error broadcasting global store change:", error);
         });
@@ -170,7 +171,7 @@ function runBackgroundScript() {
                         data: changed,
                     },
                 },
-                (tab) => tab.url!.includes(siteName),
+                (tab) => getTabSiteName(tab.url) === siteName,
             ).catch((error) => {
                 console.error(
                     `Error broadcasting store change for "${siteName}":`,

@@ -7,8 +7,14 @@
     import { sites, supportedHosts } from "@/adapters/siteConfigs";
     import { runtimeState, settingsState, uiState } from "../../state.svelte";
     import { queueMutation } from "../../popupModel.svelte";
-    import { getCurrency, getCurrencySymbol } from "@/lib/currency/";
+    import { getCurrency } from "@/lib/currency/";
     import { ensureConversionRates } from "@/lib/currency/rates";
+    import {
+        convertStudyValues,
+        getConversionRate,
+        getMatchableOpportunity,
+        type CurrencyContext,
+    } from "@/lib/currency/conversion";
     import { capitalize, rateToColor } from "@/lib/utils";
     import { matchesAlertRules } from "@/lib/notifications/alertRules";
     import {
@@ -24,7 +30,7 @@
 
     import type { OpportunityItem, OpportunitiesTabModel } from "../../types";
     import type { RuntimeOutputDataMap } from "@/messages/types";
-    import type { StudyInfo } from "@/adapters/BaseAdapter";
+    import type { OpportunityInfo } from "@/adapters/BaseAdapter";
 
     let { model }: { model: OpportunitiesTabModel } = $props();
 
@@ -110,46 +116,11 @@
         return [...items].sort(opportunitySorters[sort]);
     }
 
-    function convertStudyDisplayValues(
-        study: StudyInfo,
-    ): Pick<StudyInfo, "reward" | "rate" | "symbol"> {
-        const fallback = {
-            reward: study.reward,
-            rate: study.rate,
-            symbol: study.symbol,
-        };
-
-        if (!settingsState.globals.currency.enabled || !study.symbol) {
-            return fallback;
-        }
-
-        const targetCurrency = settingsState.globals.currency.target;
-        const sourceCurrency = getCurrency(study.symbol);
-        if (!sourceCurrency) return fallback;
-
-        const targetSymbol = getCurrencySymbol(targetCurrency) ?? study.symbol;
-        if (sourceCurrency === targetCurrency) {
-            return {
-                reward: study.reward,
-                rate: study.rate,
-                symbol: targetSymbol,
-            };
-        }
-
-        const sourceRates =
-            settingsState.globals.conversionRates[sourceCurrency];
-        if (!sourceRates || sourceRates.timestamp === 0) return fallback;
-
-        const conversionRate = sourceRates.rates[targetCurrency];
-        if (!conversionRate) return fallback;
-
-        return {
-            reward:
-                study.reward === null ? null : study.reward * conversionRate,
-            rate: study.rate === null ? null : study.rate * conversionRate,
-            symbol: targetSymbol,
-        };
-    }
+    const currencyContext: CurrencyContext = $derived({
+        enabled: settingsState.globals.currency.enabled,
+        target: settingsState.globals.currency.target,
+        conversionRates: settingsState.globals.conversionRates,
+    });
 
     function getNormalizedRateColor(
         rate: number | null,
@@ -186,7 +157,11 @@
             settingsState.globals.conversionRates[sourceCurrency];
         if (!sourceRates || sourceRates.timestamp === 0) return null;
 
-        const conversionRate = sourceRates.rates[targetCurrency];
+        const conversionRate = getConversionRate(
+            sourceCurrency,
+            targetCurrency,
+            settingsState.globals.conversionRates,
+        );
         return conversionRate ? value * conversionRate : null;
     }
 
@@ -266,7 +241,7 @@
     });
 
     function buildOpportunityBase(
-        opportunity: RuntimeOpportunity,
+        opportunity: OpportunityInfo,
         host: (typeof supportedHosts)[number],
         order: number,
     ) {
@@ -301,12 +276,16 @@
         host: (typeof supportedHosts)[number],
         order: number,
     ): OpportunityItem {
-        const display = convertStudyDisplayValues(study);
+        const display = convertStudyValues(study, currencyContext);
 
         return {
             ...study,
             ...display,
-            ...buildOpportunityBase(study, host, order),
+            ...buildOpportunityBase(
+                getMatchableOpportunity(study, currencyContext),
+                host,
+                order,
+            ),
             color: getNormalizedRateColor(display.rate, display.symbol),
             normalizedReward: getNormalizedValue(
                 study.reward,
@@ -387,7 +366,8 @@
                 case "recent":
                     filtered = filtered.filter(
                         (item) =>
-                            Date.now() - item.firstSeenAt < RECENT_THRESHOLD_MS ||
+                            Date.now() - item.firstSeenAt <
+                                RECENT_THRESHOLD_MS ||
                             Date.now() - item.lastAlertableChangeAt <
                                 RECENT_THRESHOLD_MS,
                     );

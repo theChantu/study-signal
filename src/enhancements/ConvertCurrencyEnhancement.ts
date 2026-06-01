@@ -1,4 +1,5 @@
 import { getCurrency, getCurrencySymbol } from "@/lib/currency";
+import { getConversionRate } from "@/lib/currency/conversion";
 import { ensureConversionRates } from "@/lib/currency/rates";
 import BaseEnhancement from "./BaseEnhancement";
 import { parseNumericValue } from "@/lib/parse/parseNumericValue";
@@ -73,8 +74,13 @@ class ConvertCurrencyEnhancement extends BaseEnhancement {
                 displaySymbol: selectedSymbol,
             });
 
-            const rate =
-                updatedConversionRates[sourceCurrency].rates[currency.target];
+            const rate = getConversionRate(
+                sourceCurrency,
+                currency.target,
+                updatedConversionRates,
+            );
+            if (rate === null) continue;
+
             const elementRate = parseNumericValue(originalText);
             if (elementRate === null) continue;
 

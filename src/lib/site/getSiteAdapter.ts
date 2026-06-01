@@ -1,6 +1,7 @@
 import { ProlificAdapter } from "@/adapters/ProlificAdapter";
 import { CloudResearchAdapter } from "@/adapters/CloudResearchAdapter";
 import { BaseAdapter } from "@/adapters/BaseAdapter";
+import { isMockLocation, MOCK_SITE_HOST } from "@/dev/mockHost";
 import type { SupportedHosts } from "@/adapters/siteConfigs";
 
 const siteToAdapter = {
@@ -32,6 +33,14 @@ function getSiteAdapter(input?: string): SiteAdapter | null {
     }
 
     if (input === undefined) {
+        // Dev only: load the Prolific adapter for the mock harness.
+        if (isMockLocation(window.location)) {
+            const prolific = siteAdapters.find(
+                (adapter) => adapter.config.host === MOCK_SITE_HOST,
+            );
+            if (prolific) return prolific;
+        }
+
         throw new Error(
             `Extension injected on unsupported host: ${window.location.hostname}`,
         );

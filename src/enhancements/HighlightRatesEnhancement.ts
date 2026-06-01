@@ -1,6 +1,7 @@
 import BaseEnhancement from "./BaseEnhancement";
 import { parseNumericValue } from "@/lib/parse/parseNumericValue";
 import { getCurrency } from "@/lib/currency";
+import { getConversionRate } from "@/lib/currency/conversion";
 import { ensureConversionRates } from "@/lib/currency/rates";
 import { rateToColor } from "@/lib/utils";
 import { sendExtensionMessage } from "@/messages/sendExtensionMessage";
@@ -53,8 +54,12 @@ class HighlightRatesEnhancement extends BaseEnhancement {
             const originalCurrency = getCurrency(originalSymbol);
             if (!originalCurrency) continue;
 
-            const currencyToUsd =
-                updatedConversionRates[originalCurrency].rates.USD;
+            const currencyToUsd = getConversionRate(
+                originalCurrency,
+                HIGHLIGHT_BASE_CURRENCY,
+                updatedConversionRates,
+            );
+            if (currencyToUsd === null) continue;
 
             // Recalculate existing highlighted elements because threshold settings can change.
             rateEl.style.backgroundColor = rateToColor(

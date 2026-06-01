@@ -2,6 +2,7 @@ import { browser } from "#imports";
 import { readRuntimeCache, type RuntimeCache } from "./runtimeCache";
 import { setBadgeCount } from "./badge";
 import { matchesAlertRules } from "@/lib/notifications/alertRules";
+import { getMatchableOpportunity } from "@/lib/currency/conversion";
 import {
     getOpportunityKey,
     isOpportunityAlertable,
@@ -38,9 +39,18 @@ export function createBadgeSync(
     }
 
     store.globals.subscribe((changed) => {
-        if (changed.lastPopupOpenedAt === undefined) return;
-        lastPopupOpenedAt = changed.lastPopupOpenedAt;
-        void recompute();
+        if (changed.lastPopupOpenedAt !== undefined) {
+            lastPopupOpenedAt = changed.lastPopupOpenedAt;
+        }
+
+        // Badge count depends on currency settings.
+        if (
+            changed.lastPopupOpenedAt !== undefined ||
+            changed.currency !== undefined ||
+            changed.conversionRates !== undefined
+        ) {
+            void recompute();
+        }
     });
 
     browser.runtime.onConnect.addListener((port) => {
@@ -60,6 +70,16 @@ export function createBadgeSync(
         const runtimeCache = getRuntimeCache();
         const runtimeMeta = getRuntimeMeta();
         let count = 0;
+
+        const { currency, conversionRates } = await store.globals.get([
+            "currency",
+            "conversionRates",
+        ]);
+        const currencyContext = {
+            enabled: currency.enabled,
+            target: currency.target,
+            conversionRates,
+        };
 
         for (const siteName of Object.keys(
             runtimeCache.opportunities,
@@ -84,7 +104,10 @@ export function createBadgeSync(
                 if (
                     lastAlertableChangeAt > lastPopupOpenedAt &&
                     isOpportunityAlertable(opportunity) &&
-                    matchesAlertRules(opportunity, rules)
+                    matchesAlertRules(
+                        getMatchableOpportunity(opportunity, currencyContext),
+                        rules,
+                    )
                 ) {
                     count += 1;
                 }
@@ -94,10 +117,18 @@ export function createBadgeSync(
         return count;
     }
 
+    let recomputeSeq = 0;
+
     async function recompute(): Promise<void> {
+        const seq = ++recomputeSeq;
         try {
             await ensureBadgeSync();
-            await setBadgeCount(await countNewOpportunities());
+            if (seq !== recomputeSeq) return;
+
+            const count = await countNewOpportunities();
+            if (seq !== recomputeSeq) return;
+
+            await setBadgeCount(count);
         } catch (error) {
             console.error("Error recomputing badge:", error);
         }
