@@ -1,6 +1,6 @@
 import { alertRuleFieldConfig } from "./alertRuleFieldConfig";
 
-import type { OpportunityInfo } from "@/adapters/BaseAdapter";
+import type { OpportunityInfo, OpportunityKind } from "@/adapters/BaseAdapter";
 
 export type AlertRuleFieldType = "text" | "number";
 
@@ -132,6 +132,17 @@ function isCompatibleOperator(
     return getAlertRuleOperators(field).includes(operator);
 }
 
+export function isAlertRuleFieldApplicable(
+    opportunity: OpportunityInfo,
+    field: AlertRuleField,
+): boolean {
+    const appliesTo = alertRuleFieldConfig[field].appliesTo;
+    return (
+        appliesTo === "all" ||
+        (appliesTo as readonly OpportunityKind[]).includes(opportunity.kind)
+    );
+}
+
 export function isAlertConditionComplete(condition: AlertCondition): boolean {
     if (!isAlertRuleField(condition.field)) return false;
     if (!isCompatibleOperator(condition.field, condition.operator))
@@ -217,6 +228,7 @@ export function matchesAlertCondition(
     condition: AlertCondition,
 ): boolean {
     if (!isAlertConditionComplete(condition)) return false;
+    if (!isAlertRuleFieldApplicable(opportunity, condition.field)) return false;
 
     const value = alertRuleFieldConfig[condition.field].getValue(opportunity);
 
@@ -239,11 +251,20 @@ export function getCompleteAlertConditions(
     return group.conditions.filter(isAlertConditionComplete);
 }
 
+function getApplicableCompleteAlertConditions(
+    opportunity: OpportunityInfo,
+    group: AlertRuleGroup,
+): AlertCondition[] {
+    return getCompleteAlertConditions(group).filter((condition) =>
+        isAlertRuleFieldApplicable(opportunity, condition.field),
+    );
+}
+
 export function matchesAlertRuleGroup(
     opportunity: OpportunityInfo,
     group: AlertRuleGroup,
 ): boolean {
-    const conditions = getCompleteAlertConditions(group);
+    const conditions = getApplicableCompleteAlertConditions(opportunity, group);
     if (conditions.length === 0) return false;
 
     return group.mode === "all"
@@ -261,7 +282,10 @@ export function matchesAlertRules(
 ): boolean {
     if (matchesAlertRuleGroup(opportunity, rules.exclude)) return false;
 
-    const includeConditions = getCompleteAlertConditions(rules.include);
+    const includeConditions = getApplicableCompleteAlertConditions(
+        opportunity,
+        rules.include,
+    );
     if (includeConditions.length === 0) return true;
 
     return matchesAlertRuleGroup(opportunity, rules.include);

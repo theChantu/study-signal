@@ -6,9 +6,9 @@ import {
     type AlertRules,
 } from "./alertRules";
 import { defaultAlertRules } from "./defaultAlertRules";
-import { createStudy } from "@/tests/utils/opportunities";
+import { createProject, createStudy } from "@/tests/utils/opportunities";
 
-import type { StudyInfo } from "@/adapters/BaseAdapter";
+import type { ProjectInfo, StudyInfo } from "@/adapters/BaseAdapter";
 
 function study(overrides: Partial<StudyInfo> = {}): StudyInfo {
     return createStudy("study-a", {
@@ -17,6 +17,13 @@ function study(overrides: Partial<StudyInfo> = {}): StudyInfo {
         reward: 4,
         rate: 16,
         link: null,
+        ...overrides,
+    });
+}
+
+function project(overrides: Partial<ProjectInfo> = {}): ProjectInfo {
+    return createProject("project-a", {
+        title: "Memory project",
         ...overrides,
     });
 }
@@ -115,6 +122,100 @@ describe("alert rules", () => {
 
         expect(matchesAlertRules(study({ rate: 16 }), rules)).toBe(true);
         expect(matchesAlertRules(study({ rate: 14 }), rules)).toBe(false);
+    });
+
+    it("does not suppress projects with study-only include rules", () => {
+        const rules: AlertRules = {
+            include: {
+                mode: "all",
+                conditions: [
+                    {
+                        id: "rate",
+                        field: "rate",
+                        operator: "gte",
+                        value: "15",
+                    },
+                ],
+            },
+            exclude: {
+                mode: "any",
+                conditions: [],
+            },
+        };
+
+        expect(matchesAlertRules(study({ rate: 14 }), rules)).toBe(false);
+        expect(matchesAlertRules(project(), rules)).toBe(true);
+    });
+
+    it("does not exclude projects with study-only exclude rules", () => {
+        const rules: AlertRules = {
+            include: {
+                mode: "all",
+                conditions: [],
+            },
+            exclude: {
+                mode: "any",
+                conditions: [
+                    {
+                        id: "rate",
+                        field: "rate",
+                        operator: "lt",
+                        value: "10",
+                    },
+                ],
+            },
+        };
+
+        expect(matchesAlertRules(study({ rate: 8 }), rules)).toBe(false);
+        expect(matchesAlertRules(project(), rules)).toBe(true);
+    });
+
+    it("lets explicit opportunity include rules suppress other opportunity kinds", () => {
+        const studyRules: AlertRules = {
+            include: {
+                mode: "all",
+                conditions: [
+                    {
+                        id: "kind-study",
+                        field: "kind",
+                        operator: "equals",
+                        value: "study",
+                    },
+                    {
+                        id: "rate",
+                        field: "rate",
+                        operator: "gte",
+                        value: "15",
+                    },
+                ],
+            },
+            exclude: {
+                mode: "any",
+                conditions: [],
+            },
+        };
+        const projectRules: AlertRules = {
+            include: {
+                mode: "all",
+                conditions: [
+                    {
+                        id: "kind-project",
+                        field: "kind",
+                        operator: "equals",
+                        value: "project",
+                    },
+                ],
+            },
+            exclude: {
+                mode: "any",
+                conditions: [],
+            },
+        };
+
+        expect(matchesAlertRules(study({ rate: 16 }), studyRules)).toBe(true);
+        expect(matchesAlertRules(project(), studyRules)).toBe(false);
+        expect(matchesAlertRules(project(), projectRules)).toBe(true);
+        expect(matchesAlertRules(study(), projectRules)).toBe(false);
     });
 
     it("lets exclude rules override include rules", () => {
@@ -233,5 +334,14 @@ describe("alert rules", () => {
                 value: "15",
             }),
         ).toBe(true);
+
+        expect(
+            matchesAlertCondition(project(), {
+                id: "project_rate_not_equals",
+                field: "rate",
+                operator: "not_equals",
+                value: "15",
+            }),
+        ).toBe(false);
     });
 });

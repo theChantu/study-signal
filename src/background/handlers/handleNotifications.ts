@@ -109,21 +109,34 @@ function getProjectCountFromRuntimeFingerprint(
     return Number.isFinite(count) ? count : null;
 }
 
-function getRuntimeBaselineOpportunity(
+function getRuntimeContextBaselineOpportunity(
     opportunity: OpportunityInfo,
     entry: RuntimeSeenMeta | undefined,
     now: number,
 ): OpportunityInfo | undefined {
     if (!entry || now - entry.lastSeenAt >= NOTIFY_TTL_MS) return undefined;
 
-    if (opportunity.kind === "study") return opportunity;
+    switch (opportunity.kind) {
+        case "study":
+            return undefined;
 
-    return {
-        ...opportunity,
-        availableStudyCount: getProjectCountFromRuntimeFingerprint(
-            entry.fingerprint,
-        ),
-    };
+        case "project": {
+            const currentCount = opportunity.availableStudyCount;
+            if (currentCount === null || currentCount <= 0) return undefined;
+
+            const previousCount = getProjectCountFromRuntimeFingerprint(
+                entry.fingerprint,
+            );
+            if (previousCount !== null && currentCount <= previousCount) {
+                return undefined;
+            }
+
+            return {
+                ...opportunity,
+                availableStudyCount: previousCount,
+            };
+        }
+    }
 }
 
 function buildRuntimeCacheEntry(
@@ -155,7 +168,7 @@ function getPreviousOpportunityBaseline(
         };
     }
 
-    const runtimeOpportunity = getRuntimeBaselineOpportunity(
+    const runtimeOpportunity = getRuntimeContextBaselineOpportunity(
         opportunity,
         runtimeEntry,
         now,

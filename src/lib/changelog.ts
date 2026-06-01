@@ -7,9 +7,11 @@ export type ChangelogEntry = {
 export const changelogEntries = [
     {
         version: "1.8.9",
-        title: "Popup fixes",
+        title: "Alert filtering, support, and popup fixes",
         items: [
+            "Added an optional Support section in settings for people who want to help support development.",
             "Fixed opportunity highlights and filters using the wrong site's alert rules in the opportunity popup view.",
+            "Fixed alert rules that only apply to studies, like hourly rate filters, accidentally suppressing Prolific project alerts.",
         ],
     },
     {

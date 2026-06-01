@@ -187,7 +187,7 @@ describe("handleOpportunitiesDetected", () => {
         expect(deliverNotificationsMock).toHaveBeenCalledTimes(2);
     });
 
-    it("uses recent runtime metadata to avoid alerting known studies when the notification cache is missing", async () => {
+    it("does not use recent runtime metadata to suppress cache-missing studies", async () => {
         vi.useFakeTimers();
         const now = NOTIFY_TTL_MS * 2;
         vi.setSystemTime(now);
@@ -215,12 +215,42 @@ describe("handleOpportunitiesDetected", () => {
             getRuntimeOpportunityMeta,
         );
 
-        expect(deliverNotificationsMock).not.toHaveBeenCalled();
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
 
         const state = await store.sites
             .entry(siteName)
             .get(["opportunityAlerts"]);
         expect(state.opportunityAlerts.cache.opportunities).toHaveProperty(key);
+    });
+
+    it("allows freshly runtime-seen studies to alert when notification cache is missing", async () => {
+        vi.useFakeTimers();
+        const now = NOTIFY_TTL_MS * 2;
+        vi.setSystemTime(now);
+
+        const store = new SettingsStore();
+        const getRuntimeOpportunityMeta = createRuntimeOpportunityMetaProvider(
+            getOpportunityKey(study),
+            {
+                firstSeenAt: now,
+                lastSeenAt: now,
+                lastChangedAt: now,
+                lastAlertableChangeAt: now,
+                fingerprint: "present",
+            },
+        );
+
+        await handleOpportunitiesDetected(
+            store,
+            {
+                siteName,
+                opportunities: [study],
+                hidden: true,
+            },
+            getRuntimeOpportunityMeta,
+        );
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
     });
 
     it("allows known studies to alert again when runtime metadata is stale", async () => {
@@ -292,6 +322,36 @@ describe("handleOpportunitiesDetected", () => {
                 }),
             ],
         });
+    });
+
+    it("does not use runtime metadata to suppress cache-missing active projects", async () => {
+        vi.useFakeTimers();
+        const now = NOTIFY_TTL_MS * 2;
+        vi.setSystemTime(now);
+
+        const store = new SettingsStore();
+        const getRuntimeOpportunityMeta = createRuntimeOpportunityMetaProvider(
+            getOpportunityKey(project),
+            {
+                firstSeenAt: now,
+                lastSeenAt: now,
+                lastChangedAt: now,
+                lastAlertableChangeAt: now,
+                fingerprint: "1",
+            },
+        );
+
+        await handleOpportunitiesDetected(
+            store,
+            {
+                siteName,
+                opportunities: [withProjectCount(1)],
+                hidden: true,
+            },
+            getRuntimeOpportunityMeta,
+        );
+
+        expect(deliverNotificationsMock).toHaveBeenCalledTimes(1);
     });
 
     it("updates project baselines when availability drops to zero", async () => {
