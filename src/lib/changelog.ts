@@ -12,6 +12,7 @@ export const changelogEntries = [
             "Added an optional Support section in settings for people who want to help support development.",
             "Fixed opportunity highlights and filters using the wrong site's alert rules in the opportunity popup view.",
             "Fixed alert rules that only apply to studies, like hourly rate filters, accidentally suppressing Prolific project alerts.",
+            "Fixed the opportunity popup and badge matching alert rules against the original reward and rate instead of the converted values when currency conversion is on.",
         ],
     },
     {
