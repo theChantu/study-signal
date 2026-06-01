@@ -12,10 +12,11 @@ import {
     createEnhancementScheduler,
     type EnhancementRunReason,
 } from "./enhancementScheduler";
+import { shouldScheduleEnhancementRunForStoreChange } from "./storeChangeRelevance";
 
 import type { ContentScriptContext } from "#imports";
-import type { GlobalSettings, SiteSettings } from "@/store/types";
-import type { RuntimeChannel, StoreChangedMessage } from "@/messages/types";
+import type { SiteSettings } from "@/store/types";
+import type { RuntimeChannel } from "@/messages/types";
 
 async function runContentScript(ctx: ContentScriptContext) {
     log("Loaded.");
@@ -142,11 +143,6 @@ async function runContentScript(ctx: ContentScriptContext) {
 
     initializeAutoReload(site.autoReload);
 
-    const irrelevantKeys: Record<string, Set<string>> = {
-        globals: new Set<keyof GlobalSettings>(["lastPopupOpenedAt"]),
-        sites: new Set<keyof SiteSettings>(["opportunityAlerts"]),
-    };
-
     const unsubStoreChanged = onExtensionMessage("store-changed", (payload) => {
         if (payload.namespace === "globals") {
             globals = deepMerge(globals, payload.data);
@@ -161,9 +157,14 @@ async function runContentScript(ctx: ContentScriptContext) {
             }
         }
 
-        const keys = Object.keys(payload.data);
-        const ignored = irrelevantKeys[payload.namespace];
-        if (ignored && keys.every((key) => ignored.has(key))) return;
+        if (
+            !shouldScheduleEnhancementRunForStoreChange(
+                payload,
+                adapter.config.name,
+            )
+        ) {
+            return;
+        }
 
         enhancementScheduler.schedule("settings");
     });

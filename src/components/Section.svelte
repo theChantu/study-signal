@@ -4,7 +4,7 @@
     type Props = {
         title: string;
         icon: Component<{ size: number; strokeWidth: number }>;
-        tone?: "default" | "muted";
+        tone?: "default" | "muted" | "rose";
         children?: Snippet;
     };
 
@@ -13,7 +13,7 @@
 
 <div>
     <h2
-        class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""}`}
+        class={`popup-section-heading ${tone === "muted" ? "popup-section-heading-muted" : ""} ${tone === "rose" ? "popup-section-heading-rose" : ""}`}
     >
         <Icon size={14} strokeWidth={2.5} />
         {title}

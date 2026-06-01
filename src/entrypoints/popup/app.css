@@ -83,8 +83,12 @@
         @apply text-popup-text-faint [&_svg]:text-popup-text-faint;
     }
 
+    .popup-section-heading-rose {
+        @apply text-[oklch(0.62_0.21_0)] [&_svg]:text-[oklch(0.62_0.21_0)];
+    }
+
     .popup-compact-button {
-        @apply cursor-pointer rounded-[7px] border border-popup-border bg-transparent px-2.5 py-[5px] text-[11px] font-medium font-[inherit] text-popup-text-muted transition-colors duration-150 hover:bg-[rgba(0,0,0,0.06)];
+        @apply cursor-pointer rounded-[7px] border border-popup-border bg-transparent px-2.5 py-1.25 text-[11px] font-medium font-[inherit] text-popup-text-muted transition-colors duration-150 hover:bg-popup-border;
     }
 
     .popup-compact-button-danger {
